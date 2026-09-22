@@ -229,7 +229,7 @@ export function LiveQuizPage() {
                 >
                   {String.fromCharCode(65 + idx)}
                 </span>
-                <span>{option}</span>
+                <span>{typeof option === 'string' ? option : (option as any)?.text || (option as any)?.key || ''}</span>
               </div>
             );
           })}

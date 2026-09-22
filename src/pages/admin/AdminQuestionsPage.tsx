@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { Question, Round, Edition } from '../../types/database';
+import type { Question, Round } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -149,7 +149,7 @@ export function AdminQuestionsPage() {
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)' }}>{q.points}</td>
                 <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--status-qualified)', fontWeight: 700 }}>
-                  Opt {String.fromCharCode(65 + q.correct_answer)}: {q.options[q.correct_answer]}
+                  Opt {String.fromCharCode(65 + Number(q.correct_answer ?? 0))}: {q.options[Number(q.correct_answer ?? 0)]}
                 </td>
               </tr>
             ))}

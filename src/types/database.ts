@@ -100,8 +100,8 @@ export interface Question {
   id: string;
   round_id: string;
   question_text: string;
-  options: Array<{ key: string; text: string }>;
-  correct_answer?: string; // Only available to admin
+  options: any[];
+  correct_answer?: any;
   points: number;
   difficulty: 'easy' | 'medium' | 'hard';
   status: 'active' | 'inactive';
@@ -176,6 +176,28 @@ export interface LeaderboardEntry {
   team?: Team;
 }
 
+export interface AuctionBid {
+  id: string;
+  auction_item_id: string;
+  team_id: string;
+  amount: number;
+  timestamp: string;
+  status: string;
+}
+
+export interface Result {
+  id: string;
+  edition_id: string;
+  round_id?: string | null;
+  team_id: string;
+  position: number;
+  score: number;
+  status: string;
+  published_at?: string | null;
+  created_at?: string;
+  teams?: Team;
+}
+
 export interface Certificate {
   id: string;
   certificate_id: string;
@@ -192,7 +214,8 @@ export interface Certificate {
   revoked_at: string | null;
   revoke_reason: string | null;
   verification_token: string;
-  template_version: number;
+  template_version: string | number;
+  created_at: string;
   // Joined
   participant?: Profile;
   team?: Team;

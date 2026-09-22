@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import type { LeaderboardEntry, Team, Edition } from '../types/database';
 import { Badge } from '../components/ui/Badge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
 
 interface LeaderboardItem extends LeaderboardEntry {
   teams?: Team;
@@ -73,7 +72,8 @@ export function LeaderboardPage() {
             </thead>
             <tbody>
               {entries.map((entry) => {
-                const isPodium = entry.rank <= 3;
+                const rankNum = entry.rank ?? 99;
+                const isPodium = rankNum <= 3;
                 return (
                   <tr key={entry.id} style={{ background: isPodium ? 'rgba(245, 158, 11, 0.03)' : undefined }}>
                     <td>
@@ -82,14 +82,14 @@ export function LeaderboardPage() {
                           fontFamily: 'var(--font-mono)',
                           fontWeight: 700,
                           fontSize: '1.125rem',
-                          color: entry.rank === 1 ? 'var(--gold)' : entry.rank === 2 ? '#cbd5e1' : entry.rank === 3 ? '#b45309' : 'var(--text-secondary)',
+                          color: rankNum === 1 ? 'var(--gold)' : rankNum === 2 ? '#cbd5e1' : rankNum === 3 ? '#b45309' : 'var(--text-secondary)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.375rem',
                         }}
                       >
-                        {entry.rank === 1 ? '🥇 ' : entry.rank === 2 ? '🥈 ' : entry.rank === 3 ? '🥉 ' : ''}
-                        #{entry.rank.toString().padStart(2, '0')}
+                        {rankNum === 1 ? '🥇 ' : rankNum === 2 ? '🥈 ' : rankNum === 3 ? '🥉 ' : ''}
+                        #{rankNum.toString().padStart(2, '0')}
                       </div>
                     </td>
                     <td>

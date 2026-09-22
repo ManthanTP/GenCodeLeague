@@ -60,7 +60,7 @@ export function SchedulePage() {
                   <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{item.description}</p>
                 </div>
               </div>
-              <Badge variant={item.status === 'in_progress' ? 'live' : item.status === 'completed' ? 'subtle' : 'gold'}>
+              <Badge variant={item.status === 'live' ? 'live' : item.status === 'completed' ? 'subtle' : 'gold'}>
                 {item.status.toUpperCase()}
               </Badge>
             </div>
