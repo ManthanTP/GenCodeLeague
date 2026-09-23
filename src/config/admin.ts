@@ -9,7 +9,7 @@
  */
 
 /** The secret URL path segment for accessing the admin login page. */
-export const ADMIN_SECRET_PATH = '123456789/GCL@admin';
+export const ADMIN_SECRET_PATH = '123456789/GCL-admin';
 
 /**
  * Build the full admin login route path.
