@@ -1,307 +1,297 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { AuctionEvent, AuctionItem, AuctionBid, TeamBudget, Team } from '../../types/database';
+import type { AuctionItem, Team, TeamRosterItem, EventState } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 export function LiveAuctionPage() {
-  const { user, isCaptain } = useAuth();
-  const [auctionEvent, setAuctionEvent] = useState<AuctionEvent | null>(null);
-  const [currentItem, setCurrentItem] = useState<AuctionItem | null>(null);
-  const [bids, setBids] = useState<AuctionBid[]>([]);
-  const [teamBudget, setTeamBudget] = useState<TeamBudget | null>(null);
-  const [myTeam, setMyTeam] = useState<Team | null>(null);
-  const [customBidAmount, setCustomBidAmount] = useState<number>(0);
-  const [bidding, setBidding] = useState(false);
-  const [bidError, setBidError] = useState<string | null>(null);
+  const { team } = useAuth();
+  const [liveItem, setLiveItem] = useState<AuctionItem | null>(null);
+  const [eventState, setEventState] = useState<EventState | null>(null);
+  const [myTeam, setMyTeam] = useState<Team | null>(team || null);
+  const [purchasedRoster, setPurchasedRoster] = useState<TeamRosterItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAuctionState();
+    loadAuctionObserverData();
 
-    // Subscribe to live auction bids via Supabase Realtime
+    // Realtime subscription to auction_items, event_state, and team updates
     const channel = supabase
-      .channel('live-auction-bids')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'auction_bids' },
-        (payload) => {
-          setBids((prev) => [payload.new as AuctionBid, ...prev]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'auction_items' },
-        (payload) => {
-          const updated = payload.new as AuctionItem;
-          if (updated.status === 'live') {
-            setCurrentItem(updated);
-          }
-        }
-      )
+      .channel('team-auction-observer')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'auction_items' }, () => {
+        loadAuctionObserverData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, () => {
+        loadAuctionObserverData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        loadAuctionObserverData();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [team?.id]);
 
-  async function loadAuctionState() {
-    setLoading(true);
-    // 1. Fetch active auction event
-    const { data: eventData } = await supabase
-      .from('auction_events')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (eventData) {
-      setAuctionEvent(eventData as AuctionEvent);
-
-      // 2. Fetch live item
+  async function loadAuctionObserverData() {
+    try {
+      // 1. Fetch current live auction lot
       const { data: itemData } = await supabase
         .from('auction_items')
-        .select('*')
-        .eq('auction_event_id', eventData.id)
+        .select('*, current_bidder:teams!auction_items_current_bidder_team_id_fkey(*)')
         .eq('status', 'live')
         .maybeSingle();
 
-      if (itemData) {
-        setCurrentItem(itemData as AuctionItem);
-        // Fetch recent bids for this item
-        const { data: bidData } = await supabase
-          .from('auction_bids')
-          .select('*')
-          .eq('auction_item_id', itemData.id)
-          .order('amount', { ascending: false });
+      setLiveItem((itemData as unknown as AuctionItem) || null);
 
-        if (bidData) setBids(bidData as AuctionBid[]);
-      }
-    }
-
-    // 3. Fetch user's squad & budget
-    if (user) {
-      const { data: memData } = await supabase
-        .from('team_members')
-        .select('*, teams:team_id (*)')
-        .eq('profile_id', user.id)
+      // 2. Fetch event state for timer & live banner
+      const { data: stateData } = await supabase
+        .from('event_state')
+        .select('*')
+        .limit(1)
         .maybeSingle();
 
-      if (memData?.team_id) {
-        setMyTeam(memData.teams as Team);
+      if (stateData) setEventState(stateData as EventState);
 
-        const { data: bData } = await supabase
-          .from('team_budgets')
+      // 3. Fetch latest team data (budget & score)
+      if (team?.id) {
+        const { data: tData } = await supabase
+          .from('teams')
           .select('*')
-          .eq('team_id', memData.team_id)
-          .maybeSingle();
+          .eq('id', team.id)
+          .single();
 
-        if (bData) {
-          setTeamBudget(bData as TeamBudget);
-        }
+        if (tData) setMyTeam(tData as Team);
+
+        // Fetch team's purchased lots
+        const { data: rosterData } = await supabase
+          .from('team_roster')
+          .select('*, item:auction_items(*)')
+          .eq('team_id', team.id)
+          .order('created_at', { ascending: false });
+
+        if (rosterData) setPurchasedRoster(rosterData as unknown as TeamRosterItem[]);
       }
-    }
-
-    setLoading(false);
-  }
-
-  const highestBid = bids.length > 0 ? bids[0].amount : (currentItem?.base_price || 0);
-  const minNextBid = highestBid + (auctionEvent?.bid_increment || 100);
-
-  async function handlePlaceBid(amount: number) {
-    if (!currentItem || !myTeam || !isCaptain) return;
-    setBidError(null);
-
-    // Client-side guard (validated on server as well)
-    const available = teamBudget?.current_budget ?? 10000;
-    if (amount > available) {
-      setBidError(`Bid exceeds squad remaining budget ($${available.toLocaleString()}).`);
-      return;
-    }
-    if (amount <= highestBid) {
-      setBidError(`Bid must be strictly greater than current bid ($${highestBid.toLocaleString()}).`);
-      return;
-    }
-
-    setBidding(true);
-    try {
-      const { error } = await supabase
-        .from('auction_bids')
-        .insert({
-          auction_item_id: currentItem.id,
-          team_id: myTeam.id,
-          amount,
-          status: 'accepted',
-        });
-
-      if (error) throw error;
-      setCustomBidAmount(amount + (auctionEvent?.bid_increment || 100));
-    } catch (err: any) {
-      setBidError(err.message || 'Failed to submit bid.');
+    } catch (err) {
+      console.error('Failed to load auction observation data:', err);
     } finally {
-      setBidding(false);
+      setLoading(false);
     }
   }
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Connecting to live auction telemetry..." />;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+        <LoadingSpinner size="lg" text="Connecting to Official Auction Broadcast..." />
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Header Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Broadcast Status Bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          background: 'var(--bg-surface)',
+          padding: '1.25rem 1.5rem',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <Badge variant="live" pulse>AUCTION ROOM 01 &bull; LIVE</Badge>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Increment: ${auctionEvent?.bid_increment || 100}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Badge variant="live" pulse>
+              OFFICIAL BROADCAST
+            </Badge>
+            <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0 }}>
+              Live Technical Auction Arena
+            </h1>
           </div>
-          <h1 style={{ fontSize: '2rem' }}>Tactical Squad Bidding Room</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', marginTop: '0.25rem' }}>
+            PRD Compliance Notice: All bids are officially placed and confirmed by the Tournament Auctioneer. This terminal is your live tactical monitor.
+          </p>
         </div>
 
-        {/* Squad Budget Widget */}
+        {/* Team Budget Badge */}
         <div
           style={{
-            background: 'var(--bg-surface)',
+            padding: '0.75rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-elevated)',
             border: '1px solid var(--border-gold)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1rem 1.5rem',
             textAlign: 'right',
           }}
         >
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Squad Budget: {myTeam?.name || 'Your Squad'}
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            Your Available Balance
           </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--gold)' }}>
-            ${(teamBudget?.current_budget ?? 10000).toLocaleString()}
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: '#34d399' }}>
+            {myTeam?.remaining_budget ?? 1000} <span style={{ fontSize: '0.875rem' }}>credits</span>
           </div>
         </div>
       </div>
 
-      {bidError && (
-        <div style={{ padding: '0.875rem 1.25rem', background: 'var(--status-eliminated-bg)', border: '1px solid var(--status-eliminated-border)', borderRadius: 'var(--radius-md)', color: 'var(--status-eliminated)', fontSize: '0.875rem' }}>
-          {bidError}
+      {/* Main Broadcast Stage */}
+      {liveItem ? (
+        <div
+          className="card"
+          style={{
+            padding: '2.5rem',
+            border: '2px solid var(--border-gold)',
+            background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
+            boxShadow: 'var(--shadow-gold)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <Badge variant="live" pulse style={{ marginBottom: '0.5rem' }}>
+                ON STAGE NOW
+              </Badge>
+              <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: '0.25rem 0' }}>
+                {liveItem.name}
+              </h2>
+              <Badge variant="subtle">{liveItem.category}</Badge>
+            </div>
+
+            {/* Price Callout */}
+            <div
+              style={{
+                background: 'var(--bg-elevated)',
+                padding: '1.25rem 2rem',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-subtle)',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Current High Bid
+              </div>
+              <div style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: 'var(--gold)', lineHeight: 1.1 }}>
+                {liveItem.current_bid || liveItem.base_price} <span style={{ fontSize: '1.25rem' }}>cr</span>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#34d399', fontWeight: 600, marginTop: '0.35rem' }}>
+                {liveItem.current_bidder?.id === myTeam?.id
+                  ? '✨ YOUR SQUAD HOLDS THE HIGH BID! ✨'
+                  : liveItem.current_bidder
+                  ? `Leader: ${liveItem.current_bidder.name}`
+                  : 'Starting Reserve Bid'}
+              </div>
+            </div>
+          </div>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.6, maxWidth: '720px', marginBottom: '1.5rem' }}>
+            {liveItem.description || 'Verified technical asset featuring high-leverage competitive advantages.'}
+          </p>
+
+          {liveItem.skills && liveItem.skills.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Attributes:</span>
+              {liveItem.skills.map((skill, idx) => (
+                <Badge key={idx} variant="gold">{skill}</Badge>
+              ))}
+            </div>
+          )}
+
+          {eventState?.banner_message && (
+            <div
+              style={{
+                marginTop: '2rem',
+                padding: '1rem 1.25rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: 'var(--gold)',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                textAlign: 'center',
+              }}
+            >
+              📢 Auctioneer Announcement: {eventState.banner_message}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className="card"
+          style={{
+            padding: '3rem',
+            textAlign: 'center',
+            background: 'var(--bg-surface)',
+            border: '1px dashed var(--border-default)',
+          }}
+        >
+          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔨</div>
+          <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
+            Stage Intermission
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', maxWidth: '460px', margin: '0 auto' }}>
+            The Auctioneer is currently preparing the next technical lot. Real-time broadcast will commence immediately when the next lot is called.
+          </p>
         </div>
       )}
 
-      {/* Main Auction Arena Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-        {/* Current Active Lot */}
-        <div className="gcl-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <Badge variant="gold">CURRENT LOT ON STAGE</Badge>
-              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                CATEGORY: {currentItem?.category || 'SPECIALIST'}
-              </span>
-            </div>
+      {/* Your Team's Acquired Roster */}
+      <div className="card" style={{ padding: '1.75rem' }}>
+        <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
+          📦 Your Squad's Acquired Inventory ({purchasedRoster.length} Items)
+        </h2>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+          Assets acquired during this tournament edition. Total invested: <strong>{myTeam?.total_spent ?? 0} credits</strong>.
+        </p>
 
-            {currentItem ? (
-              <div>
-                <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                  {currentItem.name}
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.9375rem' }}>
-                  {currentItem.description || 'Specialist engineering profile available for squad acquisition.'}
-                </p>
-
-                {currentItem.skills && currentItem.skills.length > 0 && (
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                    {currentItem.skills.map((skill, idx) => (
-                      <span key={idx} style={{ padding: '0.25rem 0.5rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>
-                        {skill}
+        {purchasedRoster.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '1.5rem 0', textAlign: 'center' }}>
+            Your team has not acquired any auction items yet.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+            {purchasedRoster.map((roster) => (
+              <div
+                key={roster.id}
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+                    {roster.item?.name || 'Technical Lot'}
+                  </h3>
+                  <Badge variant="gold">{roster.purchase_price} cr</Badge>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Category: {roster.item?.category || 'Specialist'}
+                </div>
+                {roster.item?.skills && (
+                  <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    {roster.item.skills.map((s, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '0.6875rem',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          padding: '0.125rem 0.375rem',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {s}
                       </span>
                     ))}
                   </div>
                 )}
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-secondary)' }}>
-                <p>The auctioneer is currently preparing the next technical lot.</p>
-              </div>
-            )}
+            ))}
           </div>
-
-          {/* Pricing & Bidding Box */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Base Price</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', color: 'var(--text-secondary)' }}>
-                  ${(currentItem?.base_price ?? 500).toLocaleString()}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Current Highest Bid</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2rem', fontWeight: 800, color: 'var(--gold)' }}>
-                  ${highestBid.toLocaleString()}
-                </div>
-              </div>
-            </div>
-
-            {/* Bid Action Form */}
-            {isCaptain ? (
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <Button
-                  variant="primary"
-                  onClick={() => handlePlaceBid(minNextBid)}
-                  isLoading={bidding}
-                  style={{ flex: 1 }}
-                >
-                  Bid +${auctionEvent?.bid_increment || 100} (${minNextBid.toLocaleString()})
-                </Button>
-              </div>
-            ) : (
-              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Only verified <strong>Team Captains</strong> possess authorized bidding keys.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Live Bids Activity Feed */}
-        <div className="gcl-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Bidding Activity Ledger</h3>
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '380px' }}>
-            {bids.length > 0 ? (
-              bids.map((bid, i) => (
-                <div
-                  key={bid.id || i}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: i === 0 ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-surface)',
-                    border: `1px solid ${i === 0 ? 'var(--border-gold)' : 'var(--border-subtle)'}`,
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                      {i === 0 ? '🏆 LEADING BID' : 'BID PLACED'}
-                    </span>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                      {new Date(bid.timestamp).toLocaleTimeString()}
-                    </div>
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.25rem', fontWeight: 700, color: i === 0 ? 'var(--gold)' : 'var(--text-primary)' }}>
-                    ${bid.amount.toLocaleString()}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                No bids recorded yet for this active lot.
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

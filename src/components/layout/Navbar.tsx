@@ -5,7 +5,7 @@ import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 
 export function Navbar() {
-  const { isAuthenticated, profile, role, isAdmin, isCaptain, signOut } = useAuth();
+  const { isAuthenticated, profile, isAdmin, isTeamLeader, team, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -46,6 +46,7 @@ export function Navbar() {
               fontFamily: 'var(--font-display)',
               letterSpacing: '-0.01em',
               color: 'var(--text-primary)',
+              textDecoration: 'none',
             }}
           >
             <div
@@ -70,11 +71,11 @@ export function Navbar() {
           </Link>
 
           {/* Current edition indicator */}
-          <div className="edition-badge-desktop">
+          <Link to="/live" target="_blank" style={{ textDecoration: 'none' }}>
             <Badge variant="live" pulse>
-              2026 LIVE
+              LIVE ARENA ↗
             </Badge>
-          </div>
+          </Link>
         </div>
 
         {/* Desktop Navigation Links */}
@@ -92,6 +93,7 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/editions') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
             Editions
@@ -102,6 +104,7 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/teams') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
             Teams
@@ -112,6 +115,7 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/rounds') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
             Rounds
@@ -122,19 +126,21 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/leaderboard') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
-            Leaderboard
+            Standings
           </Link>
           <Link
-            to="/results"
+            to="/hall-of-fame"
             style={{
               fontSize: '0.875rem',
-              color: isActive('/results') ? 'var(--gold)' : 'var(--text-secondary)',
+              color: isActive('/hall-of-fame') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
-            Results
+            Hall of Fame
           </Link>
           <Link
             to="/schedule"
@@ -142,6 +148,7 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/schedule') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
             Schedule
@@ -152,19 +159,10 @@ export function Navbar() {
               fontSize: '0.875rem',
               color: isActive('/rules') ? 'var(--gold)' : 'var(--text-secondary)',
               fontWeight: 500,
+              textDecoration: 'none',
             }}
           >
             Rules
-          </Link>
-          <Link
-            to="/verify/check"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/verify/check') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-            }}
-          >
-            Verify
           </Link>
         </nav>
 
@@ -173,26 +171,21 @@ export function Navbar() {
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {isAdmin && (
-                <Link to="/admin">
-                  <Button variant="outline" size="sm">
+                <Link to="/admin/dashboard" style={{ textDecoration: 'none' }}>
+                  <Button variant="gold" size="sm">
                     Admin Console
                   </Button>
                 </Link>
               )}
-              {isCaptain && (
-                <Link to="/team">
-                  <Button variant="secondary" size="sm">
-                    Captain Dashboard
+              {isTeamLeader && (
+                <Link to="/team/dashboard" style={{ textDecoration: 'none' }}>
+                  <Button variant="outline" size="sm" style={{ borderColor: 'var(--gold)', color: 'var(--gold)' }}>
+                    {team ? team.name : 'Team Console'}
                   </Button>
                 </Link>
               )}
-              <Link to="/dashboard">
-                <Button variant="secondary" size="sm">
-                  {profile?.full_name?.split(' ')[0] || 'Dashboard'}
-                </Button>
-              </Link>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => signOut()}
                 aria-label="Sign out"
@@ -202,152 +195,53 @@ export function Navbar() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Link to="/login">
-                <Button variant="outline" size="sm">
-                  Sign In
+              <Link to="/team/login" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" size="sm" style={{ borderColor: 'var(--gold)', color: 'var(--gold)' }}>
+                  Team Leader
                 </Button>
               </Link>
-              <Link to="/login?mode=signup">
-                <Button variant="primary" size="sm">
-                  Register
+              <Link to="/admin/login" style={{ textDecoration: 'none' }}>
+                <Button variant="ghost" size="sm">
+                  Admin
                 </Button>
               </Link>
             </div>
           )}
 
-          {/* Mobile hamburger button */}
+          {/* Mobile Menu Toggle Button */}
           <button
-            className="mobile-hamburger"
+            type="button"
+            className="mobile-menu-btn"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             style={{
-              background: 'none',
-              border: '1px solid var(--border-default)',
+              display: 'none',
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-sm)',
+              padding: '0.375rem',
               color: 'var(--text-primary)',
-              padding: '0.375rem 0.625rem',
               cursor: 'pointer',
-              fontSize: '1.125rem',
             }}
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? '✕' : '☰'}
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              {mobileMenuOpen ? (
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                />
+              ) : (
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                />
+              )}
+            </svg>
           </button>
         </div>
       </div>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div
-          className="mobile-drawer"
-          style={{
-            position: 'absolute',
-            top: 'var(--navbar-height)',
-            left: 0,
-            right: 0,
-            background: 'var(--bg-surface)',
-            borderBottom: '1px solid var(--border-default)',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            boxShadow: 'var(--shadow-elevated)',
-          }}
-        >
-          <Link
-            to="/editions"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Editions
-          </Link>
-          <Link
-            to="/teams"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Teams
-          </Link>
-          <Link
-            to="/rounds"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Rounds
-          </Link>
-          <Link
-            to="/leaderboard"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Leaderboard
-          </Link>
-          <Link
-            to="/results"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Results
-          </Link>
-          <Link
-            to="/schedule"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Schedule
-          </Link>
-          <Link
-            to="/rules"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Rules
-          </Link>
-          <Link
-            to="/verify/check"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Verify Certificate
-          </Link>
-          <Link
-            to="/announcements"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Announcements
-          </Link>
-          <Link
-            to="/gallery"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Gallery
-          </Link>
-          <Link
-            to="/organizers"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 600 }}
-          >
-            Organizers
-          </Link>
-        </div>
-      )}
-
-      <style>{`
-        @media (max-width: 900px) {
-          .desktop-nav, .edition-badge-desktop {
-            display: none !important;
-          }
-          .mobile-hamburger {
-            display: block !important;
-          }
-        }
-        @media (min-width: 901px) {
-          .mobile-hamburger {
-            display: none !important;
-          }
-        }
-      `}</style>
     </header>
   );
 }

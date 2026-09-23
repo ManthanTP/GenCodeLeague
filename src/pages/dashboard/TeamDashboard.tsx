@@ -2,350 +2,325 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Team, TeamMember, Edition, TeamBudget, Profile } from '../../types/database';
+import type { Team, TeamMember, Edition, TeamRosterItem, ScoreEntry, EventState } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
-interface MemberWithProfile extends TeamMember {
-  profiles?: Profile;
-}
-
 export function TeamDashboard() {
-  const { user, profile, isCaptain } = useAuth();
-  const [team, setTeam] = useState<Team | null>(null);
-  const [members, setMembers] = useState<MemberWithProfile[]>([]);
-  const [budget, setBudget] = useState<TeamBudget | null>(null);
+  const { user, profile, team: authTeam } = useAuth();
+  const [team, setTeam] = useState<Team | null>(authTeam || null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [edition, setEdition] = useState<Edition | null>(null);
+  const [eventState, setEventState] = useState<EventState | null>(null);
+  const [roster, setRoster] = useState<TeamRosterItem[]>([]);
+  const [recentScores, setRecentScores] = useState<ScoreEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // New team creation form state
-  const [newTeamName, setNewTeamName] = useState('');
-  const [creatingTeam, setCreatingTeam] = useState(false);
-  const [teamError, setTeamError] = useState<string | null>(null);
-
   useEffect(() => {
-    loadTeamData();
-  }, [user]);
+    loadDashboard();
 
-  async function loadTeamData() {
+    const channel = supabase
+      .channel('team-dashboard-stream')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        loadDashboard();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, () => {
+        loadDashboard();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, authTeam?.id]);
+
+  async function loadDashboard() {
     setLoading(true);
-    // Fetch current active edition
-    const { data: edData } = await supabase
-      .from('editions')
-      .select('*')
-      .eq('is_current', true)
-      .single();
-    if (edData) setEdition(edData as Edition);
+    try {
+      if (!user) return;
 
-    if (user && edData) {
-      // Find user's team membership
-      const { data: memData } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('profile_id', user.id)
+      // 1. Fetch team for this user
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('*, edition:editions(*)')
+        .or(`team_leader_id.eq.${user.id},captain_id.eq.${user.id}`)
         .maybeSingle();
 
-      if (memData) {
-        const { data: teamData } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('id', memData.team_id)
-          .single();
-
-        if (teamData) {
-          setTeam(teamData as Team);
-
-          // Fetch all members of this team
-          const { data: allMembers } = await supabase
-            .from('team_members')
-            .select(`
-              *,
-              profiles:profile_id (*)
-            `)
-            .eq('team_id', teamData.id);
-
-          if (allMembers) setMembers(allMembers as MemberWithProfile[]);
-
-          // Fetch team budget
-          const { data: budgetData } = await supabase
-            .from('team_budgets')
-            .select('*')
-            .eq('team_id', teamData.id)
-            .maybeSingle();
-
-          if (budgetData) setBudget(budgetData as TeamBudget);
+      if (teamData) {
+        setTeam(teamData as unknown as Team);
+        if (teamData.edition) {
+          setEdition(teamData.edition as unknown as Edition);
         }
+
+        // 2. Fetch members
+        const { data: memData } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('team_id', teamData.id)
+          .order('joined_at', { ascending: true });
+
+        if (memData) setMembers(memData as TeamMember[]);
+
+        // 3. Fetch purchased roster
+        const { data: rosData } = await supabase
+          .from('team_roster')
+          .select('*, item:auction_items(*)')
+          .eq('team_id', teamData.id)
+          .order('created_at', { ascending: false });
+
+        if (rosData) setRoster(rosData as unknown as TeamRosterItem[]);
+
+        // 4. Fetch recent scores
+        const { data: scrData } = await supabase
+          .from('scores')
+          .select('*')
+          .eq('team_id', teamData.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (scrData) setRecentScores(scrData as ScoreEntry[]);
       }
-    }
-    setLoading(false);
-  }
 
-  async function handleCreateTeam(e: React.FormEvent) {
-    e.preventDefault();
-    if (!user || !edition || !newTeamName.trim()) return;
+      // 5. Fetch live event state
+      const { data: stateData } = await supabase
+        .from('event_state')
+        .select('*, current_round:rounds(*)')
+        .limit(1)
+        .maybeSingle();
 
-    setCreatingTeam(true);
-    setTeamError(null);
-
-    try {
-      // 1. Insert team
-      const { data: createdTeam, error: teamErr } = await supabase
-        .from('teams')
-        .insert({
-          name: newTeamName.trim(),
-          edition_id: edition.id,
-          captain_id: user.id,
-          status: 'registered',
-        })
-        .select()
-        .single();
-
-      if (teamErr) throw teamErr;
-
-      // 2. Insert team_member as captain
-      const { error: memErr } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: createdTeam.id,
-          profile_id: user.id,
-          role: 'captain',
-          status: 'active',
-        });
-
-      if (memErr) throw memErr;
-
-      // 3. Update profile role to captain
-      await supabase
-        .from('profiles')
-        .update({ role: 'captain' })
-        .eq('id', user.id);
-
-      // Reload
-      await loadTeamData();
-    } catch (err: any) {
-      setTeamError(err.message || 'Failed to create team. Ensure team name is unique.');
+      if (stateData) setEventState(stateData as EventState);
+    } catch (err) {
+      console.error('Failed to load team dashboard:', err);
     } finally {
-      setCreatingTeam(false);
+      setLoading(false);
     }
   }
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading team dashboard..." />;
+    return (
+      <div className="container" style={{ padding: '4rem', display: 'flex', justifyContent: 'center' }}>
+        <LoadingSpinner size="lg" text="Loading Team Leader Console..." />
+      </div>
+    );
   }
 
   if (!team) {
     return (
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div className="gcl-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'var(--bg-elevated)',
-              color: 'var(--gold)',
-              margin: '0 auto 1.5rem auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem',
-            }}
-          >
-            🛡
-          </div>
-          <h2 style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>No Squad Affiliation Yet</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>
-            You are not enrolled in a squad for <strong>{edition?.name || 'GCL 2026'}</strong>. As an aspiring captain, you can register your squad now and recruit teammates.
+      <div className="container" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '3rem 2rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+          <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
+            No Assigned Team Found
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+            Your account ({profile?.email}) is not currently linked to an active competing team. Please contact your college coordinator or tournament administrator.
           </p>
-
-          {teamError && (
-            <div style={{ padding: '0.75rem', background: 'var(--status-eliminated-bg)', color: 'var(--status-eliminated)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-              {teamError}
-            </div>
-          )}
-
-          <form onSubmit={handleCreateTeam} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Squad / Team Name</label>
-              <input
-                type="text"
-                className="form-input"
-                required
-                placeholder="e.g. Apex Bytecode Syndicate"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-              />
-            </div>
-            <Button type="submit" variant="primary" isLoading={creatingTeam} style={{ marginTop: '0.5rem' }}>
-              Register Squad as Captain
+          <Link to="/">
+            <Button variant="secondary" size="md">
+              Return to League Home
             </Button>
-          </form>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-      {/* Squad Header Card */}
-      <div
-        className="gcl-card"
-        style={{
-          background: 'linear-gradient(180deg, var(--bg-card) 0%, var(--bg-surface) 100%)',
-          border: '1px solid var(--border-default)',
-          padding: '2rem',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            <div
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 800,
-                fontSize: '1.5rem',
-                color: 'var(--gold)',
-              }}
-            >
-              {team.name.slice(0, 2).toUpperCase()}
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Live Event Banner */}
+      {eventState?.state === 'LIVE' && (
+        <div
+          className="card"
+          style={{
+            padding: '1.5rem 2rem',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)',
+            border: '2px solid rgba(239, 68, 68, 0.4)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <Badge variant="live" pulse>
+                COMPETITION ROUND IS LIVE NOW
+              </Badge>
+              <strong style={{ fontSize: '1rem' }}>{eventState.current_round?.name || 'Active Challenge'}</strong>
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                <Badge variant={team.status === 'qualified' ? 'qualified' : team.status === 'eliminated' ? 'eliminated' : 'subtle'}>
-                  {team.status.toUpperCase()}
-                </Badge>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                  Season: {edition?.name || 'GCL 2026'}
-                </span>
-              </div>
-              <h1 style={{ fontSize: '2rem' }}>{team.name}</h1>
-            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+              {eventState.banner_message || 'Official answers must be submitted by the Team Leader before the countdown expires.'}
+            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {isCaptain && (
-              <Link to="/team/certificates">
-                <Button variant="primary" size="sm">
-                  Generate Member Certificates &rarr;
-                </Button>
-              </Link>
-            )}
-            <Link to="/team/auction">
-              <Button variant="secondary" size="sm">
-                Live Auction Console
-              </Button>
+          <Link to="/team/competition" style={{ textDecoration: 'none' }}>
+            <Button variant="gold" size="lg" style={{ fontWeight: 800 }}>
+              ⚡ Enter Live Arena Now &rarr;
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Metrics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+        {/* Score Card */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Official Tournament Score
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: 'var(--gold)', margin: '0.25rem 0' }}>
+            {team.score} <span style={{ fontSize: '1rem' }}>pts</span>
+          </div>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            Standing Rank: <strong>#{team.rank || '—'}</strong>
+          </div>
+        </div>
+
+        {/* Budget Card */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Remaining Credits
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: '#34d399', margin: '0.25rem 0' }}>
+            {team.remaining_budget} <span style={{ fontSize: '1rem' }}>cr</span>
+          </div>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            Total Invested: <strong>{team.total_spent} credits</strong>
+          </div>
+        </div>
+
+        {/* Squad Members Card */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Registered Squad
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', margin: '0.25rem 0' }}>
+            {members.length} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>members</span>
+          </div>
+          <div style={{ fontSize: '0.8125rem' }}>
+            <Link to="/team/members" style={{ color: 'var(--gold)', textDecoration: 'none', fontWeight: 600 }}>
+              Manage Squad Records &rarr;
             </Link>
           </div>
         </div>
 
-        {/* Squad Telemetry Bar */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1.25rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border-subtle)',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Available Auction Budget</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)', marginTop: '0.25rem' }}>
-              ${budget ? budget.current_budget.toLocaleString() : '10,000'}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Spent: ${budget ? budget.amount_spent.toLocaleString() : '0'}
-            </div>
+        {/* Inventory Card */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Acquired Auction Lots
           </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active Roster Size</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-              {members.length} Competitors
-            </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: '#818cf8', margin: '0.25rem 0' }}>
+            {roster.length} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>lots</span>
           </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Your Authorization</div>
-            <div style={{ fontSize: '1rem', fontWeight: 600, color: isCaptain ? 'var(--gold)' : 'var(--text-primary)', marginTop: '0.5rem' }}>
-              {isCaptain ? '★ TEAM CAPTAIN' : 'SQUAD MEMBER'}
-            </div>
+          <div style={{ fontSize: '0.8125rem' }}>
+            <Link to="/team/roster" style={{ color: 'var(--gold)', textDecoration: 'none', fontWeight: 600 }}>
+              View Inventory &rarr;
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Roster Table */}
-      <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.375rem' }}>Squad Roster</h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>All registered competitors authorized to represent {team.name}</p>
-          </div>
-          {isCaptain && (
+      {/* Main Grid: Squad List & Score History */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+        {/* Squad Members Section */}
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', margin: 0 }}>
+              Official Squad Roster
+            </h2>
             <Link to="/team/members">
-              <Button variant="outline" size="sm">Manage Members &rarr;</Button>
+              <Button variant="outline" size="sm">
+                Edit Squad
+              </Button>
             </Link>
+          </div>
+
+          {members.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '1rem 0' }}>
+              No squad members added yet. Click "Edit Squad" to add your team members.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {members.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                      {m.full_name} {m.is_leader && <Badge variant="gold">LEADER</Badge>}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      USN: {m.usn || 'N/A'} {m.department && `• ${m.department}`}
+                    </div>
+                  </div>
+                  <Badge variant="subtle">{m.role.toUpperCase()}</Badge>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="table-responsive">
-          <table className="gcl-table">
-            <thead>
-              <tr>
-                <th>Competitor</th>
-                <th>Role</th>
-                <th>Institution</th>
-                <th>Department</th>
-                <th>Status</th>
-                {isCaptain && <th>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>
-                      {member.profiles?.full_name || 'Competitor'}
+        {/* Score History Section */}
+        <div className="card" style={{ padding: '1.75rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', marginBottom: '1.25rem' }}>
+            Traceable Scoring History
+          </h2>
+
+          {recentScores.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '1rem 0' }}>
+              No score transactions recorded for your squad yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {recentScores.map((s) => (
+                <div
+                  key={s.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                      {s.reason || 'Competition Score Update'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {member.profiles?.email}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Source: {s.source.toUpperCase()} &bull; {new Date(s.created_at).toLocaleTimeString()}
                     </div>
-                  </td>
-                  <td>
-                    <Badge variant={member.role === 'captain' ? 'gold' : 'subtle'}>
-                      {member.role.toUpperCase()}
-                    </Badge>
-                  </td>
-                  <td>{member.profiles?.college || 'Institution Configured'}</td>
-                  <td>{member.profiles?.department || 'Engineering'}</td>
-                  <td>
-                    <Badge variant={member.status === 'active' ? 'qualified' : 'subtle'}>
-                      {member.status.toUpperCase()}
-                    </Badge>
-                  </td>
-                  {isCaptain && (
-                    <td>
-                      <Link to={`/team/certificates?memberId=${member.profile_id}`}>
-                        <Button variant="outline" size="sm">
-                          Issue Certificate
-                        </Button>
-                      </Link>
-                    </td>
-                  )}
-                </tr>
+                  </div>
+
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 800,
+                      fontSize: '1.125rem',
+                      color: Number(s.points) >= 0 ? '#34d399' : '#ef4444',
+                    }}
+                  >
+                    {Number(s.points) >= 0 ? `+${s.points}` : s.points}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

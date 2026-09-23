@@ -1,218 +1,373 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { TeamMember, Profile, Team } from '../../types/database';
+import type { TeamMember } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
-interface MemberWithProfile extends TeamMember {
-  profiles?: Profile;
-}
-
 export function TeamMembersPage() {
-  const { user, isCaptain } = useAuth();
-  const [team, setTeam] = useState<Team | null>(null);
-  const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const { team } = useAuth();
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // Invite member form state
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviting, setInviting] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  // Add/Edit Member Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [usn, setUsn] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [college, setCollege] = useState('');
+  const [department, setDepartment] = useState('');
+  const [semester, setSemester] = useState('');
+  const [isLeader, setIsLeader] = useState(false);
 
   useEffect(() => {
     loadMembers();
-  }, [user]);
+  }, [team?.id]);
 
   async function loadMembers() {
-    setLoading(true);
-    if (!user) return;
-
-    // Get user's team
-    const { data: memData } = await supabase
-      .from('team_members')
-      .select('*, teams:team_id (*)')
-      .eq('profile_id', user.id)
-      .maybeSingle();
-
-    if (memData?.team_id) {
-      const { data: teamData } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', memData.team_id)
-        .single();
-      if (teamData) setTeam(teamData as Team);
-
-      const { data: allMembers } = await supabase
-        .from('team_members')
-        .select(`
-          *,
-          profiles:profile_id (*)
-        `)
-        .eq('team_id', memData.team_id);
-
-      if (allMembers) setMembers(allMembers as MemberWithProfile[]);
+    if (!team?.id) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', team.id)
+        .order('joined_at', { ascending: true });
+
+      if (data) setMembers(data as TeamMember[]);
+    } catch (err) {
+      console.error('Failed to load team members:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function handleAddMember(e: React.FormEvent) {
+  function openAddModal() {
+    setEditingMember(null);
+    setFullName('');
+    setUsn('');
+    setEmail('');
+    setPhone('');
+    setCollege(team?.college || '');
+    setDepartment(team?.department || '');
+    setSemester('');
+    setIsLeader(false);
+    setModalOpen(true);
+  }
+
+  function openEditModal(m: TeamMember) {
+    setEditingMember(m);
+    setFullName(m.full_name);
+    setUsn(m.usn || '');
+    setEmail(m.email || '');
+    setPhone(m.phone || '');
+    setCollege(m.college || '');
+    setDepartment(m.department || '');
+    setSemester(m.semester || '');
+    setIsLeader(m.is_leader);
+    setModalOpen(true);
+  }
+
+  async function handleSaveMember(e: React.FormEvent) {
     e.preventDefault();
-    if (!team || !inviteEmail.trim()) return;
+    if (!team?.id || !fullName.trim()) return;
 
-    setInviting(true);
-    setMsg(null);
-
+    setActionLoading(true);
     try {
-      // Find profile by email
-      const { data: profileData, error: profErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', inviteEmail.trim().toLowerCase())
-        .maybeSingle();
+      if (editingMember) {
+        // Update existing member record
+        const { error } = await supabase
+          .from('team_members')
+          .update({
+            full_name: fullName.trim(),
+            usn: usn.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            college: college.trim() || null,
+            department: department.trim() || null,
+            semester: semester.trim() || null,
+            is_leader: isLeader,
+            role: isLeader ? 'team_leader' : 'member',
+          })
+          .eq('id', editingMember.id);
 
-      if (profErr || !profileData) {
-        throw new Error('No registered competitor found with that email address. Ask them to register first.');
+        if (error) throw error;
+      } else {
+        // Insert new member record (PRD: pure record, no auth user)
+        const { error } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: team.id,
+            full_name: fullName.trim(),
+            usn: usn.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            college: college.trim() || null,
+            department: department.trim() || null,
+            semester: semester.trim() || null,
+            is_leader: isLeader,
+            role: isLeader ? 'team_leader' : 'member',
+            status: 'active',
+          });
+
+        if (error) throw error;
       }
 
-      // Check if already in a team
-      const { data: existingMem } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('profile_id', profileData.id)
-        .maybeSingle();
-
-      if (existingMem) {
-        throw new Error('This competitor is already enrolled in a squad for this season.');
-      }
-
-      // Add to team
-      const { error: insertErr } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: team.id,
-          profile_id: profileData.id,
-          role: 'member',
-          status: 'active',
-        });
-
-      if (insertErr) throw insertErr;
-
-      setMsg({ type: 'success', text: `Successfully inducted ${profileData.full_name || profileData.email} into squad!` });
-      setInviteEmail('');
+      setModalOpen(false);
       await loadMembers();
     } catch (err: any) {
-      setMsg({ type: 'error', text: err.message || 'Failed to add member to team.' });
+      alert(`Error saving squad member: ${err.message}`);
     } finally {
-      setInviting(false);
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDeleteMember(memberId: string) {
+    if (!confirm('Are you sure you want to remove this member from your squad?')) return;
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+      await loadMembers();
+    } catch (err: any) {
+      alert(`Failed to delete member: ${err.message}`);
+    } finally {
+      setActionLoading(false);
     }
   }
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading squad members..." />;
-  }
-
-  if (!team) {
     return (
-      <div className="gcl-card" style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3>No Squad Configured</h3>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          Please create or join a squad from the main Team tab first.
-        </p>
+      <div className="container" style={{ padding: '4rem', display: 'flex', justifyContent: 'center' }}>
+        <LoadingSpinner size="lg" text="Loading Team Roster..." />
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-      <div>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{team.name} &bull; Squad Roster</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Manage certified competitors and team roles for {team.name}.
-        </p>
-      </div>
-
-      {isCaptain && (
-        <div className="gcl-card">
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Induct Registered Competitor</h3>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-            Add an enrolled student engineer directly to your official squad using their registered account email.
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
+              Squad Member Records
+            </h1>
+            <Badge variant="gold">{team?.name || 'My Squad'}</Badge>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+            PRD Compliance Notice: Individual members do not have login credentials. Members exist as official verified competitor records under your leadership.
           </p>
-
-          {msg && (
-            <div
-              style={{
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '1.25rem',
-                fontSize: '0.875rem',
-                background: msg.type === 'error' ? 'var(--status-eliminated-bg)' : 'var(--status-qualified-bg)',
-                border: `1px solid ${msg.type === 'error' ? 'var(--status-eliminated-border)' : 'var(--status-qualified-border)'}`,
-                color: msg.type === 'error' ? 'var(--status-eliminated)' : 'var(--status-qualified)',
-              }}
-            >
-              {msg.text}
-            </div>
-          )}
-
-          <form onSubmit={handleAddMember} style={{ display: 'flex', gap: '0.75rem', maxWidth: '520px' }}>
-            <input
-              type="email"
-              className="form-input"
-              required
-              placeholder="competitor@college.edu"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <Button type="submit" variant="primary" isLoading={inviting}>
-              Induct Member
-            </Button>
-          </form>
         </div>
-      )}
+
+        <Button variant="gold" size="md" onClick={openAddModal}>
+          + Register Squad Member
+        </Button>
+      </div>
 
       {/* Members Table */}
-      <div className="table-responsive">
-        <table className="gcl-table">
-          <thead>
-            <tr>
-              <th>Competitor Name</th>
-              <th>Official Role</th>
-              <th>College</th>
-              <th>Department</th>
-              <th>Status</th>
-              <th>Induction Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id}>
-                <td>
-                  <div style={{ fontWeight: 600 }}>{member.profiles?.full_name || 'Anonymous Competitor'}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.profiles?.email}</div>
-                </td>
-                <td>
-                  <Badge variant={member.role === 'captain' ? 'gold' : 'subtle'}>
-                    {member.role.toUpperCase()}
-                  </Badge>
-                </td>
-                <td>{member.profiles?.college || 'Institution Configured'}</td>
-                <td>{member.profiles?.department || 'Engineering'}</td>
-                <td>
-                  <Badge variant={member.status === 'active' ? 'qualified' : 'subtle'}>
-                    {member.status.toUpperCase()}
-                  </Badge>
-                </td>
-                <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', fontFamily: 'var(--font-mono)' }}>
-                  {new Date(member.joined_at).toLocaleDateString()}
-                </td>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-display)', margin: 0 }}>
+            Registered Competitors ({members.length})
+          </h2>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Official Roster for {team?.name}
+          </span>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)' }}>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Full Name</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>USN / ID</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Department & Sem</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Contact</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Role</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {members.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No members registered yet. Click "+ Register Squad Member" above to add your team members.
+                  </td>
+                </tr>
+              ) : (
+                members.map((m) => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>{m.full_name}</span>
+                        {m.is_leader && <Badge variant="gold">LEADER</Badge>}
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
+                      {m.usn || '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                      {m.department || '—'} {m.semester && `(Sem ${m.semester})`}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                      {m.email || m.phone || '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                      <Badge variant={m.is_leader ? 'live' : 'subtle'}>
+                        {m.role.toUpperCase()}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                        <Button variant="ghost" size="sm" onClick={() => openEditModal(m)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          style={{ color: '#ef4444' }}
+                          onClick={() => handleDeleteMember(m.id)}
+                          disabled={actionLoading}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Add / Edit Member Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingMember ? 'Edit Squad Member Record' : 'Register New Squad Member'}
+      >
+        <form onSubmit={handleSaveMember} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="form-group">
+            <label className="form-label">Full Name *</label>
+            <input
+              type="text"
+              className="form-input"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. Alex Rivera"
+              required
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">USN / University ID</label>
+              <input
+                type="text"
+                className="form-input"
+                value={usn}
+                onChange={(e) => setUsn(e.target.value)}
+                placeholder="e.g. 1MS22CS045"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Semester</label>
+              <input
+                type="text"
+                className="form-input"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                placeholder="e.g. 6"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                className="form-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="member@university.edu"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Phone Number</label>
+              <input
+                type="tel"
+                className="form-input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Institution / College</label>
+              <input
+                type="text"
+                className="form-input"
+                value={college}
+                onChange={(e) => setCollege(e.target.value)}
+                placeholder="University Institute of Technology"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Department / Major</label>
+              <input
+                type="text"
+                className="form-input"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="Computer Science & Engineering"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <input
+              type="checkbox"
+              id="isLeaderCheckbox"
+              checked={isLeader}
+              onChange={(e) => setIsLeader(e.target.checked)}
+              style={{ width: '18px', height: '18px', accentColor: 'var(--gold)' }}
+            />
+            <label htmlFor="isLeaderCheckbox" style={{ fontSize: '0.875rem', cursor: 'pointer' }}>
+              Designate as Team Co-Leader / Lead Competitor
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+            <Button variant="ghost" type="button" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="gold" type="submit" isLoading={actionLoading}>
+              Save Member Record
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -327,8 +327,8 @@ export function CaptainCertificatesPage() {
             >
               <option value="">-- Choose Roster Member --</option>
               {members.map((m) => (
-                <option key={m.profile_id} value={m.profile_id}>
-                  {m.profiles?.full_name || m.profiles?.email} ({m.role.toUpperCase()})
+                <option key={m.id} value={m.profile_id || m.id}>
+                  {m.full_name || m.profiles?.full_name || m.profiles?.email || 'Member'} ({m.role.toUpperCase()})
                 </option>
               ))}
             </select>

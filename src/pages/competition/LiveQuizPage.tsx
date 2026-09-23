@@ -1,94 +1,148 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Question, Round } from '../../types/database';
+import type { EventState, Question, Round, Submission } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 export function LiveQuizPage() {
-  const { roundId } = useParams<{ roundId: string }>();
-  const { user } = useAuth();
-
-  const [round, setRound] = useState<Round | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(1800); // 30 mins default
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { team } = useAuth();
+  const [eventState, setEventState] = useState<EventState | null>(null);
+  const [activeRound, setActiveRound] = useState<Round | null>(null);
+  const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
+  const [existingSubmission, setExistingSubmission] = useState<Submission | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Local synchronized timer
+  const [localSeconds, setLocalSeconds] = useState<number>(60);
+  const timerRef = useRef<any>(null);
+
   useEffect(() => {
-    async function loadQuiz() {
-      if (!roundId) return;
+    loadLiveArenaState();
 
-      const { data: rData } = await supabase
-        .from('rounds')
-        .select('*')
-        .eq('id', roundId)
-        .single();
+    // Subscribe to event_state and submissions
+    const channel = supabase
+      .channel('team-live-arena')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, () => {
+        loadLiveArenaState();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => {
+        if (team?.id) loadExistingSubmission();
+      })
+      .subscribe();
 
-      if (rData) {
-        setRound(rData as Round);
-        setSecondsRemaining((rData.duration_minutes || 30) * 60);
+    return () => {
+      supabase.removeChannel(channel);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [team?.id]);
 
-        const { data: qData } = await supabase
-          .from('questions')
-          .select('id, round_id, question_text, options, points, difficulty, sort_order')
-          .eq('round_id', rData.id)
-          .order('sort_order', { ascending: true });
+  async function loadLiveArenaState() {
+    try {
+      // 1. Fetch current event state
+      const { data: stateData } = await supabase
+        .from('event_state')
+        .select('*, current_round:rounds(*), current_question:questions(*)')
+        .limit(1)
+        .maybeSingle();
 
-        if (qData) setQuestions(qData as Question[]);
+      if (stateData) {
+        setEventState(stateData as EventState);
+        setLocalSeconds(stateData.timer_remaining_seconds || 60);
+
+        if (stateData.current_round) {
+          setActiveRound(stateData.current_round as Round);
+        }
+
+        if (stateData.current_question) {
+          setActiveQuestion(stateData.current_question as Question);
+        } else if (stateData.current_round_id) {
+          // If no specific question is pinned, load first active question
+          const { data: qData } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('round_id', stateData.current_round_id)
+            .order('sort_order', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (qData) setActiveQuestion(qData as Question);
+        }
       }
+
+      await loadExistingSubmission();
+    } catch (err) {
+      console.error('Error loading arena state:', err);
+    } finally {
       setLoading(false);
     }
-    loadQuiz();
-  }, [roundId]);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (isSubmitted || secondsRemaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmitQuiz();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isSubmitted, secondsRemaining]);
-
-  function handleSelectOption(qId: string, optIndex: number) {
-    if (isSubmitted) return;
-    setSelectedAnswers((prev) => ({
-      ...prev,
-      [qId]: optIndex,
-    }));
   }
 
-  async function handleSubmitQuiz() {
-    if (isSubmitted || !user || !round) return;
-    setSubmitting(true);
+  async function loadExistingSubmission() {
+    if (!team?.id || !activeQuestion?.id) return;
+    const { data: subData } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('team_id', team.id)
+      .eq('question_id', activeQuestion.id)
+      .maybeSingle();
 
+    if (subData) {
+      setExistingSubmission(subData as Submission);
+      setSelectedAnswer(subData.answer);
+    } else {
+      setExistingSubmission(null);
+    }
+  }
+
+  // Timer countdown
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    if (eventState?.timer_state === 'running' && localSeconds > 0) {
+      timerRef.current = setInterval(() => {
+        setLocalSeconds((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [eventState?.timer_state, localSeconds]);
+
+  async function handleSubmitAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!team || !activeQuestion || !activeRound || !selectedAnswer.trim()) return;
+    if (existingSubmission || localSeconds <= 0) return;
+
+    setSubmitting(true);
     try {
-      // Create quiz attempt
-      await supabase.from('quiz_attempts').insert({
-        round_id: round.id,
-        profile_id: user.id,
-        submitted_at: new Date().toISOString(),
-        status: 'submitted',
-      });
-      setIsSubmitted(true);
-    } catch (err) {
-      console.error('Error submitting quiz attempt:', err);
-      setIsSubmitted(true);
+      const { data, error } = await supabase
+        .from('submissions')
+        .insert({
+          edition_id: team.edition_id,
+          round_id: activeRound.id,
+          question_id: activeQuestion.id,
+          team_id: team.id,
+          answer: selectedAnswer.trim(),
+          time_taken_seconds: (eventState?.timer_duration_seconds || 60) - localSeconds,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setExistingSubmission(data as Submission);
+    } catch (err: any) {
+      alert(`Submission failed: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -96,171 +150,216 @@ export function LiveQuizPage() {
 
   const formatTimer = (secs: number) => {
     const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
-    return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
+    const remaining = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remaining.toString().padStart(2, '0')}`;
   };
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading quiz session and questions..." />;
-  }
-
-  if (!round || questions.length === 0) {
     return (
-      <div className="gcl-card" style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
-        <h3>Evaluation Round Locked</h3>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
-          Questions for this round have not been released by the tournament adjudicators yet.
-        </p>
-        <Link to="/rounds">
-          <Button variant="outline">Back to Rounds</Button>
-        </Link>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+        <LoadingSpinner size="lg" text="Connecting to Live Arena Stream..." />
       </div>
     );
   }
 
-  const currentQuestion = questions[currentIndex];
-
-  if (isSubmitted) {
+  // If tournament is not currently live or paused
+  if (!eventState || eventState.state === 'NOT_STARTED' || eventState.state === 'INTERMISSION' || eventState.state === 'COMPLETED') {
     return (
-      <div className="gcl-card" style={{ padding: '4rem 2rem', textAlign: 'center', maxWidth: '640px', margin: '0 auto' }}>
-        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--status-qualified-bg)', color: 'var(--status-qualified)', margin: '0 auto 1.5rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800 }}>
-          ✓
+      <div className="container" style={{ maxWidth: '680px', margin: '2rem auto', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '3.5rem 2rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📡</div>
+          <Badge variant="subtle" style={{ marginBottom: '1rem' }}>
+            STATUS: {eventState?.state || 'NOT STARTED'}
+          </Badge>
+          <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', marginBottom: '0.75rem' }}>
+            Live Arena On Standby
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            {eventState?.banner_message ||
+              'The tournament director will activate the live round shortly. Keep this terminal open; questions and server timers will stream in real-time.'}
+          </p>
+
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-elevated)',
+              fontSize: '0.8125rem',
+              color: 'var(--text-muted)',
+            }}
+          >
+            Competing as: <strong style={{ color: 'var(--text-primary)' }}>{team?.name || 'Registered Squad'}</strong>
+          </div>
         </div>
-        <h2 style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>Quiz Submission Recorded</h2>
-        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
-          Your answers have been committed to the tournament database. Under GCL competition integrity rules, official scores remain confidential until released by the Adjudication Committee.
-        </p>
-        <Link to="/dashboard">
-          <Button variant="primary">Return to Squad Dashboard</Button>
-        </Link>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Top Countdown Bar */}
+    <div className="container" style={{ maxWidth: '860px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Live Header & Timer Bar */}
       <div
+        className="card"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'var(--bg-surface)',
-          padding: '1rem 1.5rem',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-subtle)',
           flexWrap: 'wrap',
-          gap: '1rem',
+          gap: '1.5rem',
+          padding: '1.5rem 2rem',
+          border: '1px solid var(--border-gold)',
+          background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
         }}
       >
         <div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>ROUND EVALUATION</div>
-          <h2 style={{ fontSize: '1.25rem' }}>{round.name}</h2>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>TIME REMAINING</div>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1.75rem',
-                fontWeight: 800,
-                color: secondsRemaining < 300 ? 'var(--status-eliminated)' : 'var(--gold)',
-              }}
-            >
-              {formatTimer(secondsRemaining)}
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem' }}>
+            <Badge variant="live" pulse>
+              ROUND {activeRound?.round_number || 1} LIVE
+            </Badge>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              {activeRound?.name || 'Technical Challenge'}
+            </span>
           </div>
-          <Button variant="danger" size="sm" onClick={handleSubmitQuiz} isLoading={submitting}>
-            Submit Quiz
-          </Button>
-        </div>
-      </div>
-
-      {/* Question Card */}
-      <div className="gcl-card" style={{ padding: '2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '0.875rem', fontWeight: 700 }}>
-            QUESTION {currentIndex + 1} OF {questions.length}
-          </span>
-          <Badge variant="subtle">POINTS: {currentQuestion.points}</Badge>
+          <h1 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0 }}>
+            {activeQuestion ? `Question #${activeQuestion.question_number || 1}` : 'Active Challenge'}
+          </h1>
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', marginBottom: '2rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>
-          {currentQuestion.question_text}
-        </h3>
-
-        {/* Options */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2.5rem' }}>
-          {currentQuestion.options.map((option, idx) => {
-            const isSelected = selectedAnswers[currentQuestion.id] === idx;
-            return (
-              <div
-                key={idx}
-                onClick={() => handleSelectOption(currentQuestion.id, idx)}
-                style={{
-                  padding: '1rem 1.25rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: isSelected ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-surface)',
-                  border: `1px solid ${isSelected ? 'var(--gold)' : 'var(--border-default)'}`,
-                  color: isSelected ? 'var(--gold)' : 'var(--text-primary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  fontSize: '0.9375rem',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    border: `2px solid ${isSelected ? 'var(--gold)' : 'var(--text-muted)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {String.fromCharCode(65 + idx)}
-                </span>
-                <span>{typeof option === 'string' ? option : (option as any)?.text || (option as any)?.key || ''}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Question Stepper Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem' }}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentIndex === 0}
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-          >
-            &larr; Previous Question
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              if (currentIndex < questions.length - 1) {
-                setCurrentIndex((prev) => prev + 1);
-              } else {
-                handleSubmitQuiz();
-              }
+        {/* Server Synchronized Countdown Timer */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Time Remaining
+          </div>
+          <div
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 900,
+              fontFamily: 'var(--font-mono)',
+              color: localSeconds <= 10 ? '#ef4444' : 'var(--gold)',
+              lineHeight: 1,
             }}
           >
-            {currentIndex === questions.length - 1 ? 'Finish & Submit' : 'Next Question \u2192'}
-          </Button>
+            {formatTimer(localSeconds)}
+          </div>
         </div>
       </div>
+
+      {/* Broadcast Message if any */}
+      {eventState.banner_message && (
+        <div
+          style={{
+            padding: '0.875rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            color: 'var(--gold)',
+            fontSize: '0.875rem',
+            textAlign: 'center',
+            fontWeight: 600,
+          }}
+        >
+          📢 {eventState.banner_message}
+        </div>
+      )}
+
+      {/* Question & Answer Submission Box */}
+      {activeQuestion ? (
+        <div className="card" style={{ padding: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <Badge variant="subtle">{activeQuestion.points} Points Awarded</Badge>
+            {existingSubmission && (
+              <Badge variant="live">
+                ✓ OFFICIAL ANSWER SUBMITTED
+              </Badge>
+            )}
+          </div>
+
+          <h2 style={{ fontSize: '1.25rem', lineHeight: 1.5, fontWeight: 600, marginBottom: '2rem' }}>
+            {activeQuestion.question_text}
+          </h2>
+
+          <form onSubmit={handleSubmitAnswer} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Options */}
+            {activeQuestion.options && activeQuestion.options.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {activeQuestion.options.map((opt, idx) => {
+                  const optText = typeof opt === 'string' ? opt : opt.text;
+                  const isChecked = selectedAnswer === optText;
+                  return (
+                    <label
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '1rem 1.25rem',
+                        borderRadius: 'var(--radius-md)',
+                        background: isChecked ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                        border: isChecked ? '2px solid var(--border-gold)' : '1px solid var(--border-subtle)',
+                        cursor: existingSubmission || localSeconds <= 0 ? 'default' : 'pointer',
+                        transition: 'border-color 0.15s ease',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="arena-option"
+                        value={optText}
+                        checked={isChecked}
+                        onChange={(e) => setSelectedAnswer(e.target.value)}
+                        disabled={!!existingSubmission || localSeconds <= 0}
+                        style={{ accentColor: 'var(--gold)', width: '18px', height: '18px' }}
+                      />
+                      <span style={{ fontSize: '0.9375rem', fontWeight: isChecked ? 600 : 400 }}>
+                        {optText}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label">Team Solution / Answer</label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  value={selectedAnswer}
+                  onChange={(e) => setSelectedAnswer(e.target.value)}
+                  disabled={!!existingSubmission || localSeconds <= 0}
+                  placeholder="Type your official team response here..."
+                  required
+                />
+              </div>
+            )}
+
+            {/* Submission Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                {existingSubmission
+                  ? `Submitted at: ${new Date(existingSubmission.submitted_at).toLocaleTimeString()}`
+                  : localSeconds <= 0
+                  ? 'Time has expired for this question.'
+                  : 'Submit on behalf of your squad.'}
+              </div>
+
+              {!existingSubmission && (
+                <Button
+                  type="submit"
+                  variant="gold"
+                  size="lg"
+                  isLoading={submitting}
+                  disabled={!selectedAnswer || localSeconds <= 0}
+                >
+                  🚀 Submit Official Team Answer
+                </Button>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)' }}>Waiting for the active question broadcast from Admin...</p>
+        </div>
+      )}
     </div>
   );
 }

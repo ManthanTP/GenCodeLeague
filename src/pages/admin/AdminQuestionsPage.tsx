@@ -139,7 +139,7 @@ export function AdminQuestionsPage() {
                 <td style={{ fontWeight: 500, maxWidth: '440px' }}>
                   <div>{q.question_text}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    {q.options.join(' | ')}
+                    {q.options.map((opt) => (typeof opt === 'string' ? opt : opt.text)).join(' | ')}
                   </div>
                 </td>
                 <td>
@@ -149,7 +149,11 @@ export function AdminQuestionsPage() {
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)' }}>{q.points}</td>
                 <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--status-qualified)', fontWeight: 700 }}>
-                  Opt {String.fromCharCode(65 + Number(q.correct_answer ?? 0))}: {q.options[Number(q.correct_answer ?? 0)]}
+                  {(() => {
+                    const opt = q.options[Number(q.correct_answer ?? 0)];
+                    const optStr = typeof opt === 'string' ? opt : opt?.text || '—';
+                    return `Opt ${String.fromCharCode(65 + Number(q.correct_answer ?? 0))}: ${optStr}`;
+                  })()}
                 </td>
               </tr>
             ))}
