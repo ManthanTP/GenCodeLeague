@@ -131,7 +131,7 @@ export function SchedulePage() {
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Champion crowning, prize distribution, and digital certificate activation.</p>
               </div>
             </div>
-            <Badge variant="gold">GRAND CEREMONY</Badge>
+            <Badge variant="primary">GRAND CEREMONY</Badge>
           </div>
         </div>
       )}

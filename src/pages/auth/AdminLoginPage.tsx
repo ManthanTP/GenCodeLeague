@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { supabase } from '../../lib/supabase';
 
 export function AdminLoginPage() {
@@ -15,7 +14,7 @@ export function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(
     errorParam === 'unauthorized'
-      ? 'Access denied. The specified account does not possess administrator privileges.'
+      ? 'Access denied. This account does not have administrator privileges.'
       : null
   );
 
@@ -35,7 +34,6 @@ export function AdminLoginPage() {
         return;
       }
 
-      // Check current user session and admin status
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setErrorMessage('Session initialization failed.');
@@ -52,16 +50,15 @@ export function AdminLoginPage() {
         .maybeSingle();
 
       if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
-        // Revoke unauthorized session
         await signOut();
-        setErrorMessage('Unauthorized: This portal is strictly restricted to GCL administrators.');
+        setErrorMessage('Unauthorized: This portal is restricted to GCL administrators.');
         setIsLoading(false);
         return;
       }
 
       navigate(redirectPath, { replace: true });
     } catch (err: any) {
-      setErrorMessage(err.message || 'An unexpected error occurred during admin authentication.');
+      setErrorMessage(err.message || 'An unexpected error occurred.');
       setIsLoading(false);
     }
   }
@@ -69,116 +66,118 @@ export function AdminLoginPage() {
   return (
     <div
       style={{
-        minHeight: '80vh',
+        minHeight: 'calc(100vh - var(--navbar-height))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem 1.5rem',
+        padding: '2rem 1.5rem',
       }}
     >
       <div
-        className="card"
         style={{
           width: '100%',
-          maxWidth: '460px',
-          padding: '2.5rem',
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-gold)',
-          boxShadow: 'var(--shadow-gold)',
+          maxWidth: '400px',
+          padding: '2rem',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-elevated)',
+          textAlign: 'center',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>
-            <Badge variant="gold">ADMINISTRATIVE ACCESS</Badge>
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-            GCL Master Admin
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>
-            Authorized command console for tournament directors, auctioneers, and competition stewards.
-          </p>
+        {/* Lock Icon */}
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '2px solid rgba(239, 68, 68, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.25rem',
+            fontSize: '1.5rem',
+          }}
+        >
+          🔒
         </div>
+
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            marginBottom: '0.5rem',
+          }}
+        >
+          Admin Access Required
+        </h2>
+
+        <p
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: '0.8125rem',
+            marginBottom: '1.5rem',
+            lineHeight: 1.5,
+          }}
+        >
+          Enter the password to access the auction control panel.
+        </p>
 
         {errorMessage && (
           <div
             style={{
-              padding: '0.875rem 1rem',
+              padding: '0.625rem 0.875rem',
               borderRadius: 'var(--radius-md)',
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               color: '#f87171',
-              fontSize: '0.875rem',
-              marginBottom: '1.5rem',
+              fontSize: '0.8125rem',
+              marginBottom: '1.25rem',
               lineHeight: 1.4,
+              textAlign: 'left',
             }}
           >
             {errorMessage}
           </div>
         )}
 
-        <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="admin-email">
-              Administrator Email
-            </label>
-            <input
-              id="admin-email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@gcl.org"
-              required
-              autoComplete="email"
-            />
-          </div>
+        <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <input
+            id="admin-email"
+            type="email"
+            className="form-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Admin Email"
+            required
+            autoComplete="email"
+            style={{ textAlign: 'center' }}
+          />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="admin-password">
-              Admin Password
-            </label>
-            <input
-              id="admin-password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          <input
+            id="admin-password"
+            type="password"
+            className="form-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter Admin Password"
+            required
+            autoComplete="current-password"
+            style={{ textAlign: 'center' }}
+          />
 
-          <Button type="submit" variant="gold" size="lg" isLoading={isLoading} style={{ width: '100%', marginTop: '0.5rem' }}>
-            {isLoading ? 'Verifying Admin Authority...' : 'Authorize & Open Console'}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isLoading}
+            fullWidth
+          >
+            {isLoading ? 'Verifying...' : '🔒 Log In'}
           </Button>
         </form>
-
-        <div
-          style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            textAlign: 'center',
-            fontSize: '0.8125rem',
-            color: 'var(--text-muted)',
-          }}
-        >
-          <div>
-            Team Leader?{' '}
-            <Link to="/team/login" style={{ color: 'var(--gold)', fontWeight: 600 }}>
-              Team Portal Sign In &rarr;
-            </Link>
-          </div>
-          <div>
-            <Link to="/" style={{ color: 'var(--text-secondary)' }}>
-              &larr; Return to Public Tournament Home
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

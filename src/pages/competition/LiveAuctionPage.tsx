@@ -194,7 +194,7 @@ export function LiveAuctionPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Attributes:</span>
               {liveItem.skills.map((skill, idx) => (
-                <Badge key={idx} variant="gold">{skill}</Badge>
+                <Badge key={idx} variant="primary">{skill}</Badge>
               ))}
             </div>
           )}
@@ -266,7 +266,7 @@ export function LiveAuctionPage() {
                   <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
                     {roster.item?.name || 'Technical Lot'}
                   </h3>
-                  <Badge variant="gold">{roster.purchase_price} cr</Badge>
+                  <Badge variant="primary">{roster.purchase_price} cr</Badge>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                   Category: {roster.item?.category || 'Specialist'}

@@ -165,14 +165,14 @@ export function TeamMembersPage() {
             <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
               Squad Member Records
             </h1>
-            <Badge variant="gold">{team?.name || 'My Squad'}</Badge>
+            <Badge variant="primary">{team?.name || 'My Squad'}</Badge>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
             PRD Compliance Notice: Individual members do not have login credentials. Members exist as official verified competitor records under your leadership.
           </p>
         </div>
 
-        <Button variant="gold" size="md" onClick={openAddModal}>
+        <Button variant="primary" size="md" onClick={openAddModal}>
           + Register Squad Member
         </Button>
       </div>
@@ -213,7 +213,7 @@ export function TeamMembersPage() {
                     <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span>{m.full_name}</span>
-                        {m.is_leader && <Badge variant="gold">LEADER</Badge>}
+                        {m.is_leader && <Badge variant="primary">LEADER</Badge>}
                       </div>
                     </td>
                     <td style={{ padding: '0.875rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
@@ -362,7 +362,7 @@ export function TeamMembersPage() {
             <Button variant="ghost" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="gold" type="submit" isLoading={actionLoading}>
+            <Button variant="primary" type="submit" isLoading={actionLoading}>
               Save Member Record
             </Button>
           </div>

@@ -77,7 +77,7 @@ export function VerifyCertificatePage() {
     <div className="container" style={{ padding: '4rem 1.5rem', maxWidth: '780px' }}>
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>
-          <Badge variant="gold">CREDENTIAL INTEGRITY PROTOCOL</Badge>
+          <Badge variant="primary">CREDENTIAL INTEGRITY PROTOCOL</Badge>
         </div>
         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>Certificate Verification</h1>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '0 auto', fontSize: '1rem', lineHeight: 1.6 }}>

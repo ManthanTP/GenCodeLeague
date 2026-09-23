@@ -84,7 +84,7 @@ export function LoginPage() {
       <div style={{ maxWidth: '860px', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>
-            <Badge variant="gold">GCL ACCESS PORTAL</Badge>
+            <Badge variant="primary">GCL ACCESS PORTAL</Badge>
           </div>
           <h1 style={{ fontSize: '2.25rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
             Choose Your Access Portal
@@ -149,7 +149,7 @@ export function LoginPage() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <span style={{ fontSize: '2rem' }}>⚡</span>
-                <Badge variant="gold">OPERATIONS</Badge>
+                <Badge variant="primary">OPERATIONS</Badge>
               </div>
               <h2 style={{ fontSize: '1.375rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
                 Master Admin Console
@@ -159,7 +159,7 @@ export function LoginPage() {
               </p>
             </div>
             <Link to="/admin/login" style={{ textDecoration: 'none' }}>
-              <Button variant="gold" size="md" style={{ width: '100%' }}>
+              <Button variant="primary" size="md" style={{ width: '100%' }}>
                 Admin Console Sign In &rarr;
               </Button>
             </Link>

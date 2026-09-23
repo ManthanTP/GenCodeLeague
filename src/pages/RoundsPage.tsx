@@ -80,7 +80,7 @@ export function RoundsPage() {
           <div className="gcl-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 700 }}>STAGE 01</span>
-              <Badge variant="gold">ELIMINATION</Badge>
+              <Badge variant="primary">ELIMINATION</Badge>
             </div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Algorithmic Quiz</h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>

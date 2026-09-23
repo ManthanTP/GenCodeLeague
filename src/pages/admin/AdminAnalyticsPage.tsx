@@ -59,7 +59,7 @@ export function AdminAnalyticsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-          <Badge variant="gold">CONFIDENTIAL TELEMETRY</Badge>
+          <Badge variant="primary">CONFIDENTIAL TELEMETRY</Badge>
           <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Adjudication Eyes Only</span>
         </div>
         <h1 style={{ fontSize: '2rem' }}>League Analytics Dashboard</h1>

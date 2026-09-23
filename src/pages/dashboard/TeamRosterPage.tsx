@@ -48,7 +48,7 @@ export function TeamRosterPage() {
           <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
             Acquired Inventory & Roster
           </h1>
-          <Badge variant="gold">{roster.length} Lots Acquired</Badge>
+          <Badge variant="primary">{roster.length} Lots Acquired</Badge>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
           Assets, engineers, and technical blueprints secured by {team?.name || 'your team'} during official auctions.

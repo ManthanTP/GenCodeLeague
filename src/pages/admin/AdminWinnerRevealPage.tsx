@@ -178,7 +178,7 @@ export function AdminWinnerRevealPage() {
             <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
               Podium & Winner Reveal Control
             </h1>
-            <Badge variant="gold">CEREMONY MODE</Badge>
+            <Badge variant="live">CEREMONY MODE</Badge>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
             PRD Secrecy Protocol: Results remain completely concealed from public screens until individually unlocked by Admin.
@@ -229,7 +229,7 @@ export function AdminWinnerRevealPage() {
 
           <div style={{ marginTop: '1.25rem' }}>
             <Button
-              variant={p3Reveal?.is_revealed ? 'secondary' : 'gold'}
+              variant={p3Reveal?.is_revealed ? 'secondary' : 'primary'}
               size="md"
               onClick={() => handleToggleReveal(3, !!p3Reveal?.is_revealed)}
               isLoading={actionLoading}
@@ -277,7 +277,7 @@ export function AdminWinnerRevealPage() {
 
           <div style={{ marginTop: '1.25rem' }}>
             <Button
-              variant={p2Reveal?.is_revealed ? 'secondary' : 'gold'}
+              variant={p2Reveal?.is_revealed ? 'secondary' : 'primary'}
               size="md"
               onClick={() => handleToggleReveal(2, !!p2Reveal?.is_revealed)}
               isLoading={actionLoading}
@@ -294,15 +294,15 @@ export function AdminWinnerRevealPage() {
           style={{
             padding: '1.75rem',
             textAlign: 'center',
-            border: '2px solid var(--border-gold)',
+            border: '2px solid var(--accent-yellow)',
             background: p1Reveal?.is_revealed
-              ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 17, 24, 0.95) 100%)'
+              ? 'linear-gradient(180deg, rgba(234, 179, 8, 0.15) 0%, rgba(15, 17, 24, 0.95) 100%)'
               : 'var(--bg-surface)',
-            boxShadow: 'var(--shadow-gold)',
+            boxShadow: 'var(--shadow-neon)',
           }}
         >
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👑</div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--gold)', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-yellow)', textTransform: 'uppercase' }}>
             GCL CHAMPION
           </div>
           <h2 style={{ fontSize: '1.625rem', fontFamily: 'var(--font-display)', margin: '0.5rem 0' }}>
@@ -328,7 +328,7 @@ export function AdminWinnerRevealPage() {
 
           <div style={{ marginTop: '1.25rem' }}>
             <Button
-              variant={p1Reveal?.is_revealed ? 'secondary' : 'gold'}
+              variant={p1Reveal?.is_revealed ? 'secondary' : 'primary'}
               size="lg"
               onClick={() => handleToggleReveal(1, !!p1Reveal?.is_revealed)}
               isLoading={actionLoading}

@@ -374,7 +374,7 @@ export function AdminAuctionControlPage() {
           </p>
         </div>
 
-        <Button variant="gold" size="md" onClick={() => setIsModalOpen(true)}>
+        <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
           + Create Technical Lot
         </Button>
       </div>
@@ -385,9 +385,9 @@ export function AdminAuctionControlPage() {
           className="card"
           style={{
             padding: '2rem',
-            border: '2px solid var(--border-gold)',
-            background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
-            boxShadow: 'var(--shadow-gold)',
+            border: '2px solid var(--accent-cyan)',
+            background: 'linear-gradient(180deg, rgba(34, 211, 238, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
+            boxShadow: '0 0 20px rgba(34, 211, 238, 0.2)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -403,7 +403,7 @@ export function AdminAuctionControlPage() {
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <Button
-                variant="gold"
+                variant="primary"
                 size="md"
                 onClick={() => {
                   setFinalPrice(liveItem.current_bid || liveItem.base_price);
@@ -446,7 +446,7 @@ export function AdminAuctionControlPage() {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                 Current Highest Bid
               </div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>
+              <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>
                 {liveItem.current_bid || liveItem.base_price} <span style={{ fontSize: '1rem' }}>cr</span>
               </div>
               <div style={{ fontSize: '0.875rem', color: '#34d399', fontWeight: 600, marginTop: '0.25rem' }}>
@@ -562,7 +562,7 @@ export function AdminAuctionControlPage() {
                     <td style={{ padding: '0.875rem 1rem' }}>
                       <Badge variant="subtle">{item.category}</Badge>
                     </td>
-                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-cyan)' }}>
                       {item.base_price} cr
                     </td>
                     <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
@@ -571,7 +571,7 @@ export function AdminAuctionControlPage() {
                           item.status === 'live'
                             ? 'live'
                             : item.status === 'sold'
-                            ? 'gold'
+                            ? 'qualified'
                             : item.status === 'unsold'
                             ? 'danger'
                             : 'subtle'
@@ -660,7 +660,7 @@ export function AdminAuctionControlPage() {
             <Button variant="ghost" type="button" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="gold" type="submit" isLoading={actionLoading}>
+            <Button variant="primary" type="submit" isLoading={actionLoading}>
               Save to Auction Catalog
             </Button>
           </div>
@@ -704,7 +704,7 @@ export function AdminAuctionControlPage() {
             <Button variant="ghost" onClick={() => setSoldModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="gold" onClick={handleConfirmSold} isLoading={actionLoading}>
+            <Button variant="primary" onClick={handleConfirmSold} isLoading={actionLoading}>
               🔨 Confirm & Deduct Budget
             </Button>
           </div>

@@ -6,7 +6,7 @@ export function ContactPage() {
     <div className="container" style={{ padding: '3.5rem 1.5rem', maxWidth: '720px' }}>
       <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.5rem' }}>
-          <Badge variant="gold">LIAISON & SUPPORT</Badge>
+          <Badge variant="primary">LIAISON & SUPPORT</Badge>
         </div>
         <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>Contact Tournament Desk</h1>
         <p style={{ color: 'var(--text-secondary)' }}>

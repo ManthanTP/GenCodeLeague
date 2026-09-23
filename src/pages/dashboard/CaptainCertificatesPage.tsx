@@ -203,7 +203,7 @@ export function CaptainCertificatesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <Badge variant="gold">CAPTAIN CERTIFICATE ENGINE</Badge>
+            <Badge variant="primary">CAPTAIN CERTIFICATE ENGINE</Badge>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Squad: {team.name}</span>
           </div>
           <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>Team Certificates</h1>

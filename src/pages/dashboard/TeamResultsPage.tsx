@@ -57,7 +57,7 @@ export function TeamResultsPage() {
           <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
             Team Performance & Scoring Ledger
           </h1>
-          <Badge variant="gold">Total: {team?.score ?? 0} Points</Badge>
+          <Badge variant="primary">Total: {team?.score ?? 0} Points</Badge>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
           Detailed record of every round submission, verified challenge, bonus, and penalty transaction.

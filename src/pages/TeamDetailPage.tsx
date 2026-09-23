@@ -92,7 +92,7 @@ export function TeamDetailPage() {
             {team.status.toUpperCase()}
           </Badge>
           {team.rank && (
-            <Badge variant="gold">
+            <Badge variant="primary">
               RANK #{team.rank}
             </Badge>
           )}

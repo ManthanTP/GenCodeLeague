@@ -34,7 +34,7 @@ export function WinnersPage() {
     <div className="container" style={{ padding: '3.5rem 1.5rem' }}>
       <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.5rem' }}>
-          <Badge variant="gold">CHAMPIONS ARCHIVE</Badge>
+          <Badge variant="primary">CHAMPIONS ARCHIVE</Badge>
         </div>
         <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>Hall of Fame</h1>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '600px' }}>

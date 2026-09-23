@@ -41,7 +41,7 @@ export function HallOfFamePage() {
       {/* Hero */}
       <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>
-          <Badge variant="gold">PERMANENT LEAGUE ARCHIVE</Badge>
+          <Badge variant="primary">PERMANENT LEAGUE ARCHIVE</Badge>
         </div>
         <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', marginBottom: '0.75rem' }}>
           GCL Hall of Fame

@@ -4,6 +4,7 @@ import { PublicLayout } from './layouts/PublicLayout';
 import { TeamLeaderLayout } from './layouts/TeamLeaderLayout';
 import { AdminLayout } from './layouts/AdminLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { ADMIN_SECRET_PATH } from './config/admin';
 
 // Public Pages
 import { HomePage } from './pages/HomePage';
@@ -26,7 +27,6 @@ import { VerifyCertificatePage } from './pages/VerifyCertificatePage';
 import { HallOfFamePage } from './pages/HallOfFamePage';
 import { LiveScreenPage } from './pages/LiveScreenPage';
 import { PrivacyPage, TermsPage } from './pages/LegalPages';
-import { LoginPage } from './pages/LoginPage';
 import { TeamLoginPage } from './pages/auth/TeamLoginPage';
 import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -68,7 +68,9 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Tournament Platform Routes */}
+          {/* ══════════════════════════════════════════
+              PUBLIC ROUTES
+              ══════════════════════════════════════════ */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
@@ -97,15 +99,21 @@ export function App() {
             <Route path="/verify/:certificateId" element={<VerifyCertificatePage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
-            <Route path="/login" element={<LoginPage />} />
+
+            {/* Team Leader login — accessible publicly */}
+            <Route path="/login" element={<TeamLoginPage />} />
             <Route path="/team/login" element={<TeamLoginPage />} />
-            <Route path="/admin/login" element={<AdminLoginPage />} />
+
+            {/* Admin login — hidden behind secret route */}
+            <Route path={`/${ADMIN_SECRET_PATH}`} element={<AdminLoginPage />} />
           </Route>
 
           {/* Standalone Projector / Spectator Screen */}
           <Route path="/live" element={<LiveScreenPage />} />
 
-          {/* Protected Team Leader Console Routes */}
+          {/* ══════════════════════════════════════════
+              TEAM LEADER PROTECTED ROUTES
+              ══════════════════════════════════════════ */}
           <Route element={<ProtectedRoute requiredRole="team_leader" />}>
             <Route element={<TeamLeaderLayout />}>
               <Route path="/team" element={<Navigate to="/team/dashboard" replace />} />
@@ -119,7 +127,9 @@ export function App() {
             </Route>
           </Route>
 
-          {/* Protected Admin Operations Console Routes */}
+          {/* ══════════════════════════════════════════
+              ADMIN PROTECTED ROUTES
+              ══════════════════════════════════════════ */}
           <Route element={<ProtectedRoute requiredRole="admin" />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

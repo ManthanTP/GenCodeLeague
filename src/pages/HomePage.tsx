@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Edition, Announcement, Team } from '../types/database';
+import type { Edition, Announcement, Team, EventState } from '../types/database';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 
@@ -10,6 +10,7 @@ export function HomePage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [stats, setStats] = useState({ teamsCount: 0, participantsCount: 0, roundsCount: 0 });
+  const [eventState, setEventState] = useState<EventState | null>(null);
 
   useEffect(() => {
     async function loadHomeData() {
@@ -59,10 +60,30 @@ export function HomePage() {
           participantsCount: participantsCount || 0,
           roundsCount: roundsCount || 0,
         });
+
+        // Fetch initial event state
+        const { data: stateData } = await supabase
+          .from('event_state')
+          .select('*')
+          .eq('edition_id', editionData.id)
+          .maybeSingle();
+
+        if (stateData) setEventState(stateData as EventState);
       }
     }
 
     loadHomeData();
+
+    const channel = supabase
+      .channel('home-event-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, (payload) => {
+        setEventState(payload.new as EventState);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
@@ -73,12 +94,24 @@ export function HomePage() {
           padding: '5rem 0 3rem 0',
           position: 'relative',
           overflow: 'hidden',
-          background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, 0.15), transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.15), transparent 70%)',
         }}
       >
         <div className="container" style={{ textAlign: 'center', maxWidth: '840px' }}>
+          {eventState?.state === 'LIVE' || eventState?.state === 'ROUND_ACTIVE' ? (
+            <div style={{ marginBottom: '3rem', padding: '2rem', background: 'var(--bg-elevated)', border: '2px solid var(--accent-red)', borderRadius: 'var(--radius-xl)' }}>
+              <Badge variant="live" pulse>EVENT IS LIVE NOW</Badge>
+              <h2 style={{ fontSize: '2rem', marginTop: '1rem', marginBottom: '1rem' }}>
+                {eventState.banner_message || 'The competition is currently active.'}
+              </h2>
+              <Link to="/team/competition">
+                <Button variant="primary" size="lg">Enter Live Arena &rarr;</Button>
+              </Link>
+            </div>
+          ) : null}
+
           <div style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
-            <Badge variant="gold" pulse>
+            <Badge variant="primary" pulse>
               GEN CODE LEAGUE {currentEdition?.year || 2026} &bull; REGISTRATION ACTIVE
             </Badge>
           </div>
@@ -134,7 +167,7 @@ export function HomePage() {
             }}
           >
             <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2rem', fontWeight: 700, color: 'var(--gold)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
                 {stats.teamsCount > 0 ? stats.teamsCount : '24'}
               </div>
               <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -192,7 +225,7 @@ export function HomePage() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Event Date & Venue</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', color: 'var(--gold)', fontWeight: 600, marginTop: '0.25rem' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', color: 'var(--accent-cyan)', fontWeight: 600, marginTop: '0.25rem' }}>
                 {currentEdition?.event_date || 'October 15, 2026'}
               </div>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -203,28 +236,28 @@ export function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
             <div className="gcl-card">
-              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 01</div>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 01</div>
               <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Elimination Quiz</h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 Timed high-precision algorithmic, systems, and logic questions. Automated scoring and tie-breaking protocols.
               </p>
             </div>
             <div className="gcl-card">
-              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 02</div>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 02</div>
               <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Team Auction</h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 Captains manage virtual team budgets to bid for engineering specialists, technology stacks, and strategic modifiers.
               </p>
             </div>
             <div className="gcl-card">
-              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 03</div>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 03</div>
               <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Sprint Hack</h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 Live problem statements requiring rapid architecture, clean codebases, and robust production deployments.
               </p>
             </div>
             <div className="gcl-card">
-              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 04</div>
+              <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>STAGE 04</div>
               <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Grand Finale</h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 Championship showdown between top ranked squads. Instant live scoring and trophy presentation.
@@ -272,10 +305,10 @@ export function HomePage() {
 
       {/* Verification Direct Feature Callout */}
       <section className="container">
-        <div
+          <div
           style={{
             background: 'var(--bg-card)',
-            border: '1px solid var(--border-gold)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-xl)',
             padding: '2.5rem',
             display: 'flex',
@@ -286,7 +319,7 @@ export function HomePage() {
           }}
         >
           <div style={{ maxWidth: '600px' }}>
-            <Badge variant="gold">CREDENTIAL INTEGRITY</Badge>
+            <Badge variant="primary">CREDENTIAL INTEGRITY</Badge>
             <h2 style={{ fontSize: '1.75rem', marginTop: '0.75rem', marginBottom: '0.75rem' }}>
               Public Certificate Verification Engine
             </h2>

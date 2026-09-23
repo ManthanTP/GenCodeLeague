@@ -162,7 +162,7 @@ export function AdminScoreboardPage() {
             <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
               Official League Scoreboard
             </h1>
-            <Badge variant="gold">
+            <Badge variant="primary">
               {currentEdition ? `${currentEdition.name}` : 'GCL LEAGUE'}
             </Badge>
           </div>
@@ -176,7 +176,7 @@ export function AdminScoreboardPage() {
             🔢 Recompute Ranks
           </Button>
           <Button
-            variant="gold"
+            variant="primary"
             size="sm"
             onClick={() => {
               if (teams.length > 0) setSelectedTeamId(teams[0].id);
@@ -400,7 +400,7 @@ export function AdminScoreboardPage() {
             <Button variant="ghost" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="gold" type="submit" isLoading={actionLoading}>
+            <Button variant="primary" type="submit" isLoading={actionLoading}>
               Commit Score Transaction
             </Button>
           </div>

@@ -271,7 +271,7 @@ export function AdminLiveControlPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem' }}>
             <Button
-              variant={eventState?.state === 'LIVE' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'LIVE' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('LIVE')}
               disabled={actionLoading}
@@ -279,7 +279,7 @@ export function AdminLiveControlPage() {
               🟢 SET LIVE
             </Button>
             <Button
-              variant={eventState?.state === 'PAUSED' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'PAUSED' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('PAUSED')}
               disabled={actionLoading}
@@ -287,7 +287,7 @@ export function AdminLiveControlPage() {
               ⏸️ PAUSE EVENT
             </Button>
             <Button
-              variant={eventState?.state === 'INTERMISSION' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'INTERMISSION' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('INTERMISSION')}
               disabled={actionLoading}
@@ -295,7 +295,7 @@ export function AdminLiveControlPage() {
               ☕ INTERMISSION
             </Button>
             <Button
-              variant={eventState?.state === 'TIE_BREAKER' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'TIE_BREAKER' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('TIE_BREAKER')}
               disabled={actionLoading}
@@ -303,7 +303,7 @@ export function AdminLiveControlPage() {
               ⚖️ TIE BREAKER
             </Button>
             <Button
-              variant={eventState?.state === 'FINAL_REVEAL' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'FINAL_REVEAL' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('FINAL_REVEAL')}
               disabled={actionLoading}
@@ -311,7 +311,7 @@ export function AdminLiveControlPage() {
               🥇 PODIUM REVEAL
             </Button>
             <Button
-              variant={eventState?.state === 'COMPLETED' ? 'gold' : 'secondary'}
+              variant={eventState?.state === 'COMPLETED' ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setOverallState('COMPLETED')}
               disabled={actionLoading}
@@ -326,8 +326,8 @@ export function AdminLiveControlPage() {
           className="card"
           style={{
             padding: '1.5rem',
-            background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
-            border: '1px solid var(--border-gold)',
+            background: 'linear-gradient(180deg, rgba(34, 211, 238, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
+            border: '1px solid var(--accent-cyan)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -346,7 +346,7 @@ export function AdminLiveControlPage() {
               fontFamily: 'var(--font-mono)',
               fontSize: '3rem',
               fontWeight: 900,
-              color: localTimer <= 10 && eventState?.timer_state === 'running' ? '#ef4444' : 'var(--gold)',
+              color: localTimer <= 10 && eventState?.timer_state === 'running' ? 'var(--accent-red)' : 'var(--accent-cyan)',
               letterSpacing: '0.05em',
             }}
           >
@@ -360,7 +360,7 @@ export function AdminLiveControlPage() {
                 ⏸️ Pause Timer
               </Button>
             ) : (
-              <Button variant="gold" size="sm" onClick={() => updateTimerState('running')} disabled={actionLoading}>
+              <Button variant="primary" size="sm" onClick={() => updateTimerState('running')} disabled={actionLoading}>
                 ▶️ Start Timer
               </Button>
             )}
@@ -481,7 +481,7 @@ export function AdminLiveControlPage() {
         </div>
 
         <div style={{ marginTop: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Button variant="gold" size="md" onClick={broadcastRoundAndQuestion} disabled={actionLoading || !selectedRoundId}>
+          <Button variant="primary" size="md" onClick={broadcastRoundAndQuestion} disabled={actionLoading || !selectedRoundId}>
             🚀 Broadcast Round & Questions to Arena
           </Button>
         </div>

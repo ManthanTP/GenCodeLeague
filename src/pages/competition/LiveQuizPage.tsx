@@ -344,7 +344,7 @@ export function LiveQuizPage() {
               {!existingSubmission && (
                 <Button
                   type="submit"
-                  variant="gold"
+                  variant="primary"
                   size="lg"
                   isLoading={submitting}
                   disabled={!selectedAnswer || localSeconds <= 0}

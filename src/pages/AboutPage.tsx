@@ -7,7 +7,7 @@ export function AboutPage() {
     <div className="container" style={{ padding: '3.5rem 1.5rem', maxWidth: '840px' }}>
       <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.5rem' }}>
-          <Badge variant="gold">ABOUT THE LEAGUE</Badge>
+          <Badge variant="primary">ABOUT THE LEAGUE</Badge>
         </div>
         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>What is Gen Code League?</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', lineHeight: 1.6 }}>

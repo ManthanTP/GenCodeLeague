@@ -3,13 +3,14 @@ import { supabase } from '../lib/supabase';
 import type { EventState, Question, AuctionItem, Team, WinnerReveal, Edition } from '../types/database';
 import { Badge } from '../components/ui/Badge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { formatINR } from '../lib/currency';
 
 export function LiveScreenPage() {
   const [eventState, setEventState] = useState<EventState | null>(null);
   const [currentEdition, setCurrentEdition] = useState<Edition | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
   const [activeAuctionItem, setActiveAuctionItem] = useState<AuctionItem | null>(null);
-  const [topTeams, setTopTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [podiumReveals, setPodiumReveals] = useState<WinnerReveal[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,16 +74,15 @@ export function LiveScreenPage() {
         }
       }
 
-      // Top 5 teams for leaderboard view
+      // Fetch all teams for Live Team Status table
       if (edData?.id) {
         const { data: tData } = await supabase
           .from('teams')
           .select('*')
           .eq('edition_id', edData.id)
-          .order('score', { ascending: false })
-          .limit(8);
+          .order('name', { ascending: true });
 
-        if (tData) setTopTeams(tData as Team[]);
+        if (tData) setTeams(tData as Team[]);
 
         // Podium reveals
         const { data: revData } = await supabase
@@ -129,7 +129,7 @@ export function LiveScreenPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#05070a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <LoadingSpinner size="lg" text="Connecting to Auditorium Live Broadcast Feed..." />
       </div>
     );
@@ -139,12 +139,14 @@ export function LiveScreenPage() {
   const p2 = podiumReveals.find((r) => r.position === 2);
   const p3 = podiumReveals.find((r) => r.position === 3);
 
+  const state = eventState?.state || 'NOT_STARTED';
+
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(ellipse at top, #141724 0%, #05070a 100%)',
-        color: '#f8fafc',
+        background: 'var(--bg-page)',
+        color: 'var(--text-primary)',
         display: 'flex',
         flexDirection: 'column',
         padding: '2.5rem 3rem',
@@ -157,7 +159,7 @@ export function LiveScreenPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+          borderBottom: '1px solid var(--border-subtle)',
           paddingBottom: '1.5rem',
           marginBottom: '2rem',
         }}
@@ -168,57 +170,36 @@ export function LiveScreenPage() {
               width: '48px',
               height: '48px',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              background: 'var(--accent-cyan)',
               color: '#000',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 900,
-              fontSize: '1.25rem',
+              fontSize: '1.5rem',
               fontFamily: 'var(--font-mono)',
-              boxShadow: '0 0 20px rgba(245, 158, 11, 0.4)',
+              boxShadow: '0 0 20px rgba(34, 211, 238, 0.3)',
             }}
           >
-            GCL
+            ⚡
           </div>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '-0.02em', fontWeight: 800 }}>
               GEN CODE LEAGUE
             </h1>
-            <span style={{ fontSize: '0.875rem', color: 'var(--gold)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--accent-cyan)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               {currentEdition?.name || 'Grand Championship'}
             </span>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          <Badge
-            variant={
-              eventState?.state === 'LIVE'
-                ? 'live'
-                : eventState?.state === 'FINAL_REVEAL'
-                ? 'gold'
-                : 'subtle'
-            }
-            pulse={eventState?.state === 'LIVE' || eventState?.state === 'FINAL_REVEAL'}
-          >
-            {eventState?.state || 'OFFLINE'}
-          </Badge>
-
-          {/* Huge Timer if active */}
-          {(eventState?.state === 'LIVE' || eventState?.timer_state === 'running') && (
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '3rem',
-                fontWeight: 900,
-                color: localSeconds <= 10 ? '#ef4444' : 'var(--gold)',
-                letterSpacing: '0.05em',
-                lineHeight: 1,
-              }}
-            >
-              {formatTimer(localSeconds)}
-            </div>
+          {state === 'LIVE' || state === 'ROUND_ACTIVE' ? (
+             <Badge variant="live" pulse>LIVE AUCTION</Badge>
+          ) : state === 'FINAL_REVEAL' || state === 'COMPLETED' ? (
+             <Badge variant="qualified">CHAMPIONSHIP COMPLETED</Badge>
+          ) : (
+             <Badge variant="subtle">{state.replace(/_/g, ' ')}</Badge>
           )}
         </div>
       </header>
@@ -227,16 +208,16 @@ export function LiveScreenPage() {
       {eventState?.banner_message && (
         <div
           style={{
-            background: 'rgba(245, 158, 11, 0.12)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
+            background: 'var(--status-warning-bg)',
+            border: '1px solid rgba(234, 179, 8, 0.35)',
             borderRadius: 'var(--radius-lg)',
             padding: '1rem 2rem',
             textAlign: 'center',
             fontSize: '1.25rem',
             fontWeight: 700,
-            color: 'var(--gold)',
+            color: 'var(--status-warning)',
             marginBottom: '2.5rem',
-            boxShadow: '0 0 30px rgba(245, 158, 11, 0.1)',
+            boxShadow: '0 0 30px rgba(234, 179, 8, 0.1)',
           }}
         >
           📢 {eventState.banner_message}
@@ -245,351 +226,202 @@ export function LiveScreenPage() {
 
       {/* Dynamic Main View Switcher */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        {/* CASE 1: PODIUM FINAL REVEAL */}
-        {eventState?.state === 'FINAL_REVEAL' ? (
+        
+        {state === 'NOT_STARTED' && (
+          <div className="event-setup-screen">
+            <div className="event-setup-screen__icon">⚙️</div>
+            <h2 className="event-setup-screen__title">EVENT SETUP</h2>
+            <div className="event-setup-screen__subtitle">Configuration In Progress...</div>
+            <div className="loading-bar">
+              <div className="loading-bar__fill"></div>
+            </div>
+          </div>
+        )}
+
+        {state === 'INITIALIZED' && (
+          <div className="event-setup-screen">
+            <Badge variant="live" pulse style={{ fontSize: '1.25rem', padding: '0.5rem 1rem' }}>OFFICIAL AUCTION</Badge>
+            <h2 className="event-setup-screen__title" style={{ fontSize: '3.5rem', color: 'var(--accent-cyan)' }}>
+              AUCTION STARTING SOON
+            </h2>
+            <div className="event-setup-screen__subtitle" style={{ fontSize: '1.25rem' }}>Prepare Your Bids</div>
+            <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '800px' }}>
+               {teams.map(team => (
+                 <Badge key={team.id} variant="subtle" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
+                   {team.name}
+                 </Badge>
+               ))}
+            </div>
+          </div>
+        )}
+
+        {(state === 'INTERMISSION' || state === 'ROUND_END' || state === 'BETWEEN_ROUNDS') && (
+          <div className="event-setup-screen">
+            <h2 className="event-setup-screen__title" style={{ fontSize: '2.5rem' }}>
+              RESULTS WILL BE ANNOUNCED SOON
+            </h2>
+            <div className="event-setup-screen__subtitle" style={{ fontSize: '1.25rem', color: 'var(--accent-yellow)' }}>
+              ⚠️ BUDGETS ARE RESETTING ⚠️
+            </div>
+          </div>
+        )}
+
+        {state === 'FINAL_REVEAL' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
-            <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', color: 'var(--gold)', textAlign: 'center', margin: 0 }}>
+            <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', color: 'var(--text-primary)', textAlign: 'center', margin: 0 }}>
               🏆 OFFICIAL CEREMONY PODIUM REVEAL 🏆
             </h2>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '2rem',
-                width: '100%',
-                maxWidth: '1100px',
-                alignItems: 'flex-end',
-                marginTop: '1.5rem',
-              }}
-            >
+            <div className="podium" style={{ width: '100%', maxWidth: '1100px', marginTop: '1.5rem', gap: '2rem' }}>
               {/* 2nd Place */}
-              <div
-                style={{
-                  height: '320px',
-                  background: p2?.is_revealed
-                    ? 'linear-gradient(180deg, rgba(148, 163, 184, 0.2) 0%, rgba(15, 17, 24, 0.95) 100%)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  border: p2?.is_revealed ? '2px solid #94a3b8' : '1px dashed rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
-                  padding: '2rem',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🥈</div>
-                <div style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
-                  1st Runner Up
-                </div>
-                {p2?.is_revealed ? (
-                  <>
-                    <h3 style={{ fontSize: '1.875rem', fontFamily: 'var(--font-display)', margin: '0.75rem 0 0.25rem 0' }}>
-                      {p2.team?.name || 'Declared Team'}
-                    </h3>
-                    <div style={{ fontSize: '1.25rem', fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 800 }}>
-                      {p2.team?.score} pts
+              <div className="podium__place">
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>1st Runner Up</div>
+                <div className="podium__pedestal podium__pedestal--2nd">
+                  {p2?.is_revealed ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div className="podium__trophy">🥈</div>
+                      <div className="podium__team-name">{p2.team?.name}</div>
+                      <div className="podium__score">{p2.team?.score} pts</div>
                     </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.3)', marginTop: '1rem' }}>
-                    ??? CONCEALED ???
-                  </div>
-                )}
+                  ) : (
+                    <div className="podium__hidden">?</div>
+                  )}
+                </div>
               </div>
 
-              {/* 1st Place - Champion */}
-              <div
-                style={{
-                  height: '420px',
-                  background: p1?.is_revealed
-                    ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.25) 0%, rgba(15, 17, 24, 0.98) 100%)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  border: p1?.is_revealed ? '3px solid var(--border-gold)' : '1px dashed rgba(255, 255, 255, 0.1)',
-                  borderRadius: '20px',
-                  padding: '2.5rem',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  boxShadow: p1?.is_revealed ? '0 0 50px rgba(245, 158, 11, 0.3)' : 'none',
-                }}
-              >
-                <div style={{ fontSize: '4.5rem', marginBottom: '0.5rem' }}>👑</div>
-                <div style={{ fontSize: '1.125rem', color: 'var(--gold)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  GCL GRAND CHAMPION
-                </div>
-                {p1?.is_revealed ? (
-                  <>
-                    <h3 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', margin: '1rem 0 0.5rem 0', color: '#fff' }}>
-                      {p1.team?.name || 'Champion Team'}
-                    </h3>
-                    <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 900 }}>
-                      {p1.team?.score} POINTS
+              {/* 1st Place */}
+              <div className="podium__place">
+                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--accent-yellow)', marginBottom: '0.5rem' }}>GRAND CHAMPION</div>
+                <div className="podium__pedestal podium__pedestal--1st">
+                  {p1?.is_revealed ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div className="podium__trophy">👑</div>
+                      <div className="podium__team-name" style={{ fontSize: '1.25rem' }}>{p1.team?.name}</div>
+                      <div className="podium__score" style={{ fontSize: '1rem', color: 'rgba(0,0,0,0.6)', fontWeight: 800 }}>{p1.team?.score} pts</div>
                     </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: '1.5rem', color: 'rgba(255, 255, 255, 0.3)', marginTop: '1.5rem' }}>
-                    ??? CONCEALED ???
-                  </div>
-                )}
+                  ) : (
+                    <div className="podium__hidden">?</div>
+                  )}
+                </div>
               </div>
 
               {/* 3rd Place */}
-              <div
-                style={{
-                  height: '280px',
-                  background: p3?.is_revealed
-                    ? 'linear-gradient(180deg, rgba(180, 83, 9, 0.2) 0%, rgba(15, 17, 24, 0.95) 100%)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  border: p3?.is_revealed ? '2px solid #b45309' : '1px dashed rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
-                  padding: '2rem',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🥉</div>
-                <div style={{ fontSize: '1rem', color: '#b45309', fontWeight: 700, textTransform: 'uppercase' }}>
-                  2nd Runner Up
-                </div>
-                {p3?.is_revealed ? (
-                  <>
-                    <h3 style={{ fontSize: '1.625rem', fontFamily: 'var(--font-display)', margin: '0.75rem 0 0.25rem 0' }}>
-                      {p3.team?.name || 'Declared Team'}
-                    </h3>
-                    <div style={{ fontSize: '1.125rem', fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 800 }}>
-                      {p3.team?.score} pts
+              <div className="podium__place">
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f97316', marginBottom: '0.5rem' }}>2nd Runner Up</div>
+                <div className="podium__pedestal podium__pedestal--3rd">
+                  {p3?.is_revealed ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div className="podium__trophy">🥉</div>
+                      <div className="podium__team-name">{p3.team?.name}</div>
+                      <div className="podium__score">{p3.team?.score} pts</div>
                     </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: '1.125rem', color: 'rgba(255, 255, 255, 0.3)', marginTop: '1rem' }}>
-                    ??? CONCEALED ???
-                  </div>
-                )}
+                  ) : (
+                    <div className="podium__hidden">?</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        ) : activeAuctionItem ? (
-          /* CASE 2: LIVE AUCTION LOT ON STAGE */
-          <div
-            style={{
-              maxWidth: '1000px',
-              margin: '0 auto',
-              width: '100%',
-              background: 'rgba(15, 17, 24, 0.9)',
-              border: '2px solid var(--border-gold)',
-              borderRadius: '24px',
-              padding: '3.5rem',
-              boxShadow: '0 0 60px rgba(245, 158, 11, 0.2)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-              <div>
-                <Badge variant="live" pulse style={{ fontSize: '1rem', padding: '0.5rem 1rem', marginBottom: '0.75rem' }}>
-                  LIVE AUCTION LOT
-                </Badge>
-                <h2 style={{ fontSize: '3rem', fontFamily: 'var(--font-display)', margin: '0.5rem 0' }}>
-                  {activeAuctionItem.name}
-                </h2>
-                <span style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
-                  {activeAuctionItem.category}
+        )}
+
+        {(state === 'LIVE' || state === 'ROUND_ACTIVE') && activeAuctionItem && (
+          <div style={{ display: 'flex', gap: '2rem', height: '100%', alignItems: 'center' }}>
+            {/* Left Column: Auction Lot Details */}
+            <div
+              className="gcl-card"
+              style={{
+                flex: 1,
+                padding: '3rem',
+                border: '2px solid var(--accent-blue)',
+                boxShadow: '0 0 40px rgba(37, 99, 235, 0.15)',
+              }}
+            >
+              <div className="round-question-header">
+                <span className="round-question-header__text">
+                  ROUND {eventState?.current_round?.round_number || 1} | ITEM {activeAuctionItem.id}
                 </span>
+                <Badge variant={eventState?.timer_state === 'running' ? 'live' : 'subtle'} pulse={eventState?.timer_state === 'running'}>
+                  {eventState?.timer_state === 'running' ? 'BIDDING OPEN' : 'PAUSED'}
+                </Badge>
               </div>
 
-              {/* Massive Bid Display */}
+              <h2 style={{ fontSize: '3rem', fontFamily: 'var(--font-display)', margin: '1rem 0' }}>
+                {activeAuctionItem.name}
+              </h2>
+              
+              <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                {activeAuctionItem.description}
+              </div>
+
               <div
                 style={{
                   background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-gold)',
-                  borderRadius: '16px',
-                  padding: '1.5rem 2.5rem',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '2rem',
                   textAlign: 'center',
+                  marginBottom: '2rem'
                 }}
               >
-                <div style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  Current Highest Bid
+                <div style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  CURRENT HIGHEST BID
                 </div>
                 <div
                   style={{
                     fontSize: '4.5rem',
                     fontWeight: 900,
                     fontFamily: 'var(--font-mono)',
-                    color: 'var(--gold)',
+                    color: 'var(--accent-cyan)',
                     lineHeight: 1,
-                    margin: '0.5rem 0',
+                    margin: '1rem 0',
                   }}
                 >
-                  {eventState?.current_bid_amount || activeAuctionItem.base_price} <span style={{ fontSize: '1.5rem' }}>cr</span>
+                  {formatINR(eventState?.current_bid_amount || activeAuctionItem.base_price)}
                 </div>
-                <div style={{ fontSize: '1.25rem', color: '#34d399', fontWeight: 700 }}>
+                <div style={{ fontSize: '1.5rem', color: 'var(--accent-green)', fontWeight: 700 }}>
                   {eventState?.current_bid_team?.name || 'Base Reserve (No bids yet)'}
                 </div>
               </div>
+              
+              {/* Massive Timer */}
+              {(eventState?.timer_state === 'running' || localSeconds > 0) && (
+                <div className={`competition-timer ${localSeconds <= 10 ? 'competition-timer--danger' : ''}`}>
+                  {formatTimer(localSeconds)}
+                </div>
+              )}
             </div>
 
-            <p style={{ fontSize: '1.375rem', lineHeight: 1.6, color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-              {activeAuctionItem.description}
-            </p>
-
-            {activeAuctionItem.skills && (
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {activeAuctionItem.skills.map((s, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      color: 'var(--gold)',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {s}
-                  </span>
-                ))}
+            {/* Right Column: Live Team Status */}
+            <div className="gcl-card" style={{ width: '400px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="gcl-card__header">
+                <span className="gcl-card__icon">📊</span>
+                <h3 className="gcl-card__title">Live Team Status</h3>
               </div>
-            )}
-          </div>
-        ) : activeQuestion ? (
-          /* CASE 3: LIVE QUIZ QUESTION */
-          <div
-            style={{
-              maxWidth: '1000px',
-              margin: '0 auto',
-              width: '100%',
-              background: 'rgba(15, 17, 24, 0.9)',
-              border: '2px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '24px',
-              padding: '3.5rem',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <Badge variant="live" pulse style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
-                QUESTION #{activeQuestion.question_number || 1}
-              </Badge>
-              <div style={{ fontSize: '1.25rem', fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 800 }}>
-                {activeQuestion.points} POINTS
-              </div>
-            </div>
-
-            <h2 style={{ fontSize: '2.25rem', lineHeight: 1.4, margin: '0 0 2.5rem 0', fontWeight: 700 }}>
-              {activeQuestion.question_text}
-            </h2>
-
-            {activeQuestion.options && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
-                {activeQuestion.options.map((opt, i) => {
-                  const optText = typeof opt === 'string' ? opt : opt.text;
-                  const letter = String.fromCharCode(65 + i);
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        padding: '1.25rem 1.75rem',
-                        borderRadius: '12px',
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-subtle)',
-                        fontSize: '1.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: 'rgba(245, 158, 11, 0.2)',
-                          color: 'var(--gold)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '1rem',
-                        }}
-                      >
-                        {letter}
-                      </span>
-                      <span>{optText}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* CASE 4: LEADERBOARD & INTERMISSION */
-          <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
-            <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', textAlign: 'center', marginBottom: '2rem' }}>
-              TOURNAMENT LEADERBOARD
-            </h2>
-
-            <div
-              style={{
-                background: 'rgba(15, 17, 24, 0.95)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '16px',
-                overflow: 'hidden',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)' }}>
-                    <th style={{ padding: '1rem 1.5rem', textAlign: 'center', width: '80px', fontSize: '1rem' }}>Rank</th>
-                    <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '1rem' }}>Team</th>
-                    <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '1rem' }}>Institution</th>
-                    <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '1rem' }}>Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topTeams.map((team, idx) => (
-                    <tr key={team.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '1.25rem' }}>
-                        #{team.rank || idx + 1}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>
-                        {team.name}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontSize: '1rem' }}>
-                        {team.college || '—'}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 900, color: 'var(--gold)' }}>
-                        {team.score} pts
-                      </td>
+              <div className="table-responsive" style={{ flex: 1, overflowY: 'auto' }}>
+                <table className="gcl-table team-status-table">
+                  <thead>
+                    <tr>
+                      <th>Team Name</th>
+                      <th style={{ textAlign: 'right' }}>Total Spent</th>
+                      <th style={{ textAlign: 'right' }}>Remaining</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {teams.map(team => (
+                      <tr key={team.id}>
+                        <td className="team-name">{team.name}</td>
+                        <td className="value-spent" style={{ textAlign: 'right' }}>{formatINR(team.total_spent)}</td>
+                        <td className="value-remaining" style={{ textAlign: 'right' }}>{formatINR(team.remaining_budget)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
-      </main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          paddingTop: '1.25rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.875rem',
-          color: 'var(--text-muted)',
-        }}
-      >
-        <span>Gen Code League &bull; Official Arena Presentation Stream</span>
-        <span>Realtime Sync: Supabase Engine</span>
-      </footer>
+      </main>
     </div>
   );
 }

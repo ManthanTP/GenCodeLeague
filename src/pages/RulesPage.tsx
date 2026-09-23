@@ -5,7 +5,7 @@ export function RulesPage() {
     <div className="container" style={{ padding: '3.5rem 1.5rem', maxWidth: '860px' }}>
       <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'inline-flex', marginBottom: '0.5rem' }}>
-          <Badge variant="gold">OFFICIAL CODEX</Badge>
+          <Badge variant="primary">OFFICIAL CODEX</Badge>
         </div>
         <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>League Rules & Protocol</h1>
         <p style={{ color: 'var(--text-secondary)' }}>

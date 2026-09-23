@@ -1,245 +1,146 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Badge } from '../ui/Badge';
+import { supabase } from '../../lib/supabase';
+import { formatINR } from '../../lib/currency';
 import { Button } from '../ui/Button';
 
-export function Navbar() {
-  const { isAuthenticated, profile, isAdmin, isTeamLeader, team, signOut } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
+interface AggregateStats {
+  totalSpent: number;
+  totalAvailable: number;
+  teamsCount: number;
+}
 
-  const isActive = (path: string) => location.pathname === path;
+export function Navbar() {
+  const { isAuthenticated, isAdmin, isTeamLeader, signOut } = useAuth();
+  const [stats, setStats] = useState<AggregateStats>({
+    totalSpent: 0,
+    totalAvailable: 0,
+    teamsCount: 0,
+  });
+  const [eventStatus, setEventStatus] = useState<string>('NOT_STARTED');
+
+  useEffect(() => {
+    loadStats();
+
+    // Real-time subscription for live updates
+    const channel = supabase
+      .channel('navbar-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        loadStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, () => {
+        loadStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  async function loadStats() {
+    try {
+      // Get current edition
+      const { data: edition } = await supabase
+        .from('editions')
+        .select('id')
+        .eq('is_current', true)
+        .maybeSingle();
+
+      if (edition) {
+        // Get team aggregates
+        const { data: teams } = await supabase
+          .from('teams')
+          .select('total_spent, remaining_budget')
+          .eq('edition_id', edition.id);
+
+        if (teams) {
+          const totalSpent = teams.reduce((sum, t) => sum + (t.total_spent || 0), 0);
+          const totalAvailable = teams.reduce((sum, t) => sum + (t.remaining_budget || 0), 0);
+          setStats({
+            totalSpent,
+            totalAvailable,
+            teamsCount: teams.length,
+          });
+        }
+      }
+
+      // Get event state
+      const { data: eventState } = await supabase
+        .from('event_state')
+        .select('status')
+        .limit(1)
+        .maybeSingle();
+
+      if (eventState?.status) {
+        setEventStatus(eventState.status);
+      }
+    } catch {
+      // Silently handle errors — stats are non-critical
+    }
+  }
+
+  const isLive = ['LIVE', 'AUCTION', 'QUIZ', 'TIE_BREAKER'].includes(eventStatus);
 
   return (
-    <header
-      style={{
-        height: 'var(--navbar-height)',
-        background: 'rgba(15, 17, 24, 0.95)',
-        backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid var(--border-subtle)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <div
-        className="container"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.625rem',
-              fontWeight: 800,
-              fontSize: '1.125rem',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '-0.01em',
-              color: 'var(--text-primary)',
-              textDecoration: 'none',
-            }}
-          >
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: '#000',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 900,
-                fontSize: '0.875rem',
-                fontFamily: 'var(--font-mono)',
-                boxShadow: 'var(--shadow-gold)',
-              }}
-            >
-              GCL
-            </div>
+    <header className="gcl-stats-bar">
+      <div className="container">
+        {/* Left: Brand + Live Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link to="/" className="gcl-stats-bar__brand">
+            <div className="gcl-stats-bar__brand-icon">⚡</div>
             <span>GEN CODE LEAGUE</span>
           </Link>
 
-          {/* Current edition indicator */}
-          <Link to="/live" target="_blank" style={{ textDecoration: 'none' }}>
-            <Badge variant="live" pulse>
-              LIVE ARENA ↗
-            </Badge>
-          </Link>
+          <span className="gcl-stats-bar__live-badge">
+            <span className="gcl-stats-bar__live-dot" />
+            {isLive ? 'LIVE AUCTION' : 'LIVE AUCTION'}
+          </span>
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav
-          className="desktop-nav"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1.25rem',
-          }}
-        >
-          <Link
-            to="/editions"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/editions') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Editions
-          </Link>
-          <Link
-            to="/teams"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/teams') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Teams
-          </Link>
-          <Link
-            to="/rounds"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/rounds') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Rounds
-          </Link>
-          <Link
-            to="/leaderboard"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/leaderboard') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Standings
-          </Link>
-          <Link
-            to="/hall-of-fame"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/hall-of-fame') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Hall of Fame
-          </Link>
-          <Link
-            to="/schedule"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/schedule') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Schedule
-          </Link>
-          <Link
-            to="/rules"
-            style={{
-              fontSize: '0.875rem',
-              color: isActive('/rules') ? 'var(--gold)' : 'var(--text-secondary)',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            Rules
-          </Link>
-        </nav>
+        {/* Center: Metrics */}
+        <div className="gcl-stats-bar__metrics">
+          <div className="gcl-stats-bar__metric">
+            <span className="gcl-stats-bar__metric-label">Total Spent</span>
+            <span className="gcl-stats-bar__metric-value gcl-stats-bar__metric-value--spent">
+              {formatINR(stats.totalSpent)}
+            </span>
+          </div>
+          <div className="gcl-stats-bar__metric">
+            <span className="gcl-stats-bar__metric-label">Total Available</span>
+            <span className="gcl-stats-bar__metric-value gcl-stats-bar__metric-value--available">
+              {formatINR(stats.totalAvailable)}
+            </span>
+          </div>
+          <div className="gcl-stats-bar__metric">
+            <span className="gcl-stats-bar__metric-label">Teams</span>
+            <span className="gcl-stats-bar__metric-value gcl-stats-bar__metric-value--teams">
+              👥 {stats.teamsCount}
+            </span>
+          </div>
+        </div>
 
-        {/* User Auth Action Items */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Right: Auth actions */}
+        <div className="gcl-stats-bar__actions">
           {isAuthenticated ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {isAdmin && (
-                <Link to="/admin/dashboard" style={{ textDecoration: 'none' }}>
-                  <Button variant="gold" size="sm">
-                    Admin Console
-                  </Button>
-                </Link>
-              )}
-              {isTeamLeader && (
-                <Link to="/team/dashboard" style={{ textDecoration: 'none' }}>
-                  <Button variant="outline" size="sm" style={{ borderColor: 'var(--gold)', color: 'var(--gold)' }}>
-                    {team ? team.name : 'Team Console'}
+            <>
+              {(isAdmin || isTeamLeader) && (
+                <Link to="/live" target="_blank" style={{ textDecoration: 'none' }}>
+                  <Button variant="primary" size="sm">
+                    👁 Live View
                   </Button>
                 </Link>
               )}
               <Button
-                variant="ghost"
+                variant="danger"
                 size="sm"
                 onClick={() => signOut()}
-                aria-label="Sign out"
               >
-                Sign Out
+                🔒 Logout
               </Button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Link to="/team/login" style={{ textDecoration: 'none' }}>
-                <Button variant="outline" size="sm" style={{ borderColor: 'var(--gold)', color: 'var(--gold)' }}>
-                  Team Leader
-                </Button>
-              </Link>
-              <Link to="/admin/login" style={{ textDecoration: 'none' }}>
-                <Button variant="ghost" size="sm">
-                  Admin
-                </Button>
-              </Link>
-            </div>
-          )}
-
-          {/* Mobile Menu Toggle Button */}
-          <button
-            type="button"
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              display: 'none',
-              background: 'transparent',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.375rem',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-            }}
-            aria-label="Toggle navigation menu"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              {mobileMenuOpen ? (
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                />
-              ) : (
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                />
-              )}
-            </svg>
-          </button>
+            </>
+          ) : null}
         </div>
       </div>
     </header>

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { supabase } from '../../lib/supabase';
 
 export function TeamLoginPage() {
@@ -15,7 +14,7 @@ export function TeamLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(
     errorParam === 'no_team'
-      ? 'Only registered Team Leaders with an assigned team may access the Team Portal.'
+      ? 'This account has not been assigned to a team. Contact tournament admin.'
       : null
   );
 
@@ -30,15 +29,14 @@ export function TeamLoginPage() {
     try {
       const { error } = await signIn(email.trim(), password);
       if (error) {
-        setErrorMessage(error.message || 'Invalid credentials. Please verify your email and password.');
+        setErrorMessage(error.message || 'Invalid credentials.');
         setIsLoading(false);
         return;
       }
 
-      // Check current user session and team assignment
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setErrorMessage('Session initialization failed. Please try again.');
+        setErrorMessage('Session initialization failed.');
         setIsLoading(false);
         return;
       }
@@ -48,12 +46,12 @@ export function TeamLoginPage() {
       // Check if user has an assigned team
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name, status, edition:editions(name, year)')
+        .select('id, name')
         .or(`team_leader_id.eq.${user.id},captain_id.eq.${user.id}`)
         .maybeSingle();
 
       if (!teamData) {
-        // Check if admin
+        // Check if admin — redirect silently
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -66,7 +64,7 @@ export function TeamLoginPage() {
         }
 
         setErrorMessage(
-          'Authentication successful, but this account has not been assigned to a team yet. Please contact tournament admins.'
+          'Authentication successful, but no team is assigned to this account. Contact tournament admin.'
         );
         setIsLoading(false);
         return;
@@ -74,7 +72,7 @@ export function TeamLoginPage() {
 
       navigate(redirectPath, { replace: true });
     } catch (err: any) {
-      setErrorMessage(err.message || 'An unexpected error occurred during login.');
+      setErrorMessage(err.message || 'An unexpected error occurred.');
       setIsLoading(false);
     }
   }
@@ -82,117 +80,130 @@ export function TeamLoginPage() {
   return (
     <div
       style={{
-        minHeight: '80vh',
+        minHeight: 'calc(100vh - var(--navbar-height))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem 1.5rem',
+        padding: '2rem 1.5rem',
       }}
     >
       <div
-        className="card"
         style={{
           width: '100%',
-          maxWidth: '460px',
-          padding: '2.5rem',
-          background: 'var(--bg-surface)',
+          maxWidth: '400px',
+          padding: '2rem',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border-default)',
-          boxShadow: 'var(--shadow-lg)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-elevated)',
+          textAlign: 'center',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>
-            <Badge variant="live" pulse>
-              TEAM LEADER PORTAL
-            </Badge>
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-            Team Leader Sign In
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>
-            Official competition console for verified Team Leaders. Manage team members, enter live rounds, and track scoring.
-          </p>
+        {/* Team Icon */}
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(34, 211, 238, 0.12)',
+            border: '2px solid rgba(34, 211, 238, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.25rem',
+            fontSize: '1.5rem',
+          }}
+        >
+          🛡️
         </div>
+
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            marginBottom: '0.5rem',
+          }}
+        >
+          Team Leader Login
+        </h2>
+
+        <p
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: '0.8125rem',
+            marginBottom: '1.5rem',
+            lineHeight: 1.5,
+          }}
+        >
+          Sign in with the credentials provided by tournament admin.
+        </p>
 
         {errorMessage && (
           <div
             style={{
-              padding: '0.875rem 1rem',
+              padding: '0.625rem 0.875rem',
               borderRadius: 'var(--radius-md)',
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               color: '#f87171',
-              fontSize: '0.875rem',
-              marginBottom: '1.5rem',
+              fontSize: '0.8125rem',
+              marginBottom: '1.25rem',
               lineHeight: 1.4,
+              textAlign: 'left',
             }}
           >
             {errorMessage}
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="leader-email">
-              Leader Email Address
-            </label>
-            <input
-              id="leader-email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="leader@institution.edu"
-              required
-              autoComplete="email"
-            />
-          </div>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <input
+            id="leader-email"
+            type="email"
+            className="form-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Team Leader Email"
+            required
+            autoComplete="email"
+          />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="leader-password">
-              Password
-            </label>
-            <input
-              id="leader-password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          <input
+            id="leader-password"
+            type="password"
+            className="form-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            required
+            autoComplete="current-password"
+          />
 
-          <Button type="submit" variant="gold" size="lg" isLoading={isLoading} style={{ width: '100%', marginTop: '0.5rem' }}>
-            {isLoading ? 'Verifying Team Credentials...' : 'Authenticate & Enter Portal'}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isLoading}
+            fullWidth
+          >
+            {isLoading ? 'Verifying...' : '🔒 Log In'}
           </Button>
         </form>
 
         <div
           style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
+            marginTop: '1.5rem',
+            paddingTop: '1rem',
             borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
             textAlign: 'center',
-            fontSize: '0.8125rem',
+            fontSize: '0.75rem',
             color: 'var(--text-muted)',
           }}
         >
-          <div>
-            Tournament Administrator?{' '}
-            <Link to="/admin/login" style={{ color: 'var(--gold)', fontWeight: 600 }}>
-              Admin Console Sign In &rarr;
-            </Link>
-          </div>
-          <div>
-            <Link to="/" style={{ color: 'var(--text-secondary)' }}>
-              &larr; Return to Public Tournament Home
-            </Link>
-          </div>
+          <Link to="/" style={{ color: 'var(--text-secondary)' }}>
+            ← Return to GCL Home
+          </Link>
         </div>
       </div>
     </div>

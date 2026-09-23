@@ -63,7 +63,7 @@ export function AdminAuditLogsPage() {
                   </td>
                   <td style={{ fontWeight: 600 }}>{log.actor?.full_name || 'System / Admin'}</td>
                   <td>
-                    <Badge variant="gold">{log.action}</Badge>
+                    <Badge variant="primary">{log.action}</Badge>
                   </td>
                   <td style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                     {log.resource_type}

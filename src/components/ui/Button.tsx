@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'gold' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'green' | 'orange' | 'ghost' | 'gold';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,6 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   children: ReactNode;
+  fullWidth?: boolean;
   style?: CSSProperties;
 }
 
@@ -21,37 +22,25 @@ export function Button({
   rightIcon,
   children,
   disabled,
+  fullWidth = false,
   className = '',
   style,
   ...props
 }: ButtonProps) {
   const sizeClass = size === 'sm' ? 'btn-sm' : size === 'lg' ? 'btn-lg' : '';
 
-  // Custom inline styles for gold and ghost variants if not covered by CSS classes
-  const variantStyle: CSSProperties =
-    variant === 'gold'
-      ? {
-          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          color: '#000',
-          fontWeight: 700,
-          border: 'none',
-          boxShadow: 'var(--shadow-gold)',
-          cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
-        }
-      : variant === 'ghost'
-      ? {
-          background: 'transparent',
-          color: 'var(--text-secondary)',
-          border: '1px solid transparent',
-          cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
-        }
-      : {};
+  const variantClass =
+    variant === 'green' ? 'btn-action-green'
+    : variant === 'orange' ? 'btn-action-orange'
+    : variant === 'ghost' ? 'btn-ghost'
+    : variant === 'gold' ? 'btn-primary'
+    : `btn-${variant}`;
 
   return (
     <button
-      className={`btn btn-${variant} ${sizeClass} ${className}`}
+      className={`btn ${variantClass} ${sizeClass} ${fullWidth ? 'btn-full' : ''} ${className}`}
       disabled={disabled || isLoading}
-      style={{ ...variantStyle, ...style }}
+      style={style}
       {...props}
     >
       {isLoading ? (

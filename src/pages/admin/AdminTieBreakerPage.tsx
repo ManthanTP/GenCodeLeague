@@ -233,7 +233,7 @@ export function AdminTieBreakerPage() {
               />
             </div>
 
-            <Button type="submit" variant="gold" size="md" isLoading={actionLoading}>
+            <Button type="submit" variant="primary" size="md" isLoading={actionLoading}>
               🚀 Launch Tie Breaker Arena
             </Button>
           </form>

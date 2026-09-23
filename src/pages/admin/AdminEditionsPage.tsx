@@ -132,7 +132,7 @@ export function AdminEditionsPage() {
                 </td>
                 <td>
                   {ed.is_current ? (
-                    <Badge variant="gold">★ CURRENT SEASON</Badge>
+                    <Badge variant="primary">★ CURRENT SEASON</Badge>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => handleSetCurrent(ed.id)}>
                       Set as Active
