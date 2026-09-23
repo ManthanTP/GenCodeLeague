@@ -98,7 +98,7 @@ export function HomePage() {
         }}
       >
         <div className="container" style={{ textAlign: 'center', maxWidth: '840px' }}>
-          {eventState?.state === 'LIVE' || eventState?.state === 'ROUND_ACTIVE' ? (
+          {eventState?.state === 'LIVE' ? (
             <div style={{ marginBottom: '3rem', padding: '2rem', background: 'var(--bg-elevated)', border: '2px solid var(--accent-red)', borderRadius: 'var(--radius-xl)' }}>
               <Badge variant="live" pulse>EVENT IS LIVE NOW</Badge>
               <h2 style={{ fontSize: '2rem', marginTop: '1rem', marginBottom: '1rem' }}>

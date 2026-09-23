@@ -15,7 +15,8 @@ export type BadgeVariant =
   | 'danger'
   | 'correct'
   | 'incorrect'
-  | 'round';
+  | 'round'
+  | 'primary';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -32,7 +33,7 @@ export function Badge({ variant = 'subtle', children, pulse = false, className =
       ? { background: 'rgba(234, 179, 8, 0.15)', color: '#EAB308', border: '1px solid rgba(234, 179, 8, 0.3)' }
     : variant === 'danger'
       ? { background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }
-    : variant === 'gold'
+    : variant === 'gold' || variant === 'primary'
       ? { background: 'rgba(34, 211, 238, 0.12)', color: '#22D3EE', border: '1px solid rgba(34, 211, 238, 0.3)' }
     : variant === 'qualified' || variant === 'winner' || variant === 'active'
       ? { background: 'rgba(16, 185, 129, 0.12)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)' }

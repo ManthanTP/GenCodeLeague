@@ -135,7 +135,7 @@ export function TeamDashboard() {
       </div>
 
       {/* Live Event Banner */}
-      {eventState?.state === 'LIVE' || eventState?.state === 'ROUND_ACTIVE' ? (
+      {eventState?.state === 'LIVE' ? (
         <div
           className="gcl-card"
           style={{

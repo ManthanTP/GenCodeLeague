@@ -194,7 +194,7 @@ export function LiveScreenPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          {state === 'LIVE' || state === 'ROUND_ACTIVE' ? (
+          {state === 'LIVE' ? (
              <Badge variant="live" pulse>LIVE AUCTION</Badge>
           ) : state === 'FINAL_REVEAL' || state === 'COMPLETED' ? (
              <Badge variant="qualified">CHAMPIONSHIP COMPLETED</Badge>
@@ -238,7 +238,7 @@ export function LiveScreenPage() {
           </div>
         )}
 
-        {state === 'INITIALIZED' && (
+        {state === 'NOT_STARTED' && eventState?.banner_message?.includes('AUCTION STARTING') && (
           <div className="event-setup-screen">
             <Badge variant="live" pulse style={{ fontSize: '1.25rem', padding: '0.5rem 1rem' }}>OFFICIAL AUCTION</Badge>
             <h2 className="event-setup-screen__title" style={{ fontSize: '3.5rem', color: 'var(--accent-cyan)' }}>
@@ -255,7 +255,7 @@ export function LiveScreenPage() {
           </div>
         )}
 
-        {(state === 'INTERMISSION' || state === 'ROUND_END' || state === 'BETWEEN_ROUNDS') && (
+        {(state === 'INTERMISSION' || state === 'PAUSED') && (
           <div className="event-setup-screen">
             <h2 className="event-setup-screen__title" style={{ fontSize: '2.5rem' }}>
               RESULTS WILL BE ANNOUNCED SOON
@@ -324,7 +324,7 @@ export function LiveScreenPage() {
           </div>
         )}
 
-        {(state === 'LIVE' || state === 'ROUND_ACTIVE') && activeAuctionItem && (
+        {(state === 'LIVE') && activeAuctionItem && (
           <div style={{ display: 'flex', gap: '2rem', height: '100%', alignItems: 'center' }}>
             {/* Left Column: Auction Lot Details */}
             <div
