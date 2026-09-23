@@ -1,72 +1,79 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { EventState, Round, Question, EventLiveState, TimerState } from '../../types/database';
+import type { EventState, Team, Edition, AuctionEvent, Profile, TimerState, EventLiveState } from '../../types/database';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
-export function AdminLiveControlPage() {
-  const [eventState, setEventState] = useState<EventState | null>(null);
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [selectedRoundId, setSelectedRoundId] = useState<string>('');
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string>('');
-  const [bannerInput, setBannerInput] = useState<string>('');
-  const [customTimerSeconds, setCustomTimerSeconds] = useState<number>(60);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+const formatINR = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
-  // Local timer ticker for live UI display
-  const [localTimer, setLocalTimer] = useState<number>(60);
+export function AdminLiveControlPage() {
+  const [edition, setEdition] = useState<Edition | null>(null);
+  const [eventState, setEventState] = useState<EventState | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [auctionEvent, setAuctionEvent] = useState<AuctionEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Timer state
+  const [localTimer, setLocalTimer] = useState<number>(180);
   const timerRef = useRef<any>(null);
+
+  // Form State
+  const [startingBudget, setStartingBudget] = useState('50000000'); // 5 Cr default
+  const [questionText, setQuestionText] = useState('Enter question for R1 - Q1');
+  const [bidAmount, setBidAmount] = useState<number>(2000000); // Base 20L
+  const [winningTeamId, setWinningTeamId] = useState<string>('');
+  
+  // New Team State
+  const [newTeamName, setNewTeamName] = useState('');
 
   useEffect(() => {
     loadData();
 
-    // Subscribe to event_state changes
+    // Subscribe to event_state and teams
     const channel = supabase
-      .channel('admin-live-event-state')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'event_state' },
-        (payload) => {
-          if (payload.new) {
-            const newState = payload.new as EventState;
-            setEventState(newState);
-            setLocalTimer(newState.timer_remaining_seconds);
-            if (newState.current_round_id) setSelectedRoundId(newState.current_round_id);
-            if (newState.current_question_id) setSelectedQuestionId(newState.current_question_id);
-            if (newState.banner_message) setBannerInput(newState.banner_message);
-          }
+      .channel('admin-live-control')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_state' }, (payload) => {
+        if (payload.new) {
+          const state = payload.new as EventState;
+          setEventState(state);
+          setLocalTimer(state.timer_remaining_seconds || 180);
         }
-      )
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        if (edition) loadTeams(edition.id);
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [edition?.id]);
 
-  // Sync local countdown with eventState timer_state
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-
+    
     if (eventState?.timer_state === 'running' && localTimer > 0) {
       timerRef.current = setInterval(() => {
         setLocalTimer((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current!);
-            // Handle timer expiration
-            updateTimerState('expired', 0);
+            handleUpdateTimer('expired', 0);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
     }
-
+    
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -75,417 +82,423 @@ export function AdminLiveControlPage() {
   async function loadData() {
     setLoading(true);
     try {
-      // 1. Load active edition & event_state
-      const { data: edition } = await supabase
-        .from('editions')
-        .select('id')
-        .eq('is_current', true)
-        .maybeSingle();
+      const { data: edData } = await supabase.from('editions').select('*').eq('is_current', true).maybeSingle();
+      if (edData) {
+        setEdition(edData as Edition);
+        
+        await loadTeams(edData.id);
+        
+        const { data: evState } = await supabase.from('event_state').select('*').eq('edition_id', edData.id).maybeSingle();
+        if (evState) setEventState(evState as EventState);
 
-      const editionId = edition?.id;
-      if (editionId) {
-        const { data: stateData } = await supabase
-          .from('event_state')
-          .select('*, current_round:rounds(*), current_question:questions(*)')
-          .eq('edition_id', editionId)
-          .maybeSingle();
-
-        if (stateData) {
-          setEventState(stateData as EventState);
-          setLocalTimer(stateData.timer_remaining_seconds || 60);
-          if (stateData.current_round_id) setSelectedRoundId(stateData.current_round_id);
-          if (stateData.current_question_id) setSelectedQuestionId(stateData.current_question_id);
-          if (stateData.banner_message) setBannerInput(stateData.banner_message);
-        }
-
-        // 2. Load rounds for this edition
-        const { data: roundsData } = await supabase
-          .from('rounds')
-          .select('*')
-          .eq('edition_id', editionId)
-          .order('sort_order', { ascending: true });
-
-        if (roundsData) setRounds(roundsData as Round[]);
+        const { data: aucEv } = await supabase.from('auction_events').select('*').eq('edition_id', edData.id).maybeSingle();
+        if (aucEv) setAuctionEvent(aucEv as AuctionEvent);
+        
+        const { data: profData } = await supabase.from('profiles').select('*');
+        if (profData) setProfiles(profData as Profile[]);
       }
-    } catch (err: any) {
-      console.error('Failed to load event state:', err);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
-  // When selected round changes, load its questions
-  useEffect(() => {
-    async function loadRoundQuestions() {
-      if (!selectedRoundId) {
-        setQuestions([]);
-        return;
-      }
-      const { data: qData } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('round_id', selectedRoundId)
-        .order('sort_order', { ascending: true });
+  async function loadTeams(editionId: string) {
+    const { data } = await supabase.from('teams').select('*').eq('edition_id', editionId).order('created_at', { ascending: true });
+    if (data) setTeams(data as Team[]);
+  }
 
-      if (qData) setQuestions(qData as Question[]);
+  // --- ACTIONS ---
+
+  async function handleAddTeam() {
+    if (!newTeamName.trim() || !edition) return;
+    const b = parseInt(startingBudget) || 50000000;
+    await supabase.from('teams').insert({
+      edition_id: edition.id,
+      name: newTeamName,
+      starting_budget: b,
+      remaining_budget: b,
+      score: 0,
+      status: 'approved'
+    });
+    setNewTeamName('');
+    await loadTeams(edition.id);
+  }
+
+  async function handleRemoveTeam(id: string) {
+    if (confirm('Remove this team?')) {
+      await supabase.from('teams').delete().eq('id', id);
+      await loadTeams(edition!.id);
     }
-    loadRoundQuestions();
-  }, [selectedRoundId]);
+  }
 
-  async function updateEventState(stateUpdate: Partial<EventState>) {
+  async function handleStartAuction() {
+    if (!edition || !eventState) return;
+    
+    // Ensure auction event exists
+    if (!auctionEvent) {
+      const { data: newAuc } = await supabase.from('auction_events').insert({
+        edition_id: edition.id,
+        name: 'GCL Live Auction',
+        starting_budget: parseInt(startingBudget) || 50000000,
+        bid_increment: 500000,
+        timer_duration_seconds: 180,
+        status: 'live'
+      }).select().single();
+      setAuctionEvent(newAuc as AuctionEvent);
+    }
+
+    await supabase.from('event_state').update({
+      state: 'LIVE',
+      timer_state: 'stopped',
+      timer_remaining_seconds: 180,
+    }).eq('id', eventState.id);
+    
+    // Auto-update all team budgets
+    for (const t of teams) {
+      const b = parseInt(startingBudget) || 50000000;
+      await supabase.from('teams').update({
+        starting_budget: b,
+        remaining_budget: b,
+      }).eq('id', t.id);
+    }
+  }
+
+  async function handleUpdateTimer(state: TimerState, remaining: number) {
     if (!eventState) return;
-    setActionLoading(true);
-    setStatusMessage(null);
-    try {
-      const { error } = await supabase
-        .from('event_state')
-        .update({
-          ...stateUpdate,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', eventState.id);
-
-      if (error) throw error;
-      setStatusMessage('Event state synchronized successfully.');
-      setTimeout(() => setStatusMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Update failed: ${err.message}`);
-    } finally {
-      setActionLoading(false);
-    }
+    await supabase.from('event_state').update({
+      timer_state: state,
+      timer_remaining_seconds: remaining,
+      timer_started_at: state === 'running' ? new Date().toISOString() : null,
+      timer_paused_at: state === 'paused' ? new Date().toISOString() : null,
+    }).eq('id', eventState.id);
   }
 
-  async function setOverallState(newState: EventLiveState) {
-    await updateEventState({ state: newState });
-  }
-
-  async function broadcastRoundAndQuestion() {
-    if (!selectedRoundId) {
-      alert('Please select a round to activate.');
+  async function handleProcessAnswer(isCorrect: boolean) {
+    if (!winningTeamId || !eventState) {
+      alert("Select a winning team first!");
       return;
     }
-    await updateEventState({
-      current_round_id: selectedRoundId,
-      current_question_id: selectedQuestionId || null,
-      state: 'LIVE',
-    });
+    
+    if (!confirm(`Mark as SOLD to Team ${teams.find(t=>t.id===winningTeamId)?.name} for ${formatINR(bidAmount)}?`)) return;
 
-    // Also update round status to 'live'
-    await supabase
-      .from('rounds')
-      .update({ status: 'live' })
-      .eq('id', selectedRoundId);
-  }
-
-  async function updateTimerState(newState: TimerState, remaining?: number) {
-    if (!eventState) return;
-    const updatePayload: Partial<EventState> = {
-      timer_state: newState,
-      timer_remaining_seconds: remaining !== undefined ? remaining : localTimer,
-    };
-
-    if (newState === 'running') {
-      updatePayload.timer_started_at = new Date().toISOString();
-    } else if (newState === 'paused') {
-      updatePayload.timer_paused_at = new Date().toISOString();
+    // Deduct budget
+    const team = teams.find(t => t.id === winningTeamId);
+    if (team) {
+      const newBudget = (team.remaining_budget ?? team.starting_budget) - bidAmount;
+      const newScore = team.score + (isCorrect ? 1 : 0);
+      
+      await supabase.from('teams').update({
+        remaining_budget: newBudget,
+        score: newScore,
+        total_spent: (team.starting_budget - newBudget)
+      }).eq('id', winningTeamId);
+      
+      // Log transaction
+      if (auctionEvent) {
+        await supabase.from('auction_transactions').insert({
+          auction_event_id: auctionEvent.id,
+          auction_item_id: eventState.active_auction_item_id || undefined, // we might not have a strict item mapped
+          team_id: winningTeamId,
+          amount: bidAmount,
+          previous_budget: team.remaining_budget,
+          new_budget: newBudget,
+          transaction_type: 'purchase',
+          notes: `Purchased question ${isCorrect ? '(Correct)' : '(Incorrect)'}`
+        });
+      }
     }
-
-    setLocalTimer(updatePayload.timer_remaining_seconds!);
-    await updateEventState(updatePayload);
+    
+    // Reset selection
+    setWinningTeamId('');
+    setBidAmount(2000000);
+    handleUpdateTimer('stopped', 180);
   }
 
-  async function resetTimer(seconds: number) {
-    if (!eventState) return;
-    setLocalTimer(seconds);
-    await updateEventState({
-      timer_state: 'stopped',
-      timer_duration_seconds: seconds,
-      timer_remaining_seconds: seconds,
-      timer_started_at: null,
-      timer_paused_at: null,
-    });
-  }
+  // Calculate Header Stats
+  const totalSpent = teams.reduce((acc, t) => acc + (t.total_spent || 0), 0);
+  const totalAvailable = teams.reduce((acc, t) => acc + (t.remaining_budget || 0), 0);
 
-  async function broadcastBanner() {
-    await updateEventState({ banner_message: bannerInput.trim() || null });
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-        <LoadingSpinner size="lg" text="Loading Live Tournament Control..." />
-      </div>
-    );
-  }
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a1128' }}><LoadingSpinner text="Initializing Control Panel..." /></div>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Header Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <h1 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', margin: 0 }}>
-              Master Live Tournament Control
-            </h1>
-            <Badge
-              variant={
-                eventState?.state === 'LIVE'
-                  ? 'live'
-                  : eventState?.state === 'PAUSED'
-                  ? 'warning'
-                  : 'subtle'
-              }
-              pulse={eventState?.state === 'LIVE'}
-            >
-              STATE: {eventState?.state || 'NOT_STARTED'}
-            </Badge>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-            Direct real-time control over projector screen, Team Leader arena, question broadcast, and server timer.
-          </p>
-        </div>
-
-        {statusMessage && (
-          <div style={{ color: '#34d399', fontSize: '0.875rem', fontWeight: 600 }}>
-            ✓ {statusMessage}
-          </div>
-        )}
-      </div>
-
-      {/* Grid of Command Modules */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-        {/* Module 1: Master Tournament State */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>⚡</span> Tournament State Switcher
-          </h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-            Updates connected screens and Team Leader view instantly.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem' }}>
-            <Button
-              variant={eventState?.state === 'LIVE' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('LIVE')}
-              disabled={actionLoading}
-            >
-              🟢 SET LIVE
-            </Button>
-            <Button
-              variant={eventState?.state === 'PAUSED' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('PAUSED')}
-              disabled={actionLoading}
-            >
-              ⏸️ PAUSE EVENT
-            </Button>
-            <Button
-              variant={eventState?.state === 'INTERMISSION' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('INTERMISSION')}
-              disabled={actionLoading}
-            >
-              ☕ INTERMISSION
-            </Button>
-            <Button
-              variant={eventState?.state === 'TIE_BREAKER' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('TIE_BREAKER')}
-              disabled={actionLoading}
-            >
-              ⚖️ TIE BREAKER
-            </Button>
-            <Button
-              variant={eventState?.state === 'FINAL_REVEAL' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('FINAL_REVEAL')}
-              disabled={actionLoading}
-            >
-              🥇 PODIUM REVEAL
-            </Button>
-            <Button
-              variant={eventState?.state === 'COMPLETED' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setOverallState('COMPLETED')}
-              disabled={actionLoading}
-            >
-              🏁 EVENT COMPLETE
-            </Button>
+    <div style={{ minHeight: '100vh', background: '#0a1128', color: '#fff', fontFamily: 'var(--font-sans)', paddingBottom: '4rem' }}>
+      {/* HEADER */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', background: '#070b19', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: '32px', height: '32px', background: 'rgba(34, 211, 238, 0.1)', border: '1px solid rgba(34, 211, 238, 0.3)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22d3ee' }}>🔨</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '1.125rem', letterSpacing: '1px' }}>GEN CODE LEAGUE</div>
+            <div style={{ fontSize: '0.65rem', color: '#22d3ee', letterSpacing: '2px', textTransform: 'uppercase' }}>● LIVE AUCTION</div>
           </div>
         </div>
-
-        {/* Module 2: Official Server Timer Engine */}
-        <div
-          className="card"
-          style={{
-            padding: '1.5rem',
-            background: 'linear-gradient(180deg, rgba(34, 211, 238, 0.08) 0%, rgba(15, 17, 24, 0.95) 100%)',
-            border: '1px solid var(--accent-cyan)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <h2 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-display)', margin: 0 }}>
-              ⏱️ Master Timer Engine
-            </h2>
-            <Badge variant={eventState?.timer_state === 'running' ? 'live' : 'subtle'}>
-              {eventState?.timer_state?.toUpperCase() || 'STOPPED'}
-            </Badge>
-          </div>
-
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '1.25rem 0',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '3rem',
-              fontWeight: 900,
-              color: localTimer <= 10 && eventState?.timer_state === 'running' ? 'var(--accent-red)' : 'var(--accent-cyan)',
-              letterSpacing: '0.05em',
-            }}
-          >
-            {formatTime(localTimer)}
-          </div>
-
-          {/* Timer Actions */}
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            {eventState?.timer_state === 'running' ? (
-              <Button variant="outline" size="sm" onClick={() => updateTimerState('paused')} disabled={actionLoading}>
-                ⏸️ Pause Timer
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm" onClick={() => updateTimerState('running')} disabled={actionLoading}>
-                ▶️ Start Timer
-              </Button>
-            )}
-
-            <Button variant="ghost" size="sm" onClick={() => resetTimer(eventState?.timer_duration_seconds || 60)} disabled={actionLoading}>
-              🔄 Reset ({eventState?.timer_duration_seconds || 60}s)
-            </Button>
-          </div>
-
-          {/* Quick Preset Durations */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Presets:</span>
-            {[30, 45, 60, 90, 120, 300].map((sec) => (
-              <button
-                key={sec}
-                type="button"
-                onClick={() => resetTimer(sec)}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                {sec}s
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Module 3: Broadcast Announcement Banner */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-            📢 Live Broadcast Banner
-          </h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Overlays critical instructions across live screens and Team Leader dashboards.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <input
-              type="text"
-              className="form-input"
-              value={bannerInput}
-              onChange={(e) => setBannerInput(e.target.value)}
-              placeholder="e.g. Round 2 begins in 3 minutes. Verify squad roster."
-            />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button variant="primary" size="sm" onClick={broadcastBanner} disabled={actionLoading} style={{ flex: 1 }}>
-                Push Broadcast Banner
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setBannerInput('');
-                  updateEventState({ banner_message: null });
-                }}
-                disabled={actionLoading}
-              >
-                Clear
-              </Button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Spent</div>
+              <div style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.875rem' }}>{formatINR(totalSpent)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Available</div>
+              <div style={{ color: '#10b981', fontWeight: 700, fontSize: '0.875rem' }}>{formatINR(totalAvailable)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>Teams</div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.875rem' }}>👥 {teams.length}</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Module 4: Active Round & Question Broadcast Module */}
-      <div className="card" style={{ padding: '1.75rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-          🎯 Round & Question Broadcast Control
-        </h2>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          Select the official active round and push individual questions to Team Leader terminals.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {/* Round Selector */}
-          <div className="form-group">
-            <label className="form-label">Active Round</label>
-            <select
-              className="form-input"
-              value={selectedRoundId}
-              onChange={(e) => {
-                setSelectedRoundId(e.target.value);
-                setSelectedQuestionId('');
-              }}
-            >
-              <option value="">-- Choose Round to Broadcast --</option>
-              {rounds.map((r, i) => (
-                <option key={r.id} value={r.id}>
-                  Round {r.round_number || i + 1}: {r.name} ({r.type.toUpperCase()}) [{r.status}]
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Question Selector */}
-          <div className="form-group">
-            <label className="form-label">Target Question</label>
-            <select
-              className="form-input"
-              value={selectedQuestionId}
-              onChange={(e) => setSelectedQuestionId(e.target.value)}
-              disabled={questions.length === 0}
-            >
-              <option value="">-- Select Question (Optional / All Round) --</option>
-              {questions.map((q, idx) => (
-                <option key={q.id} value={q.id}>
-                  Q{q.question_number || idx + 1}: {q.question_text.substring(0, 60)}... ({q.points} pts)
-                </option>
-              ))}
-            </select>
+          
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button variant="primary" size="sm" onClick={() => window.open('/live', '_blank')} style={{ borderRadius: '20px' }}>👁 Live View</Button>
+            <Button variant="danger" size="sm" onClick={() => window.location.href = '/'} style={{ borderRadius: '20px' }}>🔒 Logout</Button>
           </div>
         </div>
+      </header>
 
-        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Button variant="primary" size="md" onClick={broadcastRoundAndQuestion} disabled={actionLoading || !selectedRoundId}>
-            🚀 Broadcast Round & Questions to Arena
-          </Button>
-        </div>
-      </div>
+      <main style={{ maxWidth: '900px', margin: '2rem auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        
+        {/* EVENT CONFIGURATION - Only show if not LIVE */}
+        {eventState?.state === 'NOT_STARTED' && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <span style={{ color: '#3b82f6' }}>⚙️</span> Event Configuration
+            </h2>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Starting Budget</label>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <input 
+                  type="text" 
+                  value={startingBudget} 
+                  onChange={e => setStartingBudget(e.target.value)} 
+                  style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.75rem', borderRadius: '6px' }}
+                />
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem 1rem', borderRadius: '6px', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {formatINR(parseInt(startingBudget) || 0)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Teams ({teams.length})</label>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                {teams.map((t, idx) => (
+                  <div key={t.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', width: '20px' }}>{idx + 1}.</span>
+                    <input type="text" value={t.name} readOnly style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.5rem', borderRadius: '6px' }} />
+                    <button onClick={() => handleRemoveTeam(t.id)} style={{ width: '30px', height: '30px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input type="text" value={newTeamName} onChange={e=>setNewTeamName(e.target.value)} placeholder="New Team Name" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.5rem', borderRadius: '6px' }} />
+                <Button variant="primary" size="sm" onClick={handleAddTeam} style={{ borderRadius: '20px' }}>+ Add Team</Button>
+              </div>
+            </div>
+
+            <Button variant="primary" size="lg" fullWidth onClick={handleStartAuction}>
+              ▶ Start Live Auction
+            </Button>
+          </div>
+        )}
+
+        {/* LIVE CONTROL MODULES */}
+        {eventState?.state !== 'NOT_STARTED' && (
+          <>
+            {/* ROUND PROGRESSION */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>🔄</span> Round Progression
+              </h3>
+              
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', textAlign: 'center', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ color: '#fbbf24', fontWeight: 700, letterSpacing: '2px' }}>R1 - Q1 / 20</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Manual Round Selection</label>
+                  <select style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.75rem', borderRadius: '6px' }}>
+                    <option>Round 1 (Round 1)</option>
+                    <option>Round 2 (Round 2)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Manual Question Index</label>
+                  <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <button style={{ padding: '0.75rem 1rem', background: 'transparent', color: '#fff', border: 'none', borderRight: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>{'<'}</button>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem' }}><span style={{ color: '#fbbf24', fontWeight: 700, marginRight: '4px' }}>1</span> of 20</div>
+                    <button style={{ padding: '0.75rem 1rem', background: 'transparent', color: '#fff', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>{'>'}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TEAM MANAGEMENT COMPACT */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', color: '#86efac', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>👥</span> Team Management
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {teams.map((t, idx) => (
+                  <div key={t.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', width: '20px' }}>{idx + 1}.</span>
+                    <input type="text" value={t.name} readOnly style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.5rem', borderRadius: '6px' }} />
+                    <button onClick={() => handleRemoveTeam(t.id)} style={{ width: '30px', height: '30px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* QUESTION & TIMER */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem', position: 'relative' }}>
+              <Badge variant="subtle" style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>
+                👁 HIDDEN FROM PLAYERS
+              </Badge>
+
+              <h3 style={{ fontSize: '1rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>❓</span> Question & Timer
+              </h3>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Item/Question Name</label>
+                <textarea 
+                  value={questionText} 
+                  onChange={e => setQuestionText(e.target.value)}
+                  style={{ width: '100%', height: '100px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '1rem', borderRadius: '8px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontSize: '1.5rem', color: '#ef4444' }}>⏱</span>
+                  <div>
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>Bid Timer</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                      {Math.floor(localTimer / 60).toString().padStart(2, '0')}:{(localTimer % 60).toString().padStart(2, '0')}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {eventState?.timer_state === 'running' ? (
+                    <Button variant="outline" style={{ color: '#fbbf24', borderColor: '#fbbf24' }} onClick={() => handleUpdateTimer('paused', localTimer)}>
+                      ⏸ Pause
+                    </Button>
+                  ) : (
+                    <Button variant="primary" style={{ background: '#10b981', borderColor: '#10b981' }} onClick={() => handleUpdateTimer('running', localTimer)}>
+                      ▶ Start (Reveals Q)
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => { handleUpdateTimer('stopped', 180); setLocalTimer(180); }}>
+                    🔄 Reset
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* FINAL BID & ANSWER */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>🔨</span> Final Bid & Answer
+              </h3>
+              
+              <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Winning Team</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {teams.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setWinningTeamId(t.id)}
+                        style={{
+                          padding: '0.75rem',
+                          background: winningTeamId === t.id ? 'rgba(34, 211, 238, 0.2)' : 'rgba(0,0,0,0.3)',
+                          border: `1px solid ${winningTeamId === t.id ? '#22d3ee' : 'rgba(255,255,255,0.1)'}`,
+                          borderRadius: '8px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          minWidth: '80px'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70px' }}>{t.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#fbbf24' }}>★ {t.score}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ width: '350px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>Bid Amount (Base: ₹20.00 L)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <input 
+                      type="number" 
+                      value={bidAmount}
+                      onChange={e => setBidAmount(parseInt(e.target.value) || 0)}
+                      style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.75rem', borderRadius: '6px' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button onClick={()=>setBidAmount(p=>p+2000000)} style={{ flex: 1, padding: '0.5rem', background: '#9333ea', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>+₹20.0 L</button>
+                      <button onClick={()=>setBidAmount(p=>p+1000000)} style={{ flex: 1, padding: '0.5rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>+₹10.0 L</button>
+                      <button onClick={()=>setBidAmount(p=>p+500000)} style={{ flex: 1, padding: '0.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>+ 50 L</button>
+                      <button onClick={()=>setBidAmount(p=>Math.max(0, p-1000000))} style={{ flex: 1, padding: '0.5rem', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>- 10 L</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#fbbf24' }}>❓</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Answer Result</div>
+                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Did the team answer correctly?</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button onClick={() => handleProcessAnswer(false)} style={{ padding: '0.75rem 2rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.25rem' }}>⊗</span> Incorrect (0)
+                    </button>
+                    <button onClick={() => handleProcessAnswer(true)} style={{ padding: '0.75rem 2rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.25rem' }}>✓</span> Correct (+1)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                disabled={!winningTeamId}
+                onClick={() => handleProcessAnswer(false)}
+                style={{ width: '100%', padding: '1rem', background: winningTeamId ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)', color: winningTeamId ? '#fff' : 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '8px', cursor: winningTeamId ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '1rem' }}
+              >
+                ● SOLD! (Requires Result Selection)
+              </button>
+            </div>
+
+            {/* CORRECTIONS */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.25rem', color: '#fbbf24' }}>↩</span>
+                <span style={{ fontWeight: 600, color: '#fbbf24' }}>Corrections</span>
+              </div>
+              <Button variant="outline" style={{ color: '#fff' }} onClick={() => alert('Undo functionality not implemented in demo')}>Undo Last Transaction</Button>
+            </div>
+            
+          </>
+        )}
+      </main>
     </div>
   );
 }

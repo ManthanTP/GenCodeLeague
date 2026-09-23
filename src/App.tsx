@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { PublicLayout } from './layouts/PublicLayout';
 import { TeamLeaderLayout } from './layouts/TeamLeaderLayout';
-import { AdminLayout } from './layouts/AdminLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ADMIN_SECRET_PATH } from './config/admin';
 
@@ -41,27 +40,7 @@ import { LiveAuctionPage } from './pages/competition/LiveAuctionPage';
 import { LiveQuizPage } from './pages/competition/LiveQuizPage';
 
 // Admin Operations Pages
-import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminLiveControlPage } from './pages/admin/AdminLiveControlPage';
-import { AdminAuctionControlPage } from './pages/admin/AdminAuctionControlPage';
-import { AdminScoreboardPage } from './pages/admin/AdminScoreboardPage';
-import { AdminTieBreakerPage } from './pages/admin/AdminTieBreakerPage';
-import { AdminWinnerRevealPage } from './pages/admin/AdminWinnerRevealPage';
-import { AdminEditionsPage } from './pages/admin/AdminEditionsPage';
-import { AdminTeamsPage } from './pages/admin/AdminTeamsPage';
-import { AdminRoundsPage } from './pages/admin/AdminRoundsPage';
-import { AdminQuestionsPage } from './pages/admin/AdminQuestionsPage';
-import { AdminQuizControlPage } from './pages/admin/AdminQuizControlPage';
-import { AdminLeaderboardPage } from './pages/admin/AdminLeaderboardPage';
-import { AdminResultsPage } from './pages/admin/AdminResultsPage';
-import { AdminCertificatesPage } from './pages/admin/AdminCertificatesPage';
-import { AdminSchedulePage } from './pages/admin/AdminSchedulePage';
-import { AdminAnnouncementsPage } from './pages/admin/AdminAnnouncementsPage';
-import { AdminGalleryPage } from './pages/admin/AdminGalleryPage';
-import { AdminOrganizersPage } from './pages/admin/AdminOrganizersPage';
-import { AdminAnalyticsPage } from './pages/admin/AdminAnalyticsPage';
-import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
-import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage';
 
 export function App() {
   return (
@@ -131,30 +110,8 @@ export function App() {
               ADMIN PROTECTED ROUTES
               ══════════════════════════════════════════ */}
           <Route element={<ProtectedRoute requiredRole="admin" />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/admin/dashboard" element={<AdminOverviewPage />} />
-              <Route path="/admin/live-control" element={<AdminLiveControlPage />} />
-              <Route path="/admin/auction" element={<AdminAuctionControlPage />} />
-              <Route path="/admin/scoreboard" element={<AdminScoreboardPage />} />
-              <Route path="/admin/tie-breaker" element={<AdminTieBreakerPage />} />
-              <Route path="/admin/winner-reveal" element={<AdminWinnerRevealPage />} />
-              <Route path="/admin/editions" element={<AdminEditionsPage />} />
-              <Route path="/admin/teams" element={<AdminTeamsPage />} />
-              <Route path="/admin/rounds" element={<AdminRoundsPage />} />
-              <Route path="/admin/questions" element={<AdminQuestionsPage />} />
-              <Route path="/admin/quiz" element={<AdminQuizControlPage />} />
-              <Route path="/admin/leaderboard" element={<AdminLeaderboardPage />} />
-              <Route path="/admin/results" element={<AdminResultsPage />} />
-              <Route path="/admin/certificates" element={<AdminCertificatesPage />} />
-              <Route path="/admin/schedule" element={<AdminSchedulePage />} />
-              <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
-              <Route path="/admin/gallery" element={<AdminGalleryPage />} />
-              <Route path="/admin/organizers" element={<AdminOrganizersPage />} />
-              <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
-              <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
-            </Route>
+            <Route path="/admin" element={<AdminLiveControlPage />} />
+            <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
           </Route>
 
           {/* 404 Fallback */}
