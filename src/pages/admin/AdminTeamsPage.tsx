@@ -17,9 +17,14 @@ export function AdminTeamsPage() {
   const [selectedEdition, setSelectedEdition] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  // Modal State
+  // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [teamName, setTeamName] = useState('');
+
+  // Assign Leader Modal State
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [teamToAssign, setTeamToAssign] = useState<string | null>(null);
+  const [assignLeaderId, setAssignLeaderId] = useState('');
   const [college, setCollege] = useState('');
   const [department, setDepartment] = useState('');
   const [leaderId, setLeaderId] = useState('');
@@ -112,6 +117,39 @@ export function AdminTeamsPage() {
       await loadTeams();
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to create squad.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleAssignLeader(e: React.FormEvent) {
+    e.preventDefault();
+    if (!teamToAssign || !assignLeaderId) return;
+
+    setSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      // 1. Update the team with the new leader
+      const { error: updErr } = await supabase
+        .from('teams')
+        .update({ team_leader_id: assignLeaderId })
+        .eq('id', teamToAssign);
+
+      if (updErr) throw updErr;
+
+      // 2. Ensure the user's role is elevated to team_leader
+      await supabase
+        .from('profiles')
+        .update({ role: 'team_leader' })
+        .eq('id', assignLeaderId);
+
+      setIsAssignModalOpen(false);
+      setTeamToAssign(null);
+      setAssignLeaderId('');
+      await loadTeams();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to assign leader.');
     } finally {
       setSubmitting(false);
     }
@@ -239,6 +277,11 @@ export function AdminTeamsPage() {
                             Eliminate
                           </Button>
                         )}
+                        {!t.leader && (
+                          <Button variant="outline" size="sm" onClick={() => { setTeamToAssign(t.id); setAssignLeaderId(''); setIsAssignModalOpen(true); setErrorMsg(null); }}>
+                            Assign Leader
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -352,6 +395,46 @@ export function AdminTeamsPage() {
             </Button>
             <Button type="submit" variant="primary" isLoading={submitting}>
               Enroll Squad
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Assign Leader Modal */}
+      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Assign Team Leader">
+        <form onSubmit={handleAssignLeader} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {errorMsg && (
+            <div style={{ padding: '0.75rem', background: 'var(--status-eliminated-bg)', color: 'var(--status-eliminated)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
+              {errorMsg}
+            </div>
+          )}
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Select User Account</label>
+            <select
+              className="form-select"
+              value={assignLeaderId}
+              onChange={(e) => setAssignLeaderId(e.target.value)}
+              required
+            >
+              <option value="">-- Select a User --</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name || p.email} ({p.role.toUpperCase()})
+                </option>
+              ))}
+            </select>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+              This will link the selected user account to the team and grant them Team Leader permissions.
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+            <Button type="button" variant="outline" onClick={() => setIsAssignModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" isLoading={submitting}>
+              Assign Leader
             </Button>
           </div>
         </form>
