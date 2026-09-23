@@ -373,7 +373,9 @@ export interface Certificate {
   certificate_id: string;
   edition_id: string;
   team_id: string;
-  participant_id: string;
+  participant_id: string | null;
+  team_member_id?: string | null;
+  recipient_name?: string | null;
   certificate_type_id: string;
   achievement: string | null;
   issue_date: string;
@@ -388,6 +390,7 @@ export interface Certificate {
   created_at: string;
   // Joined
   participant?: Profile;
+  team_member?: TeamMember;
   team?: Team;
   edition?: Edition;
   certificate_type?: CertificateType;

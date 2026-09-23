@@ -24,26 +24,26 @@ export function AdminAnalyticsPage() {
       if (edData) {
         setEdition(edData as Edition);
 
-        const [teamsAll, teamsApp, teamsQual, profs, certsAll, certsRev, quizAtts, bids] = await Promise.all([
+        const [teamsAll, teamsApp, teamsQual, membersCount, certsAll, certsRev, subsCount, transCount] = await Promise.all([
           supabase.from('teams').select('*', { count: 'exact', head: true }).eq('edition_id', edData.id),
           supabase.from('teams').select('*', { count: 'exact', head: true }).eq('edition_id', edData.id).eq('status', 'approved'),
           supabase.from('teams').select('*', { count: 'exact', head: true }).eq('edition_id', edData.id).eq('status', 'qualified'),
-          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('team_members').select('*', { count: 'exact', head: true }),
           supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('edition_id', edData.id),
           supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('edition_id', edData.id).eq('status', 'revoked'),
-          supabase.from('quiz_attempts').select('*', { count: 'exact', head: true }),
-          supabase.from('auction_bids').select('*', { count: 'exact', head: true }),
+          supabase.from('submissions').select('*', { count: 'exact', head: true }),
+          supabase.from('auction_transactions').select('*', { count: 'exact', head: true }),
         ]);
 
         setMetrics({
           teamsTotal: teamsAll.count || 0,
           teamsApproved: teamsApp.count || 0,
           teamsQualified: teamsQual.count || 0,
-          participants: profs.count || 0,
+          participants: membersCount.count || 0,
           certsTotal: certsAll.count || 0,
           certsRevoked: certsRev.count || 0,
-          quizAttempts: quizAtts.count || 0,
-          bidsTotal: bids.count || 0,
+          quizAttempts: subsCount.count || 0,
+          bidsTotal: transCount.count || 0,
         });
       }
       setLoading(false);

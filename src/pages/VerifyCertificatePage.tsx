@@ -44,7 +44,8 @@ export function VerifyCertificatePage() {
           certificate_types:certificate_type_id (*),
           editions:edition_id (*),
           teams:team_id (*),
-          profiles:participant_id (*)
+          profiles:participant_id (*),
+          team_members:team_member_id (*)
         `)
         .eq('certificate_id', cleanId)
         .maybeSingle();
@@ -210,7 +211,7 @@ export function VerifyCertificatePage() {
                 Recipient Name
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-                {record.profiles?.full_name || 'Competitor'}
+                {record.recipient_name || (record as any).team_members?.full_name || record.profiles?.full_name || 'Competitor'}
               </div>
             </div>
 

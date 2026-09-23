@@ -34,7 +34,31 @@ export function LeaderboardPage() {
           .in('status', ['live', 'published', 'final'])
           .order('rank', { ascending: true });
 
-        if (lbData) setEntries(lbData as LeaderboardItem[]);
+        if (lbData && lbData.length > 0) {
+          setEntries(lbData as LeaderboardItem[]);
+        } else {
+          // Fallback to teams table directly with score/rank
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('edition_id', edData.id)
+            .order('score', { ascending: false });
+
+          if (teamData && teamData.length > 0) {
+            const simulatedEntries: LeaderboardItem[] = teamData.map((t, idx) => ({
+              id: t.id,
+              edition_id: t.edition_id,
+              round_id: null,
+              team_id: t.id,
+              rank: t.rank || idx + 1,
+              points: Number(t.score) || 0,
+              status: 'live',
+              updated_at: t.updated_at || new Date().toISOString(),
+              teams: t as Team,
+            }));
+            setEntries(simulatedEntries);
+          }
+        }
       }
       setLoading(false);
     }

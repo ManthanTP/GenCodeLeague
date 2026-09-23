@@ -18,13 +18,13 @@ interface CertificateWithDetails extends Certificate {
 }
 
 export function CaptainCertificatesPage() {
-  const { user, isCaptain, isAdmin } = useAuth();
+  const { user, team: authTeam, isCaptain, isAdmin } = useAuth();
   const [searchParams] = useSearchParams();
   const preselectedMemberId = searchParams.get('memberId');
 
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<Team | null>(authTeam);
   const [edition, setEdition] = useState<Edition | null>(null);
-  const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [certTypes, setCertTypes] = useState<CertificateType[]>([]);
   const [certificates, setCertificates] = useState<CertificateWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +42,10 @@ export function CaptainCertificatesPage() {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [user, authTeam]);
 
   useEffect(() => {
-    if (preselectedMemberId && members.some((m) => m.profile_id === preselectedMemberId)) {
+    if (preselectedMemberId && members.some((m) => m.id === preselectedMemberId)) {
       setSelectedMemberId(preselectedMemberId);
       setIsModalOpen(true);
     }
@@ -74,45 +74,39 @@ export function CaptainCertificatesPage() {
     }
 
     // 3. User's Team
-    const { data: memData } = await supabase
-      .from('team_members')
-      .select('*')
-      .eq('profile_id', user.id)
-      .maybeSingle();
-
-    if (memData) {
+    let activeTeam = authTeam;
+    if (!activeTeam) {
       const { data: teamData } = await supabase
         .from('teams')
         .select('*')
-        .eq('id', memData.team_id)
-        .single();
+        .or(`team_leader_id.eq.${user.id},captain_id.eq.${user.id}`)
+        .maybeSingle();
+      if (teamData) activeTeam = teamData as Team;
+    }
 
-      if (teamData) {
-        setTeam(teamData as Team);
+    if (activeTeam) {
+      setTeam(activeTeam);
 
-        // Fetch team members
-        const { data: teamMembers } = await supabase
-          .from('team_members')
-          .select(`
-            *,
-            profiles:profile_id (*)
-          `)
-          .eq('team_id', teamData.id);
-        if (teamMembers) setMembers(teamMembers as MemberWithProfile[]);
+      // Fetch team members
+      const { data: teamMembers } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', activeTeam.id)
+        .order('is_leader', { ascending: false });
+      if (teamMembers) setMembers(teamMembers as TeamMember[]);
 
-        // Fetch existing issued certificates for this team
-        const { data: certsData } = await supabase
-          .from('certificates')
-          .select(`
-            *,
-            profiles:participant_id (*),
-            certificate_types:certificate_type_id (*)
-          `)
-          .eq('team_id', teamData.id)
-          .order('generated_at', { ascending: false });
+      // Fetch existing issued certificates for this team
+      const { data: certsData } = await supabase
+        .from('certificates')
+        .select(`
+          *,
+          profiles:participant_id (*),
+          certificate_types:certificate_type_id (*)
+        `)
+        .eq('team_id', activeTeam.id)
+        .order('created_at', { ascending: false });
 
-        if (certsData) setCertificates(certsData as CertificateWithDetails[]);
-      }
+      if (certsData) setCertificates(certsData as CertificateWithDetails[]);
     }
 
     setLoading(false);
@@ -126,12 +120,15 @@ export function CaptainCertificatesPage() {
     setModalError(null);
 
     try {
-      // 1. Check for duplicate certificate: same participant + type + edition
+      const selectedMember = members.find((m) => m.id === selectedMemberId);
+      const recipientName = selectedMember?.full_name || 'Squad Member';
+
+      // 1. Check for duplicate certificate: same member + type + edition
       const { data: existingCert } = await supabase
         .from('certificates')
         .select('id, certificate_id, status')
         .eq('edition_id', edition.id)
-        .eq('participant_id', selectedMemberId)
+        .eq('team_member_id', selectedMemberId)
         .eq('certificate_type_id', selectedTypeId)
         .maybeSingle();
 
@@ -144,7 +141,6 @@ export function CaptainCertificatesPage() {
       // 2. Generate unique certificate ID: GCL-YYYY-CERT-NNNNNN
       const randomSeq = Math.floor(100000 + Math.random() * 900000);
       const generatedId = `GCL-${edition.year}-CERT-${randomSeq}`;
-      const verificationToken = `vt_${Math.random().toString(36).substring(2)}${Date.now()}`;
 
       // 3. Insert into database
       const { data: newCert, error: insertErr } = await supabase
@@ -153,17 +149,16 @@ export function CaptainCertificatesPage() {
           certificate_id: generatedId,
           edition_id: edition.id,
           team_id: team.id,
-          participant_id: selectedMemberId,
+          team_member_id: selectedMemberId,
+          recipient_name: recipientName,
           certificate_type_id: selectedTypeId,
           achievement: achievementNote.trim() || 'Official Squad Member',
           status: 'active',
           generated_by: user.id,
-          verification_token: verificationToken,
-          template_version: 'GCL-V1',
+          template_version: 1,
         })
         .select(`
           *,
-          profiles:participant_id (*),
           certificate_types:certificate_type_id (*)
         `)
         .single();
@@ -199,7 +194,7 @@ export function CaptainCertificatesPage() {
     );
   }
 
-  const selectedMemberProfile = members.find((m) => m.profile_id === selectedMemberId)?.profiles;
+  const selectedMemberObj = members.find((m) => m.id === selectedMemberId);
   const selectedTypeObj = certTypes.find((t) => t.id === selectedTypeId);
 
   return (
@@ -256,8 +251,8 @@ export function CaptainCertificatesPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{cert.profiles?.full_name || 'Member'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cert.profiles?.email}</div>
+                      <div style={{ fontWeight: 600 }}>{cert.recipient_name || cert.profiles?.full_name || 'Squad Member'}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cert.profiles?.email || team.name}</div>
                     </td>
                     <td>
                       <Badge variant="subtle">
@@ -327,8 +322,8 @@ export function CaptainCertificatesPage() {
             >
               <option value="">-- Choose Roster Member --</option>
               {members.map((m) => (
-                <option key={m.id} value={m.profile_id || m.id}>
-                  {m.full_name || m.profiles?.full_name || m.profiles?.email || 'Member'} ({m.role.toUpperCase()})
+                <option key={m.id} value={m.id}>
+                  {m.full_name || 'Member'} {m.usn ? `(${m.usn})` : ''} {m.is_leader ? '★ LEADER' : ''}
                 </option>
               ))}
             </select>
@@ -362,10 +357,10 @@ export function CaptainCertificatesPage() {
           </div>
 
           {/* Quick Preview Card */}
-          {selectedMemberProfile && (
+          {selectedMemberObj && (
             <div style={{ padding: '1rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', fontSize: '0.8125rem' }}>
               <div style={{ color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Certificate Preview</div>
-              <div>Recipient: <strong style={{ color: 'var(--text-primary)' }}>{selectedMemberProfile.full_name}</strong></div>
+              <div>Recipient: <strong style={{ color: 'var(--text-primary)' }}>{selectedMemberObj.full_name}</strong></div>
               <div>Squad: <strong style={{ color: 'var(--text-primary)' }}>{team.name}</strong></div>
               <div>Type: <strong style={{ color: 'var(--gold)' }}>{selectedTypeObj?.name}</strong></div>
             </div>
@@ -436,7 +431,7 @@ export function CaptainCertificatesPage() {
             </p>
 
             <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', color: 'var(--text-primary)', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-default)', display: 'inline-block', paddingBottom: '0.25rem', minWidth: '320px' }}>
-              {previewCert.profiles?.full_name || 'Competitor'}
+              {previewCert.recipient_name || previewCert.profiles?.full_name || 'Squad Member'}
             </h2>
 
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', margin: '1.25rem auto', maxWidth: '500px', lineHeight: 1.6 }}>
