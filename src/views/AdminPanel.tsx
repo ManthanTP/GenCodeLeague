@@ -22,12 +22,16 @@ import {
   FileText,
   Loader2,
   Hammer,
+  Clock,
+  Pause,
+  RotateCcw,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEventState, broadcastStateChange } from '../hooks/useEventState';
 import { useTeams, broadcastTeamsChange } from '../hooks/useTeams';
 import { useTeamItems, broadcastItemsChange } from '../hooks/useTeamItems';
+import { useTimer } from '../hooks/useTimer';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import ConnectionHealth from '../components/ConnectionHealth';
@@ -42,6 +46,13 @@ export default function AdminPanel() {
   const { eventState, setEventState, edition, loading: stateLoading } = useEventState();
   const { teams, setTeams } = useTeams(edition?.id);
   const { items, setItems } = useTeamItems(edition?.id);
+  const {
+    formatted: timerFormatted,
+    isRunning: isTimerRunning,
+    isPaused: isTimerPaused,
+    isRevealed,
+    isExpired,
+  } = useTimer(eventState);
 
   // Authentication check (allows session profile OR local session flag)
   const isMasterAuthed = sessionStorage.getItem('gcl_admin_authenticated') === 'true';
@@ -333,19 +344,99 @@ export default function AdminPanel() {
       current_question_index: q,
       current_item_name: autoText,
       current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_remaining_seconds: 180,
+      timer_duration_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
       updated_at: new Date().toISOString(),
     };
 
-    setEventState((prev) => (prev ? { ...prev, ...updates } : null));
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
     broadcastStateChange(updates);
 
-    supabase
-      .from('event_state')
-      .update(updates)
-      .eq('id', eventState.id)
-      .then();
+    if (eventState?.id) {
+      supabase
+        .from('event_state')
+        .update(updates)
+        .eq('id', eventState.id)
+        .then();
+    }
 
     addHistory('Tracker Changed', `Set to Round ${r + 1}, Q${q + 1}`);
+  };
+
+  const handleStartTimer = () => {
+    const now = new Date().toISOString();
+    let updates: Partial<EventState>;
+
+    if (isTimerPaused && eventState?.timer_remaining_seconds) {
+      // Resume from paused state
+      updates = {
+        timer_state: 'running',
+        timer_started_at: now,
+        timer_paused_at: null,
+        updated_at: now,
+      };
+    } else {
+      // Start fresh
+      updates = {
+        timer_state: 'running',
+        timer_duration_seconds: 180,
+        timer_remaining_seconds: 180,
+        timer_started_at: now,
+        timer_paused_at: null,
+        updated_at: now,
+      };
+    }
+
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
+    broadcastStateChange(updates);
+    if (eventState?.id) {
+      supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    }
+    showNotification('Timer started! Question is now revealed to players.', 'success');
+    addHistory('Timer Started', `Question revealed for Round ${roundIdx + 1} - Q${questionIdx + 1}`);
+  };
+
+  const handlePauseTimer = () => {
+    const start = eventState?.timer_started_at ? new Date(eventState.timer_started_at).getTime() : Date.now();
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    const currentRemaining = Math.max(0, (eventState?.timer_remaining_seconds ?? 180) - elapsed);
+    const now = new Date().toISOString();
+
+    const updates: Partial<EventState> = {
+      timer_state: 'paused',
+      timer_remaining_seconds: currentRemaining,
+      timer_paused_at: now,
+      updated_at: now,
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
+    broadcastStateChange(updates);
+    if (eventState?.id) {
+      supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    }
+    showNotification('Timer paused.', 'success');
+  };
+
+  const handleResetTimer = () => {
+    const now = new Date().toISOString();
+    const updates: Partial<EventState> = {
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      updated_at: now,
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
+    broadcastStateChange(updates);
+    if (eventState?.id) {
+      supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    }
+    showNotification('Timer reset to 03:00. Question is now hidden.', 'success');
   };
 
   const handleTeamSelection = (id: string) => {
@@ -524,21 +615,26 @@ export default function AdminPanel() {
       broadcastStateChange(nextState);
       supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
     } else {
-      // Advance to next question in same round
+      // Advance to next question in same round (starts hidden until admin starts timer)
       nextItemText = currentRoundData.questions[nextQuestionIdx] || '';
       const nextState: Partial<EventState> = {
         current_question_index: nextQuestionIdx,
         current_item_name: nextItemText,
         current_bid_preview: null,
+        timer_state: 'stopped',
+        timer_duration_seconds: 180,
+        timer_remaining_seconds: 180,
+        timer_started_at: null,
+        timer_paused_at: null,
         updated_at: new Date().toISOString(),
       };
 
       setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
       setCurrentItem(nextItemText);
       broadcastStateChange(nextState);
-      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+      if (eventState?.id) supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
 
-      showNotification(`Sold to ${winningTeam.name}! Question ${nextQuestionIdx + 1} ready.`, 'success');
+      showNotification(`Sold to ${winningTeam.name}! Question ${nextQuestionIdx + 1} ready (hidden until timer starts).`, 'success');
     }
 
     // Reset bid inputs
@@ -580,6 +676,11 @@ export default function AdminPanel() {
       current_question_index: newQIdx,
       current_item_name: lastItem.item_name,
       current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
       updated_at: new Date().toISOString(),
     };
     setEventState((prev) => (prev ? { ...prev, ...updates } : null));
@@ -880,23 +981,80 @@ export default function AdminPanel() {
               )}
             </div>
 
-            {/* Current Item / Question Editor */}
+            {/* Question & Timer Card */}
             <div className="admin-card">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="card-title text-yellow-400">
-                  <HelpCircle size={22} /> Current Auction Item / Question
-                </h2>
-                <button onClick={handleLoadQuestionFromData} className="btn-secondary-load">
-                  <FileText size={16} /> Load Q{questionIdx + 1} from Data
-                </button>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <HelpCircle size={22} />
+                  <h2 className="text-xl font-bold text-white">Question & Timer</h2>
+                </div>
+                <div>
+                  {isRevealed ? (
+                    <span className="badge-revealed-to-players">● REVEALED TO PLAYERS</span>
+                  ) : (
+                    <span className="badge-hidden-from-players">HIDDEN FROM PLAYERS</span>
+                  )}
+                </div>
               </div>
-              <textarea
-                value={currentItem}
-                onChange={(e) => handleItemNameChange(e.target.value)}
-                placeholder={`Enter question for Round ${roundIdx + 1} - Q${questionIdx + 1}...`}
-                rows={4}
-                className="gcl-textarea"
-              />
+
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="input-label mb-0">Item / Question Name</label>
+                  <button type="button" onClick={handleLoadQuestionFromData} className="btn-secondary-load">
+                    <FileText size={15} /> Load Q{questionIdx + 1} from Data
+                  </button>
+                </div>
+                <textarea
+                  value={currentItem}
+                  onChange={(e) => handleItemNameChange(e.target.value)}
+                  placeholder={`Enter question for Round ${roundIdx + 1} - Q${questionIdx + 1}...`}
+                  rows={4}
+                  className="gcl-textarea"
+                />
+              </div>
+
+              {/* Timer Controls Row */}
+              <div className="timer-controls-bar">
+                <div className="flex items-center gap-3">
+                  <div className="timer-icon-badge">
+                    <Clock size={20} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
+                  </div>
+                  <div>
+                    <p className="timer-label">BID TIMER</p>
+                    <p className={`font-mono text-2xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                      {timerFormatted}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!isTimerRunning ? (
+                    <button
+                      type="button"
+                      onClick={handleStartTimer}
+                      className="btn-timer-start"
+                    >
+                      <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handlePauseTimer}
+                      className="btn-timer-pause"
+                    >
+                      <Pause size={18} /> Pause
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleResetTimer}
+                    className="btn-timer-reset"
+                  >
+                    <RotateCcw size={16} /> Reset
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Final Bid & Answer Form */}

@@ -11,10 +11,12 @@ import {
   History,
   Medal,
   Crown,
+  Clock,
 } from 'lucide-react';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamItems } from '../hooks/useTeamItems';
+import { useTimer } from '../hooks/useTimer';
 import Header from '../components/Header';
 import ConnectionHealth from '../components/ConnectionHealth';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
@@ -26,6 +28,12 @@ export default function LiveView() {
   const { eventState, edition, loading: stateLoading } = useEventState();
   const { teams } = useTeams(edition?.id);
   const { items } = useTeamItems(edition?.id);
+  const {
+    formatted: timerFormatted,
+    isRunning: isTimerRunning,
+    isRevealed,
+    isExpired,
+  } = useTimer(eventState);
 
   // Selected personal team ID for viewer
   const [myTeamId, setMyTeamId] = useState<string>('');
@@ -263,15 +271,35 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Current Question / Item Box */}
+          {/* Current Question / Item Box with Live Timer */}
           <div className="question-display-box">
-            <p className="question-header-ref">
-              {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-3">
+              <p className="question-header-ref">
+                {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
+              </p>
+              <div className="flex items-center gap-2 bg-slate-900/80 px-4 py-1.5 rounded-full border border-slate-700">
+                <Clock size={16} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
+                <span className="text-xs uppercase font-bold tracking-widest text-slate-400">BID TIMER</span>
+                <span className={`font-mono text-xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                  {timerFormatted}
+                </span>
+              </div>
+            </div>
             <div className="divider-gold"></div>
-            <h3 className="question-text">
-              {renderMultiLineText(eventState?.current_item_name) || 'Awaiting Next Question...'}
-            </h3>
+            {isRevealed ? (
+              <h3 className="question-text">
+                {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
+              </h3>
+            ) : (
+              <div className="py-6 text-center">
+                <h3 className="text-2xl md:text-3xl font-extrabold text-slate-400 italic tracking-wide animate-pulse">
+                  Awaiting for Next Question...
+                </h3>
+                <p className="text-sm text-slate-500 mt-2 font-mono uppercase tracking-wider">
+                  Question will appear on screen when timer begins
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Active Bid Pulse Banner */}

@@ -1142,6 +1142,136 @@ body {
   background: #334155;
 }
 
+/* ---------------------------------------------------- */
+/* --- QUESTION & TIMER STYLES --- */
+/* ---------------------------------------------------- */
+
+.badge-hidden-from-players {
+  background: rgba(120, 53, 15, 0.45);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+
+.badge-revealed-to-players {
+  background: rgba(6, 78, 59, 0.45);
+  border: 1px solid #10b981;
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.timer-controls-bar {
+  background: #0b1120;
+  border: 1px solid #1e293b;
+  border-radius: 0.85rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+  .timer-controls-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.timer-icon-badge {
+  background: #1e293b;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.btn-timer-start {
+  background: #059669;
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.6rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.btn-timer-start:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-timer-pause {
+  background: #d97706;
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.6rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-timer-pause:hover {
+  background: #b45309;
+}
+
+.btn-timer-reset {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-timer-reset:hover {
+  background: #334155;
+  color: white;
+}
+
 .team-select-btn {
   padding: 0.75rem 0.5rem;
   border-radius: 0.75rem;
