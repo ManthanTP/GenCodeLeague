@@ -255,13 +255,12 @@ export default function AdminPanel() {
   };
 
   const handleStartNextRound = async () => {
-    if (!eventState?.id) return;
-    const rIdx = eventState.current_round_index || 0;
+    const rIdx = eventState?.current_round_index || 0;
     const roundData = DEFAULT_ROUNDS_DATA[rIdx] || { name: `Round ${rIdx + 1}`, questions: [] };
     const firstQ = roundData.questions[0] || '';
 
     // If entering from intermission, reset round budgets
-    if (eventState.game_state === 'intermission') {
+    if (eventState?.game_state === 'intermission') {
       const standardBudget = edition?.starting_budget || 50000000;
       const refreshedTeams = teams.map((t) => ({ ...t, budget: standardBudget }));
       setTeams(refreshedTeams);
@@ -281,7 +280,7 @@ export default function AdminPanel() {
     };
 
     // 1. Immediate optimistic UI transition
-    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : (nextState as EventState)));
     setCurrentItem(firstQ);
 
     // 2. Broadcast immediately to Live View across all browser windows
@@ -291,13 +290,15 @@ export default function AdminPanel() {
     addHistory('Round Started', `${roundData.name} started.`);
 
     // 3. Persist to database in background
-    supabase
-      .from('event_state')
-      .update(nextState)
-      .eq('id', eventState.id)
-      .then(({ error }) => {
-        if (error) console.warn('Supabase state update notice:', error.message);
-      });
+    if (eventState?.id) {
+      supabase
+        .from('event_state')
+        .update(nextState)
+        .eq('id', eventState.id)
+        .then(({ error }) => {
+          if (error) console.warn('Supabase state update notice:', error.message);
+        });
+    }
   };
 
   const handleItemNameChange = async (text: string) => {
@@ -791,7 +792,12 @@ export default function AdminPanel() {
                 Click below when you are ready to begin <strong>Round 1</strong>.
               </p>
             </div>
-            <button onClick={handleStartNextRound} className="btn-start-round">
+            <button
+              type="button"
+              onClick={handleStartNextRound}
+              className="btn-start-round"
+              style={{ cursor: 'pointer', position: 'relative', zIndex: 30 }}
+            >
               <Play size={24} fill="currentColor" /> OFFICIALLY START ROUND 1
             </button>
           </div>
