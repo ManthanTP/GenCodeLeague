@@ -14,6 +14,12 @@ export interface Edition {
   created_at: string;
 }
 
+export interface BidPreview {
+  teamId: string;
+  amount: number;
+  questionRef: string;
+}
+
 export interface EventState {
   id: string;
   edition_id: string;
@@ -26,7 +32,7 @@ export interface EventState {
   timer_state: TimerState;
   timer_started_at: string | null;
   timer_paused_at: string | null;
-  current_bid_preview: { teamId: string; amount: number; questionRef: string } | null;
+  current_bid_preview: BidPreview | null;
   banner_message: string | null;
   updated_at: string;
 }
@@ -40,6 +46,42 @@ export interface Team {
   status: 'active' | 'eliminated';
   sort_order: number;
   created_at: string;
+}
+
+export interface TeamItem {
+  id: string;
+  team_id: string;
+  edition_id: string;
+  item_name: string;
+  cost: number;
+  is_correct: boolean;
+  round_index: number;
+  question_index: number;
+  question_ref: string;
+  created_at: string;
+}
+
+export interface TransactionEntry {
+  id: string | number;
+  time: string;
+  action: string;
+  details: string;
+}
+
+export interface PastRoundTeamResult {
+  id: string;
+  name: string;
+  score: number;
+  itemsCount: number;
+  totalSpent: number;
+  remainingBudget: number;
+}
+
+export interface PastRoundSnapshot {
+  roundIndex: number;
+  roundName: string;
+  results: PastRoundTeamResult[];
+  timestamp: number;
 }
 
 export interface Profile {
@@ -63,30 +105,5 @@ export interface TeamMember {
   department: string | null;
   semester: string | null;
   role: 'leader' | 'member';
-  created_at: string;
-}
-
-export interface TeamItem {
-  id: string;
-  team_id: string;
-  edition_id: string;
-  item_name: string;
-  cost: number;
-  is_correct: boolean;
-  round_index: number;
-  question_index: number;
-  question_ref: string;
-  created_at: string;
-}
-
-export interface WinnerReveal {
-  id: string;
-  edition_id: string;
-  position: number;
-  team_id: string;
-  team_name: string;
-  total_score: number;
-  is_revealed: boolean;
-  revealed_at: string | null;
   created_at: string;
 }

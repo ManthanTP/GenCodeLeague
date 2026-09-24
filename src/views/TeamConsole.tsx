@@ -50,13 +50,11 @@ export default function TeamConsole() {
 
   return (
     <>
-      <Header 
-        rightContent={
-          <>
-            <button className="primary" onClick={() => window.open('/', '_blank')}>Live View</button>
-            <button className="danger" onClick={handleLogout}>Logout</button>
-          </>
-        }
+      <Header
+        viewMode="team"
+        onToggleView={() => navigate('/')}
+        isAdminAuthenticated={false}
+        onLogout={handleLogout}
       />
       
       <div className="container">

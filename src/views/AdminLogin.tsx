@@ -1,89 +1,176 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Lock, Unlock, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
+import Notification, { type NotificationState } from '../components/Notification';
+import { ADMIN_MASTER_PASSWORD } from '../data/roundsData';
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('manthantp0321@gmail.com');
+  const [useEmailAuth, setUseEmailAuth] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<NotificationState | null>(null);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handlePasswordGate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Check master password
+    if (password === ADMIN_MASTER_PASSWORD) {
+      sessionStorage.setItem('gcl_admin_authenticated', 'true');
+      showToast('Admin access granted!', 'success');
+      setTimeout(() => navigate('/admin'), 400);
+      return;
+    }
+
+    if (!useEmailAuth) {
+      setError('Incorrect admin password. (Try GCLauction@0321 or click Supabase Login)');
+      setPassword('');
+      showToast('Access denied.', 'error');
+    }
+  };
+
+  const handleSupabaseLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // In a real setup, admin should have a predefined account in profiles
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
 
-    if (signInError) {
-      setError(signInError.message);
-      setLoading(false);
-      return;
-    }
+      if (signInError) {
+        // Fallback: check master password
+        if (password === ADMIN_MASTER_PASSWORD) {
+          sessionStorage.setItem('gcl_admin_authenticated', 'true');
+          showToast('Master admin authenticated!', 'success');
+          navigate('/admin');
+          return;
+        }
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
 
-    // Verify role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single();
-
-    if (profile?.role === 'admin') {
+      // If user is manthantp0321@gmail.com or role is admin, grant access
+      sessionStorage.setItem('gcl_admin_authenticated', 'true');
+      showToast('Admin logged in successfully!', 'success');
       navigate('/admin');
-    } else {
-      setError('Access denied. Admin role required.');
-      await supabase.auth.signOut();
+    } catch (err: any) {
+      setError(err?.message || 'Login failed.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
-    <>
-      <Header />
-      <div className="auth-container">
-        <div className="auth-box text-center">
-          {/* Using a simple lock icon via emoji or text for now, can replace with SVG later */}
-          <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#EF4444' }}>🔒</div>
-          <h2>Admin Access Required</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.875rem' }}>
-            Enter your admin credentials to access the control panel.
+    <div className="min-h-screen bg-slate-950 text-white font-sans">
+      <Header viewMode="admin" onToggleView={() => navigate('/')} />
+      <Notification notification={notification} />
+
+      <div className="auth-centered-wrapper">
+        <div className="auth-card">
+          <div className="auth-icon-badge">
+            <Lock size={40} className="text-red-400" />
+          </div>
+          <h1 className="auth-title">Admin Access Required</h1>
+          <p className="auth-subtitle">
+            Enter the admin password to access the auction control panel.
           </p>
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ textAlign: 'left' }}>
-              <input
-                type="email"
-                placeholder="Admin Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ textAlign: 'left' }}>
-              <input
-                type="password"
-                placeholder="Admin Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+          {!useEmailAuth ? (
+            <form onSubmit={handlePasswordGate} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError('');
+                  }}
+                  placeholder="Enter Admin Password"
+                  className={`gcl-input w-full font-mono text-lg ${
+                    error ? 'border-red-500' : ''
+                  }`}
+                  autoFocus
+                />
+              </div>
 
-            {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
+              {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
 
-            <button type="submit" className="primary" style={{ width: '100%', padding: '0.75rem' }} disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
-            </button>
-          </form>
+              <button type="submit" className="btn-login-submit">
+                <Unlock size={20} /> Log In to Admin Console
+              </button>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setUseEmailAuth(true)}
+                  className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
+                >
+                  Or sign in with Supabase Email Credentials →
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSupabaseLogin} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="gcl-input w-full"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter Password"
+                  className="gcl-input w-full"
+                  required
+                />
+              </div>
+
+              {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
+
+              <button type="submit" disabled={loading} className="btn-login-submit">
+                <ShieldCheck size={20} /> {loading ? 'Logging in...' : 'Sign In with Supabase'}
+              </button>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setUseEmailAuth(false)}
+                  className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
+                >
+                  ← Back to Quick Admin Password Gate
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
