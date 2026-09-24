@@ -170,7 +170,10 @@ CREATE POLICY "Admin all team_items" ON team_items FOR ALL USING (EXISTS (SELECT
 CREATE POLICY "Admin all transaction_history" ON transaction_history FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
 CREATE POLICY "Admin all round_snapshots" ON round_snapshots FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
 CREATE POLICY "Admin all winner_reveals" ON winner_reveals FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
-CREATE POLICY "Admin all profiles" ON profiles FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
+
+-- Fix for profiles infinite recursion: allow reading all profiles, let users update their own. Admins can be managed via dashboard.
+CREATE POLICY "Anyone can read profiles" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (id = auth.uid());
 
 -- Team Leader access
 CREATE POLICY "Team leader read own team members" ON team_members FOR SELECT USING (team_id IN (SELECT team_id FROM profiles WHERE id = auth.uid() AND role = 'team_leader'));
@@ -178,4 +181,4 @@ CREATE POLICY "Team leader insert own team members" ON team_members FOR INSERT W
 CREATE POLICY "Team leader update own team members" ON team_members FOR UPDATE USING (team_id IN (SELECT team_id FROM profiles WHERE id = auth.uid() AND role = 'team_leader'));
 CREATE POLICY "Team leader delete own team members" ON team_members FOR DELETE USING (team_id IN (SELECT team_id FROM profiles WHERE id = auth.uid() AND role = 'team_leader'));
 
-CREATE POLICY "Team leader read own profile" ON profiles FOR SELECT USING (id = auth.uid());
+-- Team leader profile read is now covered by the public read policy above.
