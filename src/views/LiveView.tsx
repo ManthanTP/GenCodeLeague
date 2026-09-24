@@ -272,21 +272,21 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Timer Display above Question Box (Right-aligned, exact match to original design) */}
-          <div className="live-timer-row">
-            <div className={`live-bid-timer-widget ${isExpired ? 'timer-expired' : isTimerRunning ? 'timer-running' : ''}`}>
-              <div className="live-timer-label">
-                <Clock size={15} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
-                <span>BID TIMER</span>
-              </div>
-              <div className={`live-timer-digits ${isExpired ? 'digits-expired' : isTimerRunning ? 'digits-running' : ''}`}>
-                {timerFormatted}
+          {/* Current Question / Item Box with Gold Border (Timer embedded in top-right) */}
+          <div className="question-display-box">
+            {/* Timer Widget inside top-right corner of Question Box */}
+            <div className="question-timer-corner">
+              <div className={`live-bid-timer-widget ${isExpired ? 'timer-expired' : isTimerRunning ? 'timer-running' : ''}`}>
+                <div className="live-timer-label">
+                  <Clock size={15} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
+                  <span>BID TIMER</span>
+                </div>
+                <div className={`live-timer-digits ${isExpired ? 'digits-expired' : isTimerRunning ? 'digits-running' : ''}`}>
+                  {timerFormatted}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Current Question / Item Box with Gold Border (Full width, exact match to original design) */}
-          <div className="question-display-box">
             {isRevealed ? (
               <>
                 <p className="question-header-ref">
