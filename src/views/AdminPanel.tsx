@@ -6,6 +6,8 @@ import { useTeams } from '../hooks/useTeams';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 
+import AdminSetup from './AdminSetup';
+
 export default function AdminPanel() {
   const { profile, loading: authLoading } = useAuth();
   const { eventState, edition, loading: stateLoading } = useEventState();
@@ -34,7 +36,7 @@ export default function AdminPanel() {
   const renderContent = () => {
     switch (eventState.game_state) {
       case 'setup':
-        return <div>Setup view placeholder</div>;
+        return <AdminSetup edition={edition} eventState={eventState} teams={teams} />;
       case 'waiting_start':
         return <div>Waiting start placeholder</div>;
       case 'active':
