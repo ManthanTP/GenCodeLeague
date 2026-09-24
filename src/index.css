@@ -323,9 +323,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 105px 1.5rem 3rem 1.5rem;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .ambient-glow {
@@ -1650,13 +1651,77 @@ body {
 }
 
 /* ---------------------------------------------------- */
+/* --- DEDICATED PAGE CONTAINERS (Prevents navbar overlap) --- */
+/* ---------------------------------------------------- */
+
+.admin-page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 105px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-waiting-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 115px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-setup-container {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 105px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-intermission-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 110px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-reveal-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 105px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+.live-page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 105px 1.5rem 3rem 1.5rem !important;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+
+/* ---------------------------------------------------- */
 /* --- ESSENTIAL LAYOUT & UTILITY CLASSES --- */
 /* ---------------------------------------------------- */
 
-.pt-20 { padding-top: 5rem; }
-.pt-24 { padding-top: 6.5rem; }
-.pt-28 { padding-top: 7.5rem; }
-.pt-32 { padding-top: 8.5rem; }
+.pt-20 { padding-top: 5rem !important; }
+.pt-24 { padding-top: 6.5rem !important; }
+.pt-28 { padding-top: 7.5rem !important; }
+.pt-32 { padding-top: 8.5rem !important; }
 
 .p-4 { padding: 1rem; }
 .p-6 { padding: 1.5rem; }

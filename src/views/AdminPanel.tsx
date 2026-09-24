@@ -25,23 +25,23 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { useEventState } from '../hooks/useEventState';
-import { useTeams } from '../hooks/useTeams';
-import { useTeamItems } from '../hooks/useTeamItems';
+import { useEventState, broadcastStateChange } from '../hooks/useEventState';
+import { useTeams, broadcastTeamsChange } from '../hooks/useTeams';
+import { useTeamItems, broadcastItemsChange } from '../hooks/useTeamItems';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, BASE_PRICE, MIN_INCREMENT } from '../data/roundsData';
-import type { Team, PastRoundSnapshot, TransactionEntry } from '../types/database';
+import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState } from '../types/database';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
-  const { eventState, edition, loading: stateLoading } = useEventState();
-  const { teams } = useTeams(edition?.id);
-  const { items } = useTeamItems(edition?.id);
+  const { eventState, setEventState, edition, loading: stateLoading } = useEventState();
+  const { teams, setTeams } = useTeams(edition?.id);
+  const { items, setItems } = useTeamItems(edition?.id);
 
   // Authentication check (allows session profile OR local session flag)
   const isMasterAuthed = sessionStorage.getItem('gcl_admin_authenticated') === 'true';
@@ -129,15 +129,18 @@ export default function AdminPanel() {
 
   const broadcastBidPreview = (teamId: string | null, amount: number, questionRef: string) => {
     if (!eventState?.id) return;
-    if (previewUpdateTimeout.current) clearTimeout(previewUpdateTimeout.current);
+    const previewData = teamId && amount > 0 ? { teamId, amount, questionRef } : null;
 
+    setEventState((prev) => (prev ? { ...prev, current_bid_preview: previewData } : null));
+    broadcastStateChange({ current_bid_preview: previewData });
+
+    if (previewUpdateTimeout.current) clearTimeout(previewUpdateTimeout.current);
     previewUpdateTimeout.current = setTimeout(async () => {
       try {
         await supabase
           .from('event_state')
           .update({
-            current_bid_preview:
-              teamId && amount > 0 ? { teamId, amount, questionRef } : null,
+            current_bid_preview: previewData,
             updated_at: new Date().toISOString(),
           })
           .eq('id', eventState.id);
@@ -169,36 +172,51 @@ export default function AdminPanel() {
     if (!newTeamName.trim() || !edition?.id) return;
 
     const initialBudget = parseInt(budgetInput) || edition.starting_budget || 50000000;
-    const { error } = await supabase.from('teams').insert({
+    const newTeamObj: Team = {
+      id: 'team_' + Date.now(),
       edition_id: edition.id,
       name: newTeamName.trim(),
       budget: initialBudget,
       score: 0,
+      status: 'active',
       sort_order: teams.length + 1,
-    });
+      created_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      showNotification(`Failed to add team: ${error.message}`, 'error');
-    } else {
-      showNotification(`Team "${newTeamName.trim()}" added!`, 'success');
-      setNewTeamName('');
-      addHistory('Team Added', `Team "${newTeamName.trim()}" registered.`);
-    }
+    const updated = [...teams, newTeamObj];
+    setTeams(updated);
+    broadcastTeamsChange(updated);
+    setNewTeamName('');
+    showNotification(`Team "${newTeamName.trim()}" added!`, 'success');
+    addHistory('Team Added', `Team "${newTeamName.trim()}" registered.`);
+
+    supabase
+      .from('teams')
+      .insert({
+        edition_id: edition.id,
+        name: newTeamObj.name,
+        budget: newTeamObj.budget,
+        score: 0,
+        sort_order: newTeamObj.sort_order,
+      })
+      .then();
   };
 
   const handleTeamNameChange = async (teamId: string, newName: string) => {
-    await supabase.from('teams').update({ name: newName }).eq('id', teamId);
+    const updated = teams.map((t) => (t.id === teamId ? { ...t, name: newName } : t));
+    setTeams(updated);
+    broadcastTeamsChange(updated);
+    supabase.from('teams').update({ name: newName }).eq('id', teamId).then();
   };
 
   const handleConfirmRemoveTeam = async () => {
     if (!teamToRemove) return;
-    const { error } = await supabase.from('teams').delete().eq('id', teamToRemove.id);
-    if (error) {
-      showNotification(`Error removing team: ${error.message}`, 'error');
-    } else {
-      showNotification(`Team ${teamToRemove.name} removed!`, 'success');
-      addHistory('Team Removed', `${teamToRemove.name} was removed.`);
-    }
+    const updated = teams.filter((t) => t.id !== teamToRemove.id);
+    setTeams(updated);
+    broadcastTeamsChange(updated);
+    supabase.from('teams').delete().eq('id', teamToRemove.id).then();
+    showNotification(`Team ${teamToRemove.name} removed!`, 'success');
+    addHistory('Team Removed', `${teamToRemove.name} was removed.`);
     setTeamToRemove(null);
   };
 
@@ -211,31 +229,29 @@ export default function AdminPanel() {
 
     // Reset teams to full budget and 0 score
     const targetBudget = parseInt(budgetInput) || edition?.starting_budget || 50000000;
-    for (const team of teams) {
-      await supabase
-        .from('teams')
-        .update({ budget: targetBudget, score: 0 })
-        .eq('id', team.id);
-    }
+    const resetTeams = teams.map((t) => ({ ...t, budget: targetBudget, score: 0 }));
+    setTeams(resetTeams);
+    broadcastTeamsChange(resetTeams);
 
-    const { error } = await supabase
-      .from('event_state')
-      .update({
-        game_state: 'waiting_start',
-        current_round_index: 0,
-        current_question_index: 0,
-        current_item_name: '',
-        current_bid_preview: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventState.id);
+    const nextState: Partial<EventState> = {
+      game_state: 'waiting_start',
+      current_round_index: 0,
+      current_question_index: 0,
+      current_item_name: '',
+      current_bid_preview: null,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      showNotification('Failed to initialize auction state', 'error');
-    } else {
-      showNotification('Auction Initialized! Live screen is in Starting Soon mode.', 'success');
-      addHistory('Event Initialized', 'Auction setup complete. Waiting for Round 1.');
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    broadcastStateChange(nextState);
+
+    showNotification('Auction Initialized! Live screen is in Starting Soon mode.', 'success');
+    addHistory('Event Initialized', 'Auction setup complete. Waiting for Round 1.');
+
+    for (const team of resetTeams) {
+      supabase.from('teams').update({ budget: targetBudget, score: 0 }).eq('id', team.id).then();
     }
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
   };
 
   const handleStartNextRound = async () => {
@@ -247,40 +263,53 @@ export default function AdminPanel() {
     // If entering from intermission, reset round budgets
     if (eventState.game_state === 'intermission') {
       const standardBudget = edition?.starting_budget || 50000000;
-      for (const t of teams) {
-        await supabase.from('teams').update({ budget: standardBudget }).eq('id', t.id);
+      const refreshedTeams = teams.map((t) => ({ ...t, budget: standardBudget }));
+      setTeams(refreshedTeams);
+      broadcastTeamsChange(refreshedTeams);
+      for (const t of refreshedTeams) {
+        supabase.from('teams').update({ budget: standardBudget }).eq('id', t.id).then();
       }
     }
 
-    const { data, error } = await supabase
-      .from('event_state')
-      .update({
-        game_state: 'active',
-        current_question_index: 0,
-        current_item_name: firstQ,
-        current_bid_preview: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventState.id)
-      .select();
+    const nextState: Partial<EventState> = {
+      game_state: 'active',
+      current_round_index: rIdx,
+      current_question_index: 0,
+      current_item_name: firstQ,
+      current_bid_preview: null,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      showNotification(`Failed to start round: ${error.message}`, 'error');
-    } else if (!data || data.length === 0) {
-      showNotification('Update blocked by database security. Please sign in with your admin email or run the SQL script to enable auction writes.', 'error');
-    } else {
-      showNotification(`${roundData.name} has officially started!`, 'success');
-      addHistory('Round Started', `${roundData.name} started.`);
-    }
+    // 1. Immediate optimistic UI transition
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem(firstQ);
+
+    // 2. Broadcast immediately to Live View across all browser windows
+    broadcastStateChange(nextState);
+
+    showNotification(`${roundData.name} has officially started!`, 'success');
+    addHistory('Round Started', `${roundData.name} started.`);
+
+    // 3. Persist to database in background
+    supabase
+      .from('event_state')
+      .update(nextState)
+      .eq('id', eventState.id)
+      .then(({ error }) => {
+        if (error) console.warn('Supabase state update notice:', error.message);
+      });
   };
 
   const handleItemNameChange = async (text: string) => {
     setCurrentItem(text);
     if (!eventState?.id) return;
-    await supabase
+    setEventState((prev) => (prev ? { ...prev, current_item_name: text } : null));
+    broadcastStateChange({ current_item_name: text });
+    supabase
       .from('event_state')
       .update({ current_item_name: text, updated_at: new Date().toISOString() })
-      .eq('id', eventState.id);
+      .eq('id', eventState.id)
+      .then();
   };
 
   const handleLoadQuestionFromData = () => {
@@ -297,16 +326,23 @@ export default function AdminPanel() {
     if (!eventState?.id) return;
     const autoText = DEFAULT_ROUNDS_DATA[r]?.questions[q] || '';
     setCurrentItem(autoText);
-    await supabase
+
+    const updates: Partial<EventState> = {
+      current_round_index: r,
+      current_question_index: q,
+      current_item_name: autoText,
+      current_bid_preview: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...updates } : null));
+    broadcastStateChange(updates);
+
+    supabase
       .from('event_state')
-      .update({
-        current_round_index: r,
-        current_question_index: q,
-        current_item_name: autoText,
-        current_bid_preview: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventState.id);
+      .update(updates)
+      .eq('id', eventState.id)
+      .then();
 
     addHistory('Tracker Changed', `Set to Round ${r + 1}, Q${q + 1}`);
   };
@@ -379,22 +415,19 @@ export default function AdminPanel() {
     const currentRoundData = DEFAULT_ROUNDS_DATA[rIdx] || { name: `Round ${rIdx + 1}`, questions: [] };
     const qRef = `R${rIdx + 1} - Q${qIdx + 1}`;
 
-    // 1. Deduct budget and add score to team
+    // 1. Deduct budget and add score to team locally & sync
     const newBudget = winningTeam.budget - amount;
     const newScore = (winningTeam.score || 0) + (isAnswerCorrect ? 1 : 0);
+    const updatedTeams = teams.map((t) =>
+      t.id === winningTeam.id ? { ...t, budget: newBudget, score: newScore } : t
+    );
+    setTeams(updatedTeams);
+    broadcastTeamsChange(updatedTeams);
+    supabase.from('teams').update({ budget: newBudget, score: newScore }).eq('id', winningTeam.id).then();
 
-    const { error: teamUpdateErr } = await supabase
-      .from('teams')
-      .update({ budget: newBudget, score: newScore })
-      .eq('id', winningTeam.id);
-
-    if (teamUpdateErr) {
-      showNotification(`Failed to update team: ${teamUpdateErr.message}`, 'error');
-      return;
-    }
-
-    // 2. Insert into team_items
-    await supabase.from('team_items').insert({
+    // 2. Insert into team_items locally & sync
+    const newItem: TeamItem = {
+      id: 'item_' + Date.now(),
       edition_id: edition.id,
       team_id: winningTeam.id,
       item_name: currentItem,
@@ -403,7 +436,21 @@ export default function AdminPanel() {
       round_index: rIdx,
       question_index: qIdx,
       question_ref: qRef,
-    });
+      created_at: new Date().toISOString(),
+    };
+    const updatedItems = [newItem, ...items];
+    setItems(updatedItems);
+    broadcastItemsChange(updatedItems);
+    supabase.from('team_items').insert({
+      edition_id: edition.id,
+      team_id: winningTeam.id,
+      item_name: currentItem,
+      cost: amount,
+      is_correct: isAnswerCorrect,
+      round_index: rIdx,
+      question_index: qIdx,
+      question_ref: qRef,
+    }).then();
 
     // 3. Log transaction
     const resText = isAnswerCorrect ? 'CORRECT (+1 Pt)' : 'WRONG (0 Pt)';
@@ -461,30 +508,34 @@ export default function AdminPanel() {
         nextGameState = 'winner_reveal';
       }
 
-      await supabase
-        .from('event_state')
-        .update({
-          game_state: nextGameState,
-          current_round_index: nextRoundIdx,
-          current_question_index: nextQuestionIdx,
-          current_item_name: '',
-          current_bid_preview: null,
-          banner_message: JSON.stringify(updatedPastRounds),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', eventState.id);
+      const nextState: Partial<EventState> = {
+        game_state: nextGameState,
+        current_round_index: nextRoundIdx,
+        current_question_index: nextQuestionIdx,
+        current_item_name: '',
+        current_bid_preview: null,
+        banner_message: JSON.stringify(updatedPastRounds),
+        updated_at: new Date().toISOString(),
+      };
+
+      setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+      setCurrentItem('');
+      broadcastStateChange(nextState);
+      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
     } else {
       // Advance to next question in same round
       nextItemText = currentRoundData.questions[nextQuestionIdx] || '';
-      await supabase
-        .from('event_state')
-        .update({
-          current_question_index: nextQuestionIdx,
-          current_item_name: nextItemText,
-          current_bid_preview: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', eventState.id);
+      const nextState: Partial<EventState> = {
+        current_question_index: nextQuestionIdx,
+        current_item_name: nextItemText,
+        current_bid_preview: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+      setCurrentItem(nextItemText);
+      broadcastStateChange(nextState);
+      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
 
       showNotification(`Sold to ${winningTeam.name}! Question ${nextQuestionIdx + 1} ready.`, 'success');
     }
@@ -509,26 +560,31 @@ export default function AdminPanel() {
     // Refund team budget and deduct score
     const refundedBudget = teamToRefund.budget + lastItem.cost;
     const revertedScore = Math.max(0, (teamToRefund.score || 0) - (lastItem.is_correct ? 1 : 0));
+    const updatedTeams = teams.map((t) =>
+      t.id === teamToRefund.id ? { ...t, budget: refundedBudget, score: revertedScore } : t
+    );
+    setTeams(updatedTeams);
+    broadcastTeamsChange(updatedTeams);
+    supabase.from('teams').update({ budget: refundedBudget, score: revertedScore }).eq('id', teamToRefund.id).then();
 
-    await supabase
-      .from('teams')
-      .update({ budget: refundedBudget, score: revertedScore })
-      .eq('id', teamToRefund.id);
-
-    // Delete item record
-    await supabase.from('team_items').delete().eq('id', lastItem.id);
+    // Delete item record locally & sync
+    const updatedItems = items.slice(1);
+    setItems(updatedItems);
+    broadcastItemsChange(updatedItems);
+    supabase.from('team_items').delete().eq('id', lastItem.id).then();
 
     // Step back question tracker
     const newQIdx = Math.max(0, (eventState.current_question_index ?? 1) - 1);
-    await supabase
-      .from('event_state')
-      .update({
-        current_question_index: newQIdx,
-        current_item_name: lastItem.item_name,
-        current_bid_preview: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventState.id);
+    const updates: Partial<EventState> = {
+      current_question_index: newQIdx,
+      current_item_name: lastItem.item_name,
+      current_bid_preview: null,
+      updated_at: new Date().toISOString(),
+    };
+    setEventState((prev) => (prev ? { ...prev, ...updates } : null));
+    setCurrentItem(lastItem.item_name);
+    broadcastStateChange(updates);
+    supabase.from('event_state').update(updates).eq('id', eventState.id).then();
 
     showNotification(`Undid sale to ${teamToRefund.name}. Refunded ${formatCurrency(lastItem.cost)}.`, 'success');
     addHistory('UNDO', `Reverted sale to ${teamToRefund.name} (${formatCurrency(lastItem.cost)}).`);
@@ -539,24 +595,25 @@ export default function AdminPanel() {
     if (!edition?.id || !eventState?.id) return;
 
     const standardBudget = edition.starting_budget || 50000000;
-    for (const t of teams) {
-      await supabase.from('teams').update({ budget: standardBudget, score: 0 }).eq('id', t.id);
-    }
+    const resetTeams = teams.map((t) => ({ ...t, budget: standardBudget, score: 0 }));
+    setTeams(resetTeams);
+    broadcastTeamsChange(resetTeams);
 
-    await supabase.from('team_items').delete().eq('edition_id', edition.id);
+    setItems([]);
+    broadcastItemsChange([]);
 
-    await supabase
-      .from('event_state')
-      .update({
-        game_state: 'setup',
-        current_round_index: 0,
-        current_question_index: 0,
-        current_item_name: '',
-        current_bid_preview: null,
-        banner_message: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventState.id);
+    const resetUpdates: Partial<EventState> = {
+      game_state: 'setup',
+      current_round_index: 0,
+      current_question_index: 0,
+      current_item_name: '',
+      current_bid_preview: null,
+      banner_message: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...resetUpdates } : null));
+    broadcastStateChange(resetUpdates);
 
     setIsConfirmingReset(false);
     setBidAmount('');
@@ -564,6 +621,12 @@ export default function AdminPanel() {
     setCurrentItem('');
     setLocalHistory([]);
     showNotification('Auction reset to initial setup state.', 'success');
+
+    for (const t of teams) {
+      supabase.from('teams').update({ budget: standardBudget, score: 0 }).eq('id', t.id).then();
+    }
+    supabase.from('team_items').delete().eq('edition_id', edition.id).then();
+    supabase.from('event_state').update(resetUpdates).eq('id', eventState.id).then();
   };
 
   const handleLogout = async () => {
@@ -619,7 +682,7 @@ export default function AdminPanel() {
 
       {/* 1. SETUP STATE */}
       {gameState === 'setup' && (
-        <div className="max-w-3xl mx-auto p-4 md:p-8 pt-24">
+        <div className="admin-setup-container">
           <div className="admin-card">
             <div className="flex items-center gap-3 mb-6 text-blue-400">
               <Settings size={32} />
@@ -714,7 +777,7 @@ export default function AdminPanel() {
 
       {/* 2. WAITING START STATE */}
       {gameState === 'waiting_start' && (
-        <div className="max-w-2xl mx-auto p-6 pt-28">
+        <div className="admin-waiting-container">
           <div className="admin-card text-center space-y-6">
             <div className="flex flex-col items-center text-indigo-400">
               <div className="relative mb-4">
@@ -737,7 +800,7 @@ export default function AdminPanel() {
 
       {/* 3. ACTIVE ROUND CONTROLS */}
       {gameState === 'active' && (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 pt-24 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="admin-page-container grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Controls Column */}
           <div className="lg:col-span-2 space-y-8">
             {/* Round Progression Card */}
@@ -1116,7 +1179,7 @@ export default function AdminPanel() {
 
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
-        <div className="max-w-4xl mx-auto p-6 pt-24 space-y-8">
+        <div className="admin-intermission-container space-y-8">
           <div className="admin-card text-center p-8 space-y-6">
             <div className="flex flex-col items-center text-indigo-400">
               <Loader2 size={64} className="animate-spin mb-4" />
@@ -1136,7 +1199,7 @@ export default function AdminPanel() {
 
       {/* 5. WINNER REVEAL STATE */}
       {gameState === 'winner_reveal' && (
-        <div className="max-w-4xl mx-auto p-6 pt-24 space-y-8">
+        <div className="admin-reveal-container space-y-8">
           {(() => {
             const sorted = [...teamsWithStats].sort(
               (a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget
@@ -1168,18 +1231,19 @@ export default function AdminPanel() {
                   <button
                     onClick={async () => {
                       if (!eventState?.id) return;
-                      // Advance to Tie Breaker
-                      await supabase
-                        .from('event_state')
-                        .update({
-                          game_state: 'active',
-                          current_round_index: 3,
-                          current_question_index: 0,
-                          current_item_name: DEFAULT_ROUNDS_DATA[3]?.questions[0] || '',
-                          current_bid_preview: null,
-                          updated_at: new Date().toISOString(),
-                        })
-                        .eq('id', eventState.id);
+                      const tieItem = DEFAULT_ROUNDS_DATA[3]?.questions[0] || '';
+                      const tieState: Partial<EventState> = {
+                        game_state: 'active',
+                        current_round_index: 3,
+                        current_question_index: 0,
+                        current_item_name: tieItem,
+                        current_bid_preview: null,
+                        updated_at: new Date().toISOString(),
+                      };
+                      setEventState((prev) => (prev ? { ...prev, ...tieState } : null));
+                      setCurrentItem(tieItem);
+                      broadcastStateChange(tieState);
+                      supabase.from('event_state').update(tieState).eq('id', eventState.id).then();
                       showNotification('Started Tie Breaker Round!', 'success');
                     }}
                     className={`btn-tie-action ${

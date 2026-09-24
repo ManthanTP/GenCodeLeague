@@ -192,7 +192,7 @@ export default function LiveView() {
 
       {/* 3. ACTIVE ROUND STATE */}
       {gameState === 'active' && (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 pt-24">
+        <div className="live-page-container">
           {/* Viewer Mode Selector */}
           <div className="mb-6 flex justify-end">
             <select
@@ -507,7 +507,7 @@ export default function LiveView() {
 
       {/* 5. WINNER REVEAL STATE */}
       {gameState === 'winner_reveal' && (
-        <div className="pt-24 max-w-7xl mx-auto p-4 md:p-8">
+        <div className="live-page-container">
           <div className="text-center mb-12">
             <h1 className="champions-title">CHAMPIONS</h1>
             <p className="text-xl text-slate-400 font-mono uppercase tracking-widest">
