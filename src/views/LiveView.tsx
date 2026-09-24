@@ -272,86 +272,38 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Question & Big Live Timer Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8 items-stretch">
-            {/* Question Display Card (Left / Center) */}
-            <div className="lg:col-span-8 xl:col-span-9 question-display-box flex flex-col justify-center min-h-[200px]">
-              {isRevealed ? (
-                <div className="w-full text-left">
-                  <p className="question-header-ref">
-                    {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
-                  </p>
-                  <div className="divider-gold"></div>
-                  <h3 className="question-text">
-                    {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
-                  </h3>
-                </div>
-              ) : (
-                <div className="w-full py-8 text-center flex flex-col items-center justify-center">
-                  <h3 className="text-3xl md:text-5xl font-extrabold text-slate-300 tracking-wide animate-pulse">
-                    Awaiting for Next Question...
-                  </h3>
-                  <p className="text-sm md:text-base text-yellow-500/80 mt-3 font-mono uppercase tracking-widest font-semibold">
-                    Question will appear on screen when timer begins
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Big Dedicated Timer Card at Right Side of Question Box */}
-            <div
-              className={`lg:col-span-4 xl:col-span-3 live-timer-hero-card ${
-                isExpired
-                  ? 'timer-expired'
-                  : isTimerRunning
-                  ? 'timer-running'
-                  : 'timer-idle'
-              }`}
-            >
-              <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-xs md:text-sm mb-1">
-                <Clock
-                  size={20}
-                  className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'}
-                />
+          {/* Timer Display above Question Box (Right-aligned, exact match to original design) */}
+          <div className="flex justify-end mb-3">
+            <div className="flex flex-col items-center bg-slate-900 border border-slate-700 rounded-2xl px-6 py-2 shadow-lg">
+              <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-widest">
+                <Clock size={15} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
                 <span>BID TIMER</span>
               </div>
-
-              <div
-                className={`font-mono text-5xl md:text-6xl font-black tracking-tight my-2 ${
-                  isExpired
-                    ? 'text-red-500 animate-pulse'
-                    : isTimerRunning
-                    ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.5)]'
-                    : 'text-slate-200'
-                }`}
-              >
+              <div className={`font-mono text-3xl md:text-4xl font-black ${isExpired ? 'text-red-500 animate-pulse' : isTimerRunning ? 'text-yellow-400' : 'text-white'}`}>
                 {timerFormatted}
               </div>
-
-              <div className="mt-2">
-                {isTimerRunning ? (
-                  <span className="px-3.5 py-1 bg-green-500/20 text-green-400 border border-green-500/40 rounded-full text-xs font-bold uppercase tracking-widest inline-flex items-center gap-1.5 animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                    ACTIVE
-                  </span>
-                ) : isTimerPaused ? (
-                  <span className="px-3.5 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 rounded-full text-xs font-bold uppercase tracking-widest inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                    PAUSED
-                  </span>
-                ) : isExpired ? (
-                  <span className="px-3.5 py-1 bg-red-500/20 text-red-400 border border-red-500/40 rounded-full text-xs font-bold uppercase tracking-widest inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                    TIME UP
-                  </span>
-                ) : (
-                  <span className="px-3.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full text-xs font-bold uppercase tracking-widest inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-                    STANDBY
-                  </span>
-                )}
-              </div>
             </div>
+          </div>
+
+          {/* Current Question / Item Box with Gold Border (Full width, exact match to original design) */}
+          <div className="bg-slate-900 border-2 border-yellow-500 rounded-3xl p-6 md:p-8 mb-8 shadow-2xl">
+            {isRevealed ? (
+              <>
+                <p className="text-lg md:text-xl font-semibold text-yellow-500 uppercase tracking-widest mb-2 text-center">
+                  {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
+                </p>
+                <div className="h-0.5 w-24 mx-auto bg-yellow-600 mb-6 rounded-full"></div>
+                <h3 className="text-3xl md:text-4xl font-extrabold text-white whitespace-pre-line leading-tight text-left">
+                  {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
+                </h3>
+              </>
+            ) : (
+              <div className="py-6 text-center">
+                <h3 className="text-3xl md:text-4xl font-extrabold text-slate-300 tracking-wide">
+                  Awaiting for Next Question...
+                </h3>
+              </div>
+            )}
           </div>
 
           {/* Active Bid Pulse Banner */}
