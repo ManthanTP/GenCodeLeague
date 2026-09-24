@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { EventState, Edition } from '../types/database';
+import type { EventState, Edition } from '../types/database';
 
 export function useEventState() {
   const [eventState, setEventState] = useState<EventState | null>(null);

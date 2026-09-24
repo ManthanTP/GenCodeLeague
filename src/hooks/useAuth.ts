@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Profile } from '../types/database';
+import type { Profile } from '../types/database';
 
 export function useAuth() {
   const [profile, setProfile] = useState<Profile | null>(null);

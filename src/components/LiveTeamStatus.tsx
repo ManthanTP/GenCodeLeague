@@ -1,5 +1,5 @@
 import React from 'react';
-import { Team } from '../types/database';
+import type { Team } from '../types/database';
 
 interface LiveTeamStatusProps {
   teams: Team[];

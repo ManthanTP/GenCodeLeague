@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { EventState } from '../types/database';
+import type { EventState } from '../types/database';
 
 export function useTimer(eventState: EventState | null) {
   const [timeLeft, setTimeLeft] = useState<number>(0);

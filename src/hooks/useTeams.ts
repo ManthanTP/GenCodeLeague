@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Team } from '../types/database';
+import type { Team } from '../types/database';
 
 export function useTeams(editionId: string | undefined) {
   const [teams, setTeams] = useState<Team[]>([]);
