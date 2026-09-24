@@ -31,6 +31,7 @@ export default function LiveView() {
   const {
     formatted: timerFormatted,
     isRunning: isTimerRunning,
+    isPaused: isTimerPaused,
     isRevealed,
     isExpired,
   } = useTimer(eventState);
