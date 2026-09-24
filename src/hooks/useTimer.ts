@@ -60,7 +60,16 @@ export function useTimer(eventState: EventState | null) {
   const isRunning = eventState?.timer_state === 'running';
   const isPaused = eventState?.timer_state === 'paused';
   const isExpired = timeLeft === 0 && (isRunning || eventState?.timer_state === 'expired');
-  const isRevealed = eventState ? eventState.timer_state !== 'stopped' : false;
+
+  // Question is strictly HIDDEN until the admin explicitly starts the timer.
+  // It is ONLY revealed when timer_state is 'running', 'paused' (after start), or 'expired'.
+  // Any 'stopped', null, or uninitialized state keeps the question hidden.
+  const isRevealed = Boolean(
+    eventState &&
+    (eventState.timer_state === 'running' ||
+     eventState.timer_state === 'paused' ||
+     eventState.timer_state === 'expired')
+  );
 
   return {
     timeLeft,

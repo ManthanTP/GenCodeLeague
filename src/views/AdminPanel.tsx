@@ -250,6 +250,11 @@ export default function AdminPanel() {
       current_question_index: 0,
       current_item_name: '',
       current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
       updated_at: new Date().toISOString(),
     };
 
@@ -287,6 +292,11 @@ export default function AdminPanel() {
       current_question_index: 0,
       current_item_name: firstQ,
       current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
       updated_at: new Date().toISOString(),
     };
 
@@ -329,8 +339,22 @@ export default function AdminPanel() {
     const qIdx = eventState?.current_question_index ?? 0;
     const qText = DEFAULT_ROUNDS_DATA[rIdx]?.questions[qIdx] || '';
     if (qText) {
-      handleItemNameChange(qText);
-      showNotification(`Loaded question Q${qIdx + 1}`, 'success');
+      setCurrentItem(qText);
+      const updates: Partial<EventState> = {
+        current_item_name: qText,
+        timer_state: 'stopped',
+        timer_remaining_seconds: 180,
+        timer_duration_seconds: 180,
+        timer_started_at: null,
+        timer_paused_at: null,
+        updated_at: new Date().toISOString(),
+      };
+      setEventState((prev) => (prev ? { ...prev, ...updates } : null));
+      broadcastStateChange(updates);
+      if (eventState?.id) {
+        supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+      }
+      showNotification(`Loaded question Q${qIdx + 1} (hidden until timer starts)`, 'success');
     }
   };
 
@@ -606,6 +630,11 @@ export default function AdminPanel() {
         current_question_index: nextQuestionIdx,
         current_item_name: '',
         current_bid_preview: null,
+        timer_state: 'stopped',
+        timer_duration_seconds: 180,
+        timer_remaining_seconds: 180,
+        timer_started_at: null,
+        timer_paused_at: null,
         banner_message: JSON.stringify(updatedPastRounds),
         updated_at: new Date().toISOString(),
       };
@@ -711,6 +740,11 @@ export default function AdminPanel() {
       current_item_name: '',
       current_bid_preview: null,
       banner_message: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
       updated_at: new Date().toISOString(),
     };
 

@@ -592,8 +592,41 @@ body {
   border: 2px solid #ca8a04;
   border-radius: 1.5rem;
   padding: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(202, 138, 4, 0.15);
+}
+
+/* Big Hero Timer on the Right Side of Question Box */
+.live-timer-hero-card {
+  background: #0f172a;
+  border-radius: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  min-height: 180px;
+}
+
+.live-timer-hero-card.timer-running {
+  border: 2px solid #eab308;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(234, 179, 8, 0.3);
+}
+
+.live-timer-hero-card.timer-expired {
+  border: 2px solid #ef4444;
+  background: rgba(69, 10, 10, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(239, 68, 68, 0.35);
+}
+
+.live-timer-hero-card.timer-idle {
+  border: 2px solid #334155;
+  background: rgba(15, 23, 42, 0.9);
 }
 
 .question-header-ref {
