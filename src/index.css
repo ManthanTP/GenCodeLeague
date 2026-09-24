@@ -656,6 +656,7 @@ body {
 
 /* Question Display Box with Golden Glow Border */
 .question-display-box {
+  position: relative;
   background: #0f172a;
   border: 2px solid #ca8a04;
   border-radius: 1.5rem;
@@ -664,6 +665,23 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(202, 138, 4, 0.15);
   width: 100%;
   box-sizing: border-box;
+  min-height: 200px;
+}
+
+.question-timer-corner {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 10;
+}
+
+@media (max-width: 767px) {
+  .question-timer-corner {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
 }
 
 .question-text-awaiting {
