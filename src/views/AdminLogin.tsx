@@ -9,7 +9,7 @@ import { ADMIN_MASTER_PASSWORD } from '../data/roundsData';
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('manthantp0321@gmail.com');
-  const [useEmailAuth, setUseEmailAuth] = useState(false);
+  const [useEmailAuth, setUseEmailAuth] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);

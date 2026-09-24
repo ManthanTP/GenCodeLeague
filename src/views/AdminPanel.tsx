@@ -252,7 +252,7 @@ export default function AdminPanel() {
       }
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('event_state')
       .update({
         game_state: 'active',
@@ -261,10 +261,13 @@ export default function AdminPanel() {
         current_bid_preview: null,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', eventState.id);
+      .eq('id', eventState.id)
+      .select();
 
     if (error) {
-      showNotification('Failed to start round', 'error');
+      showNotification(`Failed to start round: ${error.message}`, 'error');
+    } else if (!data || data.length === 0) {
+      showNotification('Update blocked by database security. Please sign in with your admin email or run the SQL script to enable auction writes.', 'error');
     } else {
       showNotification(`${roundData.name} has officially started!`, 'success');
       addHistory('Round Started', `${roundData.name} started.`);
