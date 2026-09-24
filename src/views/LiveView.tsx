@@ -202,8 +202,8 @@ export default function LiveView() {
       {/* 3. ACTIVE ROUND STATE */}
       {gameState === 'active' && (
         <div className="live-page-container">
-          {/* Viewer Mode Selector */}
-          <div className="mb-6 flex justify-end">
+          {/* Viewer Mode Selector (Right-aligned) */}
+          <div className="live-top-actions-row">
             <select
               value={myTeamId}
               onChange={(e) => setMyTeamId(e.target.value)}
@@ -273,36 +273,34 @@ export default function LiveView() {
           )}
 
           {/* Timer Display above Question Box (Right-aligned, exact match to original design) */}
-          <div className="flex justify-end mb-3">
-            <div className="flex flex-col items-center bg-slate-900 border border-slate-700 rounded-2xl px-6 py-2 shadow-lg">
-              <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-widest">
+          <div className="live-timer-row">
+            <div className={`live-bid-timer-widget ${isExpired ? 'timer-expired' : isTimerRunning ? 'timer-running' : ''}`}>
+              <div className="live-timer-label">
                 <Clock size={15} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
                 <span>BID TIMER</span>
               </div>
-              <div className={`font-mono text-3xl md:text-4xl font-black ${isExpired ? 'text-red-500 animate-pulse' : isTimerRunning ? 'text-yellow-400' : 'text-white'}`}>
+              <div className={`live-timer-digits ${isExpired ? 'digits-expired' : isTimerRunning ? 'digits-running' : ''}`}>
                 {timerFormatted}
               </div>
             </div>
           </div>
 
           {/* Current Question / Item Box with Gold Border (Full width, exact match to original design) */}
-          <div className="bg-slate-900 border-2 border-yellow-500 rounded-3xl p-6 md:p-8 mb-8 shadow-2xl">
+          <div className="question-display-box">
             {isRevealed ? (
               <>
-                <p className="text-lg md:text-xl font-semibold text-yellow-500 uppercase tracking-widest mb-2 text-center">
+                <p className="question-header-ref">
                   {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
                 </p>
-                <div className="h-0.5 w-24 mx-auto bg-yellow-600 mb-6 rounded-full"></div>
-                <h3 className="text-3xl md:text-4xl font-extrabold text-white whitespace-pre-line leading-tight text-left">
+                <div className="divider-gold"></div>
+                <h3 className="question-text">
                   {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
                 </h3>
               </>
             ) : (
-              <div className="py-6 text-center">
-                <h3 className="text-3xl md:text-4xl font-extrabold text-slate-300 tracking-wide">
-                  Awaiting for Next Question...
-                </h3>
-              </div>
+              <h3 className="question-text-awaiting">
+                Awaiting for Next Question...
+              </h3>
             )}
           </div>
 

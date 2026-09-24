@@ -587,46 +587,93 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* --- LIVE VIEW QUESTION & TIMER SECTION (Exact match to reference) --- */
+
+.live-top-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.live-timer-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+.live-bid-timer-widget {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 1rem;
+  padding: 0.35rem 1.25rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: all 0.25s ease;
+}
+
+.live-bid-timer-widget.timer-running {
+  border-color: #eab308;
+  box-shadow: 0 4px 20px rgba(234, 179, 8, 0.25);
+}
+
+.live-bid-timer-widget.timer-expired {
+  border-color: #ef4444;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+}
+
+.live-timer-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #94a3b8;
+}
+
+.live-timer-digits {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.live-timer-digits.digits-running {
+  color: #facc15;
+}
+
+.live-timer-digits.digits-expired {
+  color: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+/* Question Display Box with Golden Glow Border */
 .question-display-box {
   background: #0f172a;
   border: 2px solid #ca8a04;
   border-radius: 1.5rem;
-  padding: 2rem;
-  margin-bottom: 0;
+  padding: 2.25rem 2.5rem;
+  margin-bottom: 2rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(202, 138, 4, 0.15);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Big Hero Timer on the Right Side of Question Box */
-.live-timer-hero-card {
-  background: #0f172a;
-  border-radius: 1.5rem;
-  padding: 1.5rem 1.75rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  min-height: 180px;
-}
-
-.live-timer-hero-card.timer-running {
-  border: 2px solid #eab308;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(234, 179, 8, 0.3);
-}
-
-.live-timer-hero-card.timer-expired {
-  border: 2px solid #ef4444;
-  background: rgba(69, 10, 10, 0.4);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(239, 68, 68, 0.35);
-}
-
-.live-timer-hero-card.timer-idle {
-  border: 2px solid #334155;
-  background: rgba(15, 23, 42, 0.9);
+.question-text-awaiting {
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  color: #cbd5e1;
+  line-height: 1.35;
+  text-align: left;
+  white-space: pre-line;
+  padding: 1rem 0;
 }
 
 .question-header-ref {
@@ -1999,4 +2046,39 @@ body {
 .border-slate-800 { border-color: #1e293b; }
 .border-t { border-top-width: 1px; border-top-style: solid; }
 .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+
+/* Essential Flexbox & Layout Utilities */
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.flex-col { flex-direction: column; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.gap-1 { gap: 0.25rem; }
+.gap-1\.5 { gap: 0.375rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-2xl { border-radius: 1rem; }
+.rounded-3xl { border-radius: 1.5rem; }
+.rounded-full { border-radius: 9999px; }
+
+.border { border-width: 1px; border-style: solid; }
+.border-2 { border-width: 2px; border-style: solid; }
+.border-yellow-500 { border-color: #eab308; }
+.border-yellow-600 { border-color: #ca8a04; }
+
+.bg-slate-900 { background-color: #0f172a; }
+.bg-slate-950 { background-color: #020617; }
+.bg-yellow-600 { background-color: #ca8a04; }
+
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3); }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
 
