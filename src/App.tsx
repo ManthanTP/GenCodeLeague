@@ -10,8 +10,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LiveView />} />
-      <Route path="/123456789/GCL@admin" element={<AdminLogin />} />
-      <Route path="/admin" element={<AdminPanel />} />
+      <Route path="/123456789/GCL-0321/admin/login" element={<AdminLogin />} />
+      <Route path="/123456789/GCL-0321/admin" element={<AdminPanel />} />
       <Route path="/team" element={<TeamConsole />} />
       <Route path="/team-login" element={<TeamLogin />} />
     </Routes>

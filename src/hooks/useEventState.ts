@@ -109,8 +109,28 @@ export function useEventState() {
         }
       });
 
+      // 5. Subscribe to editions table changes
+      const editionsChannel = supabase
+        .channel('editions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'editions',
+            filter: `id=eq.${edData.id}`,
+          },
+          (payload) => {
+            if (payload.new) {
+              setEdition(payload.new as Edition);
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(postgresChannel);
+        supabase.removeChannel(editionsChannel);
         broadcastListener.unsubscribe();
       };
     }
@@ -118,5 +138,5 @@ export function useEventState() {
     loadInitialData();
   }, []);
 
-  return { eventState, setEventState, edition, loading };
+  return { eventState, setEventState, edition, setEdition, loading };
 }

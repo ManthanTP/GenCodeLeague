@@ -62,17 +62,34 @@ export default function LiveView() {
     [teamsWithStats]
   );
 
-  // Parse past rounds from event_state.banner_message if stored as JSON, or derive from items
-  const pastRounds: PastRoundSnapshot[] = useMemo(() => {
-    if (!eventState?.banner_message) return [];
+  // Parse past rounds & podium state from event_state.banner_message
+  const { pastRounds, podiumState } = useMemo(() => {
+    let past: PastRoundSnapshot[] = [];
+    let podium = {
+      thirdTeamId: null as string | null,
+      thirdRevealed: false,
+      secondTeamId: null as string | null,
+      secondRevealed: false,
+      firstTeamId: null as string | null,
+      firstRevealed: false,
+    };
+
+    if (!eventState?.banner_message) return { pastRounds: past, podiumState: podium };
     try {
-      if (eventState.banner_message.startsWith('[')) {
-        return JSON.parse(eventState.banner_message);
+      const parsed = JSON.parse(eventState.banner_message);
+      if (Array.isArray(parsed)) {
+        past = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.pastRounds)) past = parsed.pastRounds;
+        if (parsed.podium) podium = { ...podium, ...parsed.podium };
+        if (parsed.firstRevealed !== undefined || parsed.thirdRevealed !== undefined) {
+          podium = { ...podium, ...parsed };
+        }
       }
     } catch {
-      // not json, return empty
+      // not json, return defaults
     }
-    return [];
+    return { pastRounds: past, podiumState: podium };
   }, [eventState?.banner_message]);
 
   // Last successful bid derived from team_items
@@ -85,21 +102,14 @@ export default function LiveView() {
       questionRef: lastItem.question_ref || `R${lastItem.round_index + 1} - Q${lastItem.question_index + 1}`,
       amount: formatCurrency(lastItem.cost),
       status: lastItem.is_correct ? 'correct' : 'wrong',
-      resultText: lastItem.is_correct ? 'Correct (+1 Pt)' : 'Wrong (0 Pt)',
+      resultText: lastItem.is_correct ? 'Correct' : 'Incorrect',
     };
   }, [items, teams]);
 
-  // Personal team stats for viewer
+  // Personal team stats for viewer (Scores and ranks completely hidden)
   const myTeamStats = useMemo(() => {
     if (!myTeamId) return null;
-    const team = teamsWithStats.find((t) => t.id === myTeamId);
-    if (!team) return null;
-
-    const sorted = [...teamsWithStats].sort(
-      (a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget
-    );
-    const rank = sorted.findIndex((t) => t.id === team.id) + 1;
-    return { ...team, rank };
+    return teamsWithStats.find((t) => t.id === myTeamId) || null;
   }, [teamsWithStats, myTeamId]);
 
   if (stateLoading) {
@@ -133,7 +143,6 @@ export default function LiveView() {
         totalAvailable={totalAvailable}
         teamCount={teams.length}
         viewMode="live"
-        onToggleView={() => navigate('/123456789/GCL@admin')}
       />
 
       <ConnectionHealth isConnected={true} />
@@ -218,7 +227,7 @@ export default function LiveView() {
             </select>
           </div>
 
-          {/* Personal Team Dashboard Card */}
+          {/* Personal Team Dashboard Card (Scores & Ranks completely hidden) */}
           {myTeamStats && (
             <div className="my-team-banner">
               <div className="watermark-icon">
@@ -227,14 +236,11 @@ export default function LiveView() {
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="my-team-subtitle">MY TEAM DASHBOARD • RANK #{myTeamStats.rank}</p>
+                    <p className="my-team-subtitle">MY TEAM DASHBOARD</p>
                     <h2 className="my-team-name">{myTeamStats.name}</h2>
                   </div>
-                  <div className="text-right">
-                    <span className="score-pill">★ {myTeamStats.score || 0} PTS</span>
-                  </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="stat-pill">
                     <p className="stat-pill-label">
                       <Wallet size={14} /> Budget
@@ -261,12 +267,6 @@ export default function LiveView() {
                     </p>
                     <p className="stat-pill-val text-white">{myTeamStats.itemsCount}</p>
                   </div>
-                  <div className="stat-pill">
-                    <p className="stat-pill-label">Official Score</p>
-                    <p className="stat-pill-val text-yellow-400 font-bold">
-                      {myTeamStats.score || 0} pts
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -287,16 +287,16 @@ export default function LiveView() {
               </div>
             </div>
 
+            {/* Always display Round & Question Index */}
+            <p className="question-header-ref">
+              {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
+            </p>
+            <div className="divider-gold"></div>
+
             {isRevealed ? (
-              <>
-                <p className="question-header-ref">
-                  {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
-                </p>
-                <div className="divider-gold"></div>
-                <h3 className="question-text">
-                  {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
-                </h3>
-              </>
+              <h3 className="question-text">
+                {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
+              </h3>
             ) : (
               <h3 className="question-text-awaiting">
                 Awaiting for Next Question...
@@ -379,7 +379,7 @@ export default function LiveView() {
             <h2 className="section-title-large">Live Team Status</h2>
             <div className="scoreboard-container">
               <div className="scoreboard-header">
-                <div className="col-span-2">TEAM NAME</div>
+                <div>TEAM NAME</div>
                 <div className="text-right">TOTAL SPENT</div>
                 <div className="text-right">REMAINING</div>
               </div>
@@ -396,7 +396,7 @@ export default function LiveView() {
                             isMyTeam ? 'team-row-me' : 'team-row-default'
                           }`}
                         >
-                          <div className="col-span-2 flex items-center gap-3">
+                          <div className="flex items-center gap-3">
                             <span className="team-row-name">
                               {team.name}
                               {isMyTeam && <span className="badge-you">YOU</span>}
@@ -490,9 +490,14 @@ export default function LiveView() {
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
         <div className="live-centered-screen">
-          <div className="text-center animate-pulse mb-8">
-            <h1 className="intermission-title">NEXT ROUND WILL START SOON</h1>
-            <p className="intermission-subtitle">Stand By...</p>
+          <div className="text-center mb-8">
+            <h1 className="intermission-title">
+              {roundIdx >= 2 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
+            </h1>
+            <p className="intermission-subtitle">STAND BY...</p>
+            <div className="intermission-warning-banner">
+              ⚠️ BUDGETS ARE RESETTING ⚠️
+            </div>
           </div>
           {pastRounds.length > 0 && (
             <div className="max-w-4xl w-full mx-auto round-summary-card">
@@ -535,141 +540,86 @@ export default function LiveView() {
         </div>
       )}
 
-      {/* 5. WINNER REVEAL STATE */}
+      {/* 5. WINNER REVEAL STATE (Sequential Manual Reveal Podium matching Old GCL reference) */}
       {gameState === 'winner_reveal' && (
         <div className="live-page-container">
           <div className="text-center mb-12">
             <h1 className="champions-title">CHAMPIONS</h1>
             <p className="text-xl text-slate-400 font-mono uppercase tracking-widest">
-              Grand Final Standings (All Rounds)
+              Grand Final Standings
             </p>
           </div>
 
           {/* Grand Champions Podium */}
           {(() => {
-            const sorted = [...teamsWithStats].sort(
-              (a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget
-            );
-            const first = sorted[0];
-            const second = sorted[1];
-            const third = sorted[2];
+            const firstTeam = teams.find((t) => t.id === podiumState.firstTeamId);
+            const secondTeam = teams.find((t) => t.id === podiumState.secondTeamId);
+            const thirdTeam = teams.find((t) => t.id === podiumState.thirdTeamId);
 
             return (
               <div className="podium-wrapper">
-                {second && (
-                  <div className="podium-col order-2 md:order-1">
-                    <div className="podium-badge mb-4">
-                      <Medal size={48} className="text-slate-300 mx-auto mb-2" />
-                      <h2 className="text-2xl font-bold text-slate-200">{second.name}</h2>
-                      <p className="text-lg font-mono text-slate-400">{second.score || 0} pts</p>
-                    </div>
-                    <div className="podium-step podium-silver">
-                      <span className="podium-number">2</span>
-                    </div>
+                {/* 2nd Place Pedestal (Left) */}
+                <div className="podium-col order-2 md:order-1">
+                  <div className="podium-badge mb-4">
+                    {podiumState.secondRevealed && secondTeam ? (
+                      <div className="animate-reveal-up">
+                        <Medal size={56} className="text-slate-300 mx-auto mb-2" />
+                        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-100">{secondTeam.name}</h2>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="podium-hidden-circle">?</div>
+                        <p className="podium-hidden-label">HIDDEN</p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {first && (
-                  <div className="podium-col order-1 md:order-2 scale-105 z-20">
-                    <div className="podium-badge mb-6">
-                      <Crown size={64} className="text-yellow-400 mx-auto mb-2 animate-bounce" />
-                      <h2 className="text-3xl md:text-4xl font-black text-yellow-100">
-                        {first.name}
-                      </h2>
-                      <p className="text-2xl font-mono text-yellow-400 font-bold">
-                        {first.score || 0} pts
-                      </p>
-                    </div>
-                    <div className="podium-step podium-gold">
-                      <span className="podium-number">1</span>
-                    </div>
+                  <div className={`podium-step ${podiumState.secondRevealed ? 'podium-silver' : 'podium-dark'}`}>
+                    <span className="podium-number">2</span>
                   </div>
-                )}
-                {third && (
-                  <div className="podium-col order-3">
-                    <div className="podium-badge mb-4">
-                      <Medal size={48} className="text-orange-400 mx-auto mb-2" />
-                      <h2 className="text-2xl font-bold text-orange-100">{third.name}</h2>
-                      <p className="text-lg font-mono text-orange-200">{third.score || 0} pts</p>
-                    </div>
-                    <div className="podium-step podium-bronze">
-                      <span className="podium-number">3</span>
-                    </div>
+                </div>
+
+                {/* 1st Place Champion Pedestal (Middle) */}
+                <div className="podium-col order-1 md:order-2 scale-105 z-20">
+                  <div className="podium-badge mb-6">
+                    {podiumState.firstRevealed && firstTeam ? (
+                      <div className="animate-reveal-up">
+                        <Crown size={72} className="text-yellow-400 mx-auto mb-2 animate-bounce" />
+                        <h2 className="text-3xl md:text-4xl font-black text-yellow-300">{firstTeam.name}</h2>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="podium-hidden-circle">?</div>
+                        <p className="podium-hidden-label">HIDDEN</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className={`podium-step ${podiumState.firstRevealed ? 'podium-gold' : 'podium-dark'}`}>
+                    <span className="podium-number">1</span>
+                  </div>
+                </div>
+
+                {/* 3rd Place Pedestal (Right) */}
+                <div className="podium-col order-3">
+                  <div className="podium-badge mb-4">
+                    {podiumState.thirdRevealed && thirdTeam ? (
+                      <div className="animate-reveal-up">
+                        <Medal size={56} className="text-orange-400 mx-auto mb-2" />
+                        <h2 className="text-2xl md:text-3xl font-extrabold text-orange-200">{thirdTeam.name}</h2>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="podium-hidden-circle">?</div>
+                        <p className="podium-hidden-label">HIDDEN</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className={`podium-step ${podiumState.thirdRevealed ? 'podium-bronze' : 'podium-dark'}`}>
+                    <span className="podium-number">3</span>
+                  </div>
+                </div>
               </div>
             );
           })()}
-
-          {/* Grand Cumulative Table */}
-          <div className="mt-16">
-            <h2 className="section-title-large">Grand Cumulative Scoreboard</h2>
-            <div className="scoreboard-container">
-              <div className="scoreboard-header-5col">
-                <div className="col-span-2">TEAM NAME</div>
-                <div className="text-right text-yellow-400">TOTAL SCORE</div>
-                <div className="text-right">ITEMS WON</div>
-                <div className="text-right">TOTAL SPENT</div>
-                <div className="text-right">REMAINING</div>
-              </div>
-              <div className="space-y-3">
-                {[...teamsWithStats]
-                  .sort((a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget)
-                  .map((team, idx) => {
-                    const isFirst = idx === 0;
-                    const isMe = team.id === myTeamId;
-                    return (
-                      <div
-                        key={team.id}
-                        className={`team-row-5col ${
-                          isFirst ? 'row-champion' : isMe ? 'team-row-me' : 'team-row-default'
-                        }`}
-                      >
-                        <div className="col-span-2 flex items-center gap-3">
-                          <span
-                            className={`font-black text-2xl ${
-                              idx === 0
-                                ? 'text-yellow-400'
-                                : idx === 1
-                                ? 'text-slate-300'
-                                : idx === 2
-                                ? 'text-amber-600'
-                                : 'text-slate-500'
-                            }`}
-                          >
-                            {idx + 1}.
-                          </span>
-                          <div>
-                            <p className="text-xl font-bold text-white">
-                              {team.name}
-                              {isMe && <span className="badge-you">YOU</span>}
-                            </p>
-                            {isFirst && <span className="badge-champion">GRAND CHAMPION</span>}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-3xl font-black text-yellow-400">
-                            {team.score || 0}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-indigo-300">{team.itemsCount}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-red-400">
-                            {formatCurrency(team.totalSpent)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-black text-green-400">
-                            {formatCurrency(team.budget)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -28,7 +28,7 @@ export default function AdminLogin() {
     if (password === ADMIN_MASTER_PASSWORD) {
       sessionStorage.setItem('gcl_admin_authenticated', 'true');
       showToast('Admin access granted!', 'success');
-      setTimeout(() => navigate('/admin'), 400);
+      setTimeout(() => navigate('/123456789/GCL-0321/admin'), 400);
       return;
     }
 
@@ -55,7 +55,7 @@ export default function AdminLogin() {
         if (password === ADMIN_MASTER_PASSWORD) {
           sessionStorage.setItem('gcl_admin_authenticated', 'true');
           showToast('Master admin authenticated!', 'success');
-          navigate('/admin');
+          navigate('/123456789/GCL-0321/admin');
           return;
         }
         setError(signInError.message);
@@ -66,7 +66,7 @@ export default function AdminLogin() {
       // If user is manthantp0321@gmail.com or role is admin, grant access
       sessionStorage.setItem('gcl_admin_authenticated', 'true');
       showToast('Admin logged in successfully!', 'success');
-      navigate('/admin');
+      navigate('/123456789/GCL-0321/admin');
     } catch (err: any) {
       setError(err?.message || 'Login failed.');
     } finally {

@@ -62,17 +62,9 @@ export default function Header({
           </div>
 
           <div className="gcl-buttons-row">
-            {onToggleView && (
+            {viewMode === 'admin' && onToggleView && (
               <button onClick={onToggleView} className="btn-header-view">
-                {viewMode === 'admin' ? (
-                  <>
-                    <Eye size={18} /> Live View
-                  </>
-                ) : (
-                  <>
-                    {isAdminAuthenticated ? <Lock size={18} /> : <Unlock size={18} />} Admin Console
-                  </>
-                )}
+                <Eye size={18} /> Live View
               </button>
             )}
 
