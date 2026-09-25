@@ -139,7 +139,7 @@ export default function LiveView() {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans">
+    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans gcl-page-enter">
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -158,7 +158,7 @@ export default function LiveView() {
             <div className="inline-block mb-4">
               <Settings size={72} className="text-slate-500 animate-spin-slow mx-auto" />
             </div>
-            <h1 className="text-6xl md:text-7xl font-black text-slate-400 tracking-tighter">
+            <h1 className="text-6xl md:text-7xl font-black text-slate-400 tracking-tighter gcl-display">
               EVENT SETUP
             </h1>
             <div className="divider-cyan"></div>
@@ -179,12 +179,12 @@ export default function LiveView() {
               <span className="badge-official">Official Auction</span>
             </div>
             <h1 className="grand-title">
-              GEN<span className="text-blue-500">CODE</span>
+              GEN<span className="brand-heading-accent">CODE</span>
               <br />
               LEAGUE
             </h1>
             <div className="divider-blue"></div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-widest animate-bounce">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-widest animate-bounce gcl-display">
               Auction Starting Soon
             </h2>
 
@@ -584,7 +584,7 @@ export default function LiveView() {
         <div className="live-page-container">
           <div className="text-center mb-12">
             <h1 className="champions-title">CHAMPIONS</h1>
-            <p className="text-xl text-slate-400 font-mono uppercase tracking-widest">
+            <p className="text-xl text-slate-400 font-mono uppercase tracking-widest gcl-display" style={{ letterSpacing: '0.2em' }}>
               Grand Final Standings
             </p>
           </div>
