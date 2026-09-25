@@ -151,7 +151,7 @@ export default function TeamConsole() {
           </div>
         )}
 
-        <LiveTeamStatus teams={teams} startingBudget={edition.starting_budget} />
+        <LiveTeamStatus teams={teams} startingBudget={edition.starting_budget} myTeamId={myTeam.id} />
       </div>
     </div>
   );

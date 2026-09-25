@@ -5,58 +5,72 @@ import { formatCurrency } from '../utils/formatters';
 interface LiveTeamStatusProps {
   teams: Team[];
   startingBudget: number;
+  myTeamId?: string | null;
 }
 
-export default function LiveTeamStatus({ teams, startingBudget }: LiveTeamStatusProps) {
-  // Sort teams securely by sort_order or score
+export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: LiveTeamStatusProps) {
+  // Sort teams by sort_order or name
   const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <div className="mt-8 space-y-4">
-      <h2 className="text-xl font-bold text-white uppercase tracking-wider text-center">
-        Live Team Standings
+    <div className="mt-10 max-w-4xl w-full mx-auto">
+      <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide text-center mb-6">
+        Live Team Status
       </h2>
-      
-      <div className="overflow-x-auto rounded-xl">
-        <table className="table-attractive">
-          <thead>
-            <tr>
-              <th className="text-left">Team Name</th>
-              <th className="text-right">Total Spent</th>
-              <th className="text-right text-green-400">Remaining Budget</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedTeams.map((team) => {
+
+      <div className="gcl-table-container">
+        {/* Header row */}
+        <div className="grid-live-status-header">
+          <div>TEAM NAME</div>
+          <div className="text-right">TOTAL SPENT</div>
+          <div className="text-right">REMAINING</div>
+        </div>
+
+        {/* Rows */}
+        <div className="space-y-1">
+          {sortedTeams.length > 0 ? (
+            sortedTeams.map((team) => {
               const spent = Math.max(0, startingBudget - team.budget);
               const isOutOfBudget = team.budget <= 0;
               const isLowBudget = !isOutOfBudget && team.budget <= 5000000;
+              const isMyTeam = team.id === myTeamId;
 
               return (
-                <tr key={team.id}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-base">{team.name}</span>
-                      {isOutOfBudget && (
-                        <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                      )}
-                      {isLowBudget && (
-                        <span className="badge-low-budget">⚠️ LOW</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="text-right font-mono text-red-400 font-semibold">
+                <div
+                  key={team.id}
+                  className={`grid-live-status-row ${isMyTeam ? 'grid-live-status-me' : ''}`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap min-w-0 pr-2">
+                    <span className="font-bold text-white text-base md:text-lg truncate">
+                      {team.name}
+                    </span>
+                    {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                    {isOutOfBudget && (
+                      <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                    )}
+                    {isLowBudget && (
+                      <span className="badge-low-budget">⚠️ LOW</span>
+                    )}
+                  </div>
+
+                  <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
                     {formatCurrency(spent)}
-                  </td>
-                  <td className="text-right font-mono font-bold text-green-400 text-base">
+                  </div>
+
+                  <div className="text-right font-mono font-bold text-green-400 text-base md:text-lg">
                     {formatCurrency(team.budget)}
-                  </td>
-                </tr>
+                  </div>
+                </div>
               );
-            })}
-          </tbody>
-        </table>
+            })
+          ) : (
+            <div className="text-center py-8 text-slate-500 italic">
+              No teams are currently participating.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

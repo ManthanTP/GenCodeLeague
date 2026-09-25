@@ -21,6 +21,7 @@ import { useTeamItems } from '../hooks/useTeamItems';
 import { useTimer } from '../hooks/useTimer';
 import Header from '../components/Header';
 import ConnectionHealth from '../components/ConnectionHealth';
+import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA } from '../data/roundsData';
 import type { PastRoundSnapshot } from '../types/database';
@@ -428,276 +429,12 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* 1. CURRENT ROUND SCORE (Attractive Table with Clear Borders) */}
-          <div className="scoreboard-card-current mt-8">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <Trophy size={24} className="text-cyan-400" />
-                <h2 className="text-2xl font-bold text-white">Current Round Score</h2>
-                <span className="inline-flex items-center px-3 py-0.5 bg-cyan-950/90 border border-cyan-500/60 rounded-full text-cyan-300 text-xs font-bold font-mono">
-                  Round {roundIdx + 1}
-                </span>
-              </div>
-              <p className="text-sm text-slate-400">
-                Live performance for {DEFAULT_ROUNDS_DATA[roundIdx]?.name || `Round ${roundIdx + 1}`}
-              </p>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl">
-              <table className="table-attractive">
-                <thead>
-                  <tr>
-                    <th className="text-center w-16">Rank</th>
-                    <th>Team Name</th>
-                    <th className="text-center text-yellow-400">Round Score</th>
-                    <th className="text-center">Items Won</th>
-                    <th className="text-right">Round Spent</th>
-                    <th className="text-right text-green-400">Remaining Budget</th>
-                    <th className="text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentRoundStats.length > 0 ? (
-                    currentRoundStats.map((team, idx) => {
-                      const isMyTeam = team.id === myTeamId;
-                      const isOutOfBudget = team.remainingBudget <= 0;
-                      const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
-
-                      return (
-                        <tr
-                          key={team.id}
-                          className={isMyTeam ? 'bg-indigo-950/50' : ''}
-                        >
-                          <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
-                          <td>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-white text-base">
-                                {team.name}
-                              </span>
-                              {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                              {isOutOfBudget && (
-                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                              )}
-                              {isLowBudget && (
-                                <span className="badge-low-budget">⚠️ LOW</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="text-center font-black text-yellow-400 text-xl font-mono">
-                            {team.roundScore}
-                          </td>
-                          <td className="text-center font-semibold text-indigo-300 font-mono">
-                            {team.roundItemsCount}
-                          </td>
-                          <td className="text-right font-mono text-red-400 font-semibold">
-                            {formatCurrency(team.roundSpent)}
-                          </td>
-                          <td className="text-right font-mono font-bold text-green-400 text-base">
-                            {formatCurrency(team.remainingBudget)}
-                          </td>
-                          <td className="text-center">
-                            {isOutOfBudget ? (
-                              <span className="status-badge-exhausted">Exhausted</span>
-                            ) : (
-                              <span className="status-badge-active">Active</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="text-center py-6 text-slate-500 italic">
-                        No teams are currently participating.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
-          <div className="scoreboard-card-overall mt-8">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <Crown size={24} className="text-yellow-400" />
-                <h2 className="text-2xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
-                <span className="inline-flex items-center px-3 py-0.5 bg-amber-950/90 border border-yellow-500/60 rounded-full text-yellow-300 text-xs font-bold font-mono">
-                  {Math.max(1, currentRoundIndex + 1)} Rounds
-                </span>
-              </div>
-              <p className="text-sm text-slate-400">
-                Ranking Priority: Total Score → Total Items → Total Remaining Budget
-              </p>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl">
-              <table className="table-attractive">
-                <thead>
-                  <tr>
-                    <th className="text-left">TEAM NAME</th>
-                    <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
-                    <th className="text-center text-slate-300">TOTAL ITEMS</th>
-                    <th className="text-right text-red-400">TOTAL SPENT</th>
-                    <th className="text-right text-green-400 font-black">TOTAL REM.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overallStats.map((team, idx) => {
-                    const isGrandChampion = idx === 0 && team.totalScore > 0;
-                    const isOutOfBudget = team.totalRemaining <= 0;
-                    const isMyTeam = team.id === myTeamId;
-
-                    return (
-                      <tr
-                        key={team.id}
-                        className={`${isGrandChampion ? 'tr-grand-champion' : ''} ${isMyTeam && !isGrandChampion ? 'bg-indigo-950/50' : ''}`}
-                      >
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
-                              {idx + 1}.
-                            </span>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-white text-base">{team.name}</span>
-                                {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                                {isOutOfBudget && (
-                                  <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                                )}
-                              </div>
-                              {isGrandChampion && (
-                                <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
-                                  ★ GRAND CHAMPION ★
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="text-center font-black text-yellow-400 text-2xl font-mono">
-                          {team.totalScore}
-                        </td>
-                        <td className="text-center font-bold text-slate-200 text-lg font-mono">
-                          {team.totalItems}
-                        </td>
-                        <td className="text-right font-mono text-red-400 font-bold text-base">
-                          {formatCurrency(team.totalSpent)}
-                        </td>
-                        <td className="text-right font-mono font-black text-green-400 text-lg">
-                          {formatCurrency(team.totalRemaining)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 3. Completed Round Summaries (Previous Rounds Scoreboard with Rich Detailing) */}
-          {pastRounds.length > 0 && (
-            <div className="scoreboard-card-previous mt-8">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <History size={24} className="text-indigo-400" />
-                  <h2 className="text-2xl font-bold text-white">Previous Round Scoreboard</h2>
-                </div>
-                <p className="text-sm text-slate-400">
-                  Archived final snapshot of completed rounds
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {pastRounds.map((round, rIdx) => {
-                  const roundTotalSpent = round.results.reduce((acc, r) => acc + (r.totalSpent || 0), 0);
-                  const roundTotalItems = round.results.reduce((acc, r) => acc + (r.itemsCount || 0), 0);
-
-                  return (
-                    <div key={rIdx} className="space-y-3">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 px-1">
-                        <div>
-                          <h3 className="text-xl font-bold text-indigo-300 uppercase tracking-wide">
-                            {round.roundName} Final Results
-                          </h3>
-                          <span className="text-slate-400 text-xs font-mono">
-                            Finished at {new Date(round.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="badge-preview">
-                            Total Spent: {formatCurrency(roundTotalSpent)}
-                          </span>
-                          <span className="badge-items-sm">
-                            {roundTotalItems} Items Auctioned
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto rounded-xl">
-                        <table className="table-attractive">
-                          <thead>
-                            <tr>
-                              <th className="text-center w-16">Rank</th>
-                              <th>Team</th>
-                              <th className="text-center text-yellow-400">Score</th>
-                              <th className="text-center">Items Won</th>
-                              <th className="text-right">Total Spent</th>
-                              <th className="text-right text-green-400">Remaining Budget</th>
-                              <th className="text-center">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[...round.results]
-                              .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
-                              .map((res, i) => {
-                                const isExhausted = (res.remainingBudget || 0) <= 0;
-                                const isMyTeam = res.id === myTeamId;
-                                return (
-                                  <tr
-                                    key={i}
-                                    className={isMyTeam ? 'bg-indigo-950/50' : ''}
-                                  >
-                                    <td className="text-center font-mono text-slate-400 font-bold">{i + 1}</td>
-                                    <td className="font-bold text-white">
-                                      <div className="flex items-center gap-2">
-                                        <span>{res.name}</span>
-                                        {isMyTeam && (
-                                          <span className="badge-you-inline">YOU</span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="text-center font-bold text-yellow-400 text-lg font-mono">
-                                      {res.score || 0}
-                                    </td>
-                                    <td className="text-center font-semibold text-indigo-300 font-mono">
-                                      {res.itemsCount || 0}
-                                    </td>
-                                    <td className="text-right font-mono text-red-400 font-semibold">
-                                      {formatCurrency(res.totalSpent)}
-                                    </td>
-                                    <td className="text-right font-mono font-bold text-green-400">
-                                      {formatCurrency(res.remainingBudget)}
-                                    </td>
-                                    <td className="text-center">
-                                      {isExhausted ? (
-                                        <span className="status-badge-exhausted">Exhausted</span>
-                                      ) : (
-                                        <span className="status-badge-active">Active</span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* Live Team Status (Strictly Budget & Spent Only - Scores Hidden from Live View) */}
+          <LiveTeamStatus
+            teams={teams}
+            startingBudget={edition?.starting_budget || 50000000}
+            myTeamId={myTeamId}
+          />
         </div>
       )}
 
@@ -714,40 +451,40 @@ export default function LiveView() {
             </div>
           </div>
           {pastRounds.length > 0 && (
-            <div className="max-w-4xl w-full mx-auto round-summary-card">
-              <h2 className="text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
-                <History className="text-yellow-400" size={28} />{' '}
-                {pastRounds[pastRounds.length - 1].roundName} Summary
-              </h2>
-              <div className="overflow-hidden rounded-xl border border-slate-700">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-900">
-                    <tr className="text-slate-300 uppercase text-xs">
-                      <th className="p-4">Team</th>
-                      <th className="p-4 text-right">Total Spent</th>
-                      <th className="p-4 text-right">Rem. Budget</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {pastRounds[pastRounds.length - 1].results.map((res, i) => (
-                      <tr
-                        key={i}
-                        className={res.id === myTeamId ? 'bg-indigo-900/40' : 'hover:bg-slate-800/40'}
-                      >
-                        <td className="p-4 font-bold text-lg text-white">
+            <div className="max-w-4xl w-full mx-auto px-2">
+              <div className="gcl-table-container">
+                <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
+                  <History className="text-yellow-400" size={24} />{' '}
+                  {pastRounds[pastRounds.length - 1].roundName} Summary
+                </h2>
+
+                <div className="grid-live-status-header">
+                  <div>TEAM</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right">REM. BUDGET</div>
+                </div>
+
+                <div className="space-y-1">
+                  {pastRounds[pastRounds.length - 1].results.map((res, i) => (
+                    <div
+                      key={res.id || i}
+                      className={`grid-live-status-row ${res.id === myTeamId ? 'grid-live-status-me' : ''}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <span className="font-bold text-white text-base md:text-lg truncate">
                           {res.name}
-                          {res.id === myTeamId && <span className="badge-you-inline">YOU</span>}
-                        </td>
-                        <td className="p-4 text-right text-red-400 font-semibold">
-                          {formatCurrency(res.totalSpent)}
-                        </td>
-                        <td className="p-4 text-right text-green-400 font-bold">
-                          {formatCurrency(res.remainingBudget)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                        {res.id === myTeamId && <span className="badge-you-inline">YOU</span>}
+                      </div>
+                      <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
+                        {formatCurrency(res.totalSpent)}
+                      </div>
+                      <div className="text-right font-mono font-bold text-green-400 text-base md:text-lg">
+                        {formatCurrency(res.remainingBudget)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -834,6 +571,84 @@ export default function LiveView() {
               </div>
             );
           })()}
+
+          {/* Grand Champion Final Scoreboard (All Rounds Combined - Matching winner 2025 2.png) */}
+          <div className="max-w-5xl w-full mx-auto mt-12 px-2">
+            <div className="gcl-table-container">
+              {/* Header row */}
+              <div className="grid-overall-header">
+                <div>TEAM NAME</div>
+                <div className="text-center text-yellow-400 font-black">TOTAL SCORE</div>
+                <div className="text-center">TOTAL ITEMS</div>
+                <div className="text-right">TOTAL SPENT</div>
+                <div className="text-right">TOTAL REM.</div>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-1">
+                {overallStats.map((team, idx) => {
+                  const isGrandChampion = idx === 0 && team.totalScore > 0;
+                  const isOutOfBudget = team.totalRemaining <= 0;
+                  const isMyTeam = team.id === myTeamId;
+
+                  return (
+                    <div
+                      key={team.id}
+                      className={`grid-overall-row ${
+                        isGrandChampion
+                          ? 'gcl-row-champion'
+                          : isMyTeam
+                          ? 'grid-live-status-me'
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 pr-2">
+                        <span
+                          className={`font-mono font-bold text-lg ${
+                            isGrandChampion ? 'text-yellow-400' : 'text-blue-400'
+                          }`}
+                        >
+                          {idx + 1}.
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-base md:text-lg truncate">
+                              {team.name}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                            {isOutOfBudget && (
+                              <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                            )}
+                          </div>
+                          {isGrandChampion && (
+                            <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
+                              GRAND CHAMPION
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-center font-black text-yellow-400 text-2xl font-mono">
+                        {team.totalScore}
+                      </div>
+
+                      <div className="text-center font-semibold text-slate-200 text-lg font-mono">
+                        {team.totalItems}
+                      </div>
+
+                      <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
+                        {formatCurrency(team.totalSpent)}
+                      </div>
+
+                      <div className="text-right font-mono font-black text-green-400 text-lg md:text-xl">
+                        {formatCurrency(team.totalRemaining)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

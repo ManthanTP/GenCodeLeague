@@ -3784,3 +3784,179 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
+/* ==================================================== */
+/* --- GCL SIGNATURE ROW-CARD TABLES (winner 2025 2.png & Old GCL) --- */
+/* ==================================================== */
+
+.gcl-table-container {
+  background: #070d1e;
+  border: 1px solid #1e293b;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin-top: 1.5rem;
+}
+
+.gcl-row-card {
+  background: #0d1527;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.6rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.6rem;
+  transition: all 0.15s ease;
+}
+
+.gcl-row-card:hover {
+  background: #111d38;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.gcl-row-champion {
+  background: linear-gradient(90deg, #2b1f0d 0%, #1e170a 100%) !important;
+  border: 1.5px solid #eab308 !important;
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
+}
+
+/* ==================================================== */
+/* --- GCL SIGNATURE ROW-CARD TABLES (winner 2025 2.png & Old GCL) --- */
+/* ==================================================== */
+
+.gcl-table-container {
+  background: #091024;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin-top: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gcl-row-card {
+  background: #0e172e;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.65rem;
+  transition: all 0.15s ease;
+}
+
+.gcl-row-card:hover {
+  background: #131f3d;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.gcl-row-champion {
+  background: linear-gradient(90deg, #34220b 0%, #1f1406 100%) !important;
+  border: 1.5px solid #eab308 !important;
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.25);
+}
+
+/* 3-column grid for Live Team Status & Intermission: TEAM NAME | TOTAL SPENT | REMAINING */
+.grid-live-status-header {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) 1fr 1fr;
+  align-items: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 1.25rem 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.grid-live-status-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) 1fr 1fr;
+  align-items: center;
+  background: #0e172e;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.95rem 1.25rem;
+  margin-bottom: 0.65rem;
+  transition: all 0.15s ease;
+}
+
+.grid-live-status-row:hover {
+  background: #131f3d;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.grid-live-status-me {
+  background: rgba(30, 41, 80, 0.75) !important;
+  border: 1px solid rgba(250, 204, 21, 0.6) !important;
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.2) !important;
+}
+
+/* 5-column grid for Overall Scoreboard matching winner 2025 2.png:
+   TEAM NAME | TOTAL SCORE | TOTAL ITEMS | TOTAL SPENT | TOTAL REM. */
+.grid-overall-header {
+  display: grid;
+  grid-template-columns: minmax(200px, 2.4fr) 1.1fr 1fr 1.25fr 1.25fr;
+  align-items: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 1.25rem 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.grid-overall-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 2.4fr) 1.1fr 1fr 1.25fr 1.25fr;
+  align-items: center;
+  background: #0e172e;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.95rem 1.25rem;
+  margin-bottom: 0.65rem;
+  transition: all 0.15s ease;
+}
+
+.grid-overall-row:hover {
+  background: #131f3d;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* 6-column grid for Admin Current Round Score:
+   RANK | TEAM NAME | ROUND SCORE | ITEMS WON | ROUND SPENT | REMAINING BUDGET */
+.grid-admin-score-header {
+  display: grid;
+  grid-template-columns: 0.6fr minmax(180px, 2.2fr) 1fr 1fr 1.25fr 1.25fr;
+  align-items: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 1.25rem 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.grid-admin-score-row {
+  display: grid;
+  grid-template-columns: 0.6fr minmax(180px, 2.2fr) 1fr 1fr 1.25fr 1.25fr;
+  align-items: center;
+  background: #0e172e;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 0.65rem;
+  transition: all 0.15s ease;
+}
+
+.grid-admin-score-row:hover {
+  background: #131f3d;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+

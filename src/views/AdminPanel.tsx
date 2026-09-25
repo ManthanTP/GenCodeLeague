@@ -1854,7 +1854,7 @@ export default function AdminPanel() {
 
           {/* FULL WIDTH: Scoreboards Section */}
           <div className="space-y-8 mt-8">
-            {/* 1. CURRENT ROUND SCORE (Renamed & Attractive Table with Clear Borders) */}
+            {/* 1. CURRENT ROUND SCORE */}
             <div className="scoreboard-card-current">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2.5">
@@ -1869,53 +1869,48 @@ export default function AdminPanel() {
                 </p>
               </div>
 
-              <div className="overflow-x-auto rounded-xl">
-                <table className="table-attractive">
-                  <thead>
-                    <tr>
-                      <th className="text-center w-16">Rank</th>
-                      <th>Team Name</th>
-                      <th className="text-center text-yellow-400">Round Score</th>
-                      <th className="text-center">Items Won</th>
-                      <th className="text-right">Round Spent</th>
-                      <th className="text-right text-green-400">Remaining Budget</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentRoundStats.map((team, idx) => {
-                      const isOutOfBudget = team.remainingBudget <= 0;
-                      const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
-                      return (
-                        <tr key={team.id}>
-                          <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
-                          <td>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-white text-base">{team.name}</span>
-                              {isOutOfBudget && (
-                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                              )}
-                              {isLowBudget && (
-                                <span className="badge-low-budget">⚠️ LOW</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="text-center font-black text-yellow-400 text-xl font-mono">
-                            {team.roundScore}
-                          </td>
-                          <td className="text-center font-semibold text-indigo-300 font-mono">
-                            {team.roundItemsCount}
-                          </td>
-                          <td className="text-right font-mono text-red-400 font-semibold">
-                            {formatCurrency(team.roundSpent)}
-                          </td>
-                          <td className="text-right font-mono font-bold text-green-400 text-base">
-                            {formatCurrency(team.remainingBudget)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="gcl-table-container">
+                <div className="grid-admin-score-header">
+                  <div className="text-center">RANK</div>
+                  <div>TEAM NAME</div>
+                  <div className="text-center text-yellow-400">ROUND SCORE</div>
+                  <div className="text-center">ITEMS WON</div>
+                  <div className="text-right">ROUND SPENT</div>
+                  <div className="text-right text-green-400">REMAINING BUDGET</div>
+                </div>
+
+                <div className="space-y-1">
+                  {currentRoundStats.map((team, idx) => {
+                    const isOutOfBudget = team.remainingBudget <= 0;
+                    const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
+                    return (
+                      <div key={team.id} className="grid-admin-score-row">
+                        <div className="text-center font-mono text-slate-400 font-bold">{idx + 1}</div>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0 pr-2">
+                          <span className="font-bold text-white text-base truncate">{team.name}</span>
+                          {isOutOfBudget && (
+                            <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                          )}
+                          {isLowBudget && (
+                            <span className="badge-low-budget">⚠️ LOW</span>
+                          )}
+                        </div>
+                        <div className="text-center font-black text-yellow-400 text-xl font-mono">
+                          {team.roundScore}
+                        </div>
+                        <div className="text-center font-semibold text-indigo-300 font-mono">
+                          {team.roundItemsCount}
+                        </div>
+                        <div className="text-right font-mono text-red-400 font-semibold">
+                          {formatCurrency(team.roundSpent)}
+                        </div>
+                        <div className="text-right font-mono font-bold text-green-400 text-base">
+                          {formatCurrency(team.remainingBudget)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -1934,61 +1929,58 @@ export default function AdminPanel() {
                 </p>
               </div>
 
-              <div className="overflow-x-auto rounded-xl">
-                <table className="table-attractive">
-                  <thead>
-                    <tr>
-                      <th className="text-left">TEAM NAME</th>
-                      <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
-                      <th className="text-center text-slate-300">TOTAL ITEMS</th>
-                      <th className="text-right text-red-400">TOTAL SPENT</th>
-                      <th className="text-right text-green-400 font-black">TOTAL REM.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overallStats.map((team, idx) => {
-                      const isGrandChampion = idx === 0 && team.totalScore > 0;
-                      const isOutOfBudget = team.totalRemaining <= 0;
-                      return (
-                        <tr
-                          key={team.id}
-                          className={isGrandChampion ? 'tr-grand-champion' : ''}
-                        >
-                          <td>
-                            <div className="flex items-center gap-3">
-                              <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
-                                {idx + 1}.
-                              </span>
-                              <div>
-                                <span className="font-bold text-white text-base">{team.name}</span>
-                                {isGrandChampion && (
-                                  <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
-                                    ★ GRAND CHAMPION ★
-                                  </span>
-                                )}
-                                {isOutOfBudget && (
-                                  <span className="badge-out-of-budget ml-2">⚠️ OUT OF BUDGET</span>
-                                )}
-                              </div>
+              <div className="gcl-table-container">
+                <div className="grid-overall-header">
+                  <div>TEAM NAME</div>
+                  <div className="text-center text-yellow-400 font-black">TOTAL SCORE</div>
+                  <div className="text-center">TOTAL ITEMS</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right">TOTAL REM.</div>
+                </div>
+
+                <div className="space-y-1">
+                  {overallStats.map((team, idx) => {
+                    const isGrandChampion = idx === 0 && team.totalScore > 0;
+                    const isOutOfBudget = team.totalRemaining <= 0;
+                    return (
+                      <div
+                        key={team.id}
+                        className={`grid-overall-row ${isGrandChampion ? 'gcl-row-champion' : ''}`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                            {idx + 1}.
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white text-base truncate">{team.name}</span>
+                              {isOutOfBudget && (
+                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                              )}
                             </div>
-                          </td>
-                          <td className="text-center font-black text-yellow-400 text-2xl font-mono">
-                            {team.totalScore}
-                          </td>
-                          <td className="text-center font-bold text-slate-200 text-lg font-mono">
-                            {team.totalItems}
-                          </td>
-                          <td className="text-right font-mono text-red-400 font-bold text-base">
-                            {formatCurrency(team.totalSpent)}
-                          </td>
-                          <td className="text-right font-mono font-black text-green-400 text-lg">
-                            {formatCurrency(team.totalRemaining)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            {isGrandChampion && (
+                              <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
+                                GRAND CHAMPION
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-center font-black text-yellow-400 text-2xl font-mono">
+                          {team.totalScore}
+                        </div>
+                        <div className="text-center font-bold text-slate-200 text-lg font-mono">
+                          {team.totalItems}
+                        </div>
+                        <div className="text-right font-mono text-red-400 font-bold text-base">
+                          {formatCurrency(team.totalSpent)}
+                        </div>
+                        <div className="text-right font-mono font-black text-green-400 text-lg">
+                          {formatCurrency(team.totalRemaining)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -2025,41 +2017,37 @@ export default function AdminPanel() {
                           </span>
                         )}
                       </div>
-                      <div className="overflow-x-auto rounded-xl">
-                        <table className="table-attractive">
-                          <thead>
-                            <tr>
-                              <th className="text-center w-16">Rank</th>
-                              <th>Team</th>
-                              <th className="text-center text-yellow-400">Score</th>
-                              <th className="text-center">Items Won</th>
-                              <th className="text-right">Total Spent</th>
-                              <th className="text-right text-green-400">Remaining Budget</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[...(snap.results || [])]
-                              .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
-                              .map((res, idx) => (
-                                <tr key={res.id || idx}>
-                                  <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
-                                  <td className="font-bold text-white">{res.name}</td>
-                                  <td className="text-center font-bold text-yellow-400 text-lg font-mono">
-                                    {res.score || 0}
-                                  </td>
-                                  <td className="text-center font-semibold text-indigo-300 font-mono">
-                                    {res.itemsCount || 0}
-                                  </td>
-                                  <td className="text-right font-mono text-red-400 font-semibold">
-                                    {formatCurrency(res.totalSpent || 0)}
-                                  </td>
-                                  <td className="text-right font-mono font-bold text-green-400">
-                                    {formatCurrency(res.remainingBudget || 0)}
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
+                      <div className="gcl-table-container">
+                        <div className="grid-admin-score-header">
+                          <div className="text-center">RANK</div>
+                          <div>TEAM</div>
+                          <div className="text-center text-yellow-400">SCORE</div>
+                          <div className="text-center">ITEMS WON</div>
+                          <div className="text-right">TOTAL SPENT</div>
+                          <div className="text-right text-green-400">REMAINING BUDGET</div>
+                        </div>
+                        <div className="space-y-1">
+                          {[...(snap.results || [])]
+                            .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
+                            .map((res, idx) => (
+                              <div key={res.id || idx} className="grid-admin-score-row">
+                                <div className="text-center font-mono text-slate-400 font-bold">{idx + 1}</div>
+                                <div className="font-bold text-white truncate">{res.name}</div>
+                                <div className="text-center font-bold text-yellow-400 text-lg font-mono">
+                                  {res.score || 0}
+                                </div>
+                                <div className="text-center font-semibold text-indigo-300 font-mono">
+                                  {res.itemsCount || 0}
+                                </div>
+                                <div className="text-right font-mono text-red-400 font-semibold">
+                                  {formatCurrency(res.totalSpent || 0)}
+                                </div>
+                                <div className="text-right font-mono font-bold text-green-400">
+                                  {formatCurrency(res.remainingBudget || 0)}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
                       </div>
                     </div>
                   ))}
