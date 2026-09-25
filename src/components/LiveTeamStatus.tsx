@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Team } from '../types/database';
+import { formatCurrency } from '../utils/formatters';
 
 interface LiveTeamStatusProps {
   teams: Team[];
@@ -11,29 +12,44 @@ export default function LiveTeamStatus({ teams, startingBudget }: LiveTeamStatus
   const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <div className="mt-4">
-      <h2 className="text-center" style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Live Team Status</h2>
+    <div className="mt-8 space-y-4">
+      <h2 className="text-xl font-bold text-white uppercase tracking-wider text-center">
+        Live Team Standings
+      </h2>
       
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="overflow-x-auto rounded-xl">
+        <table className="table-attractive">
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'left' }}>
-              <th style={{ padding: '1rem 1.5rem' }}>Team Name</th>
-              <th style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>Total Spent</th>
-              <th style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>Remaining</th>
+            <tr>
+              <th className="text-left">Team Name</th>
+              <th className="text-right">Total Spent</th>
+              <th className="text-right text-green-400">Remaining Budget</th>
             </tr>
           </thead>
           <tbody>
-            {sortedTeams.map((team, idx) => {
-              const spent = startingBudget - team.budget;
+            {sortedTeams.map((team) => {
+              const spent = Math.max(0, startingBudget - team.budget);
+              const isOutOfBudget = team.budget <= 0;
+              const isLowBudget = !isOutOfBudget && team.budget <= 5000000;
+
               return (
-                <tr key={team.id} style={{ borderBottom: idx === sortedTeams.length - 1 ? 'none' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-elevated)' }}>
-                  <td style={{ padding: '1rem 1.5rem', fontWeight: 600 }}>{team.name}</td>
-                  <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: spent > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                    ₹{spent > 0 ? spent.toLocaleString() : '0'}
+                <tr key={team.id}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-base">{team.name}</span>
+                      {isOutOfBudget && (
+                        <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                      )}
+                      {isLowBudget && (
+                        <span className="badge-low-budget">⚠️ LOW</span>
+                      )}
+                    </div>
                   </td>
-                  <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: 'var(--success)', fontWeight: 'bold' }}>
-                    ₹{team.budget.toLocaleString()}
+                  <td className="text-right font-mono text-red-400 font-semibold">
+                    {formatCurrency(spent)}
+                  </td>
+                  <td className="text-right font-mono font-bold text-green-400 text-base">
+                    {formatCurrency(team.budget)}
                   </td>
                 </tr>
               );

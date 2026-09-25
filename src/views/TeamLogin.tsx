@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Users, LogIn } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 
@@ -44,43 +45,64 @@ export default function TeamLogin() {
   };
 
   return (
-    <>
-      <Header />
-      <div className="auth-container">
-        <div className="auth-box text-center">
-          <h2>Team Login</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.875rem' }}>
+    <div className="min-h-screen bg-slate-950 text-white font-sans">
+      <Header viewMode="team" onToggleView={() => navigate('/')} />
+      
+      <div className="auth-centered-wrapper">
+        <div className="auth-card">
+          <div className="auth-icon-badge bg-cyan-950/40 border-cyan-500/30">
+            <Users size={38} className="text-cyan-400" />
+          </div>
+          <h1 className="auth-title">Team Leader Login</h1>
+          <p className="auth-subtitle">
             Enter your team credentials to access your dashboard.
           </p>
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ textAlign: 'left' }}>
+          <form onSubmit={handleLogin} className="space-y-4 text-left">
+            <div>
+              <label className="text-xs text-slate-400 uppercase font-bold mb-1.5 block">
+                Team Email
+              </label>
               <input
                 type="email"
-                placeholder="Team Email"
+                placeholder="team@gencodeleague.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="gcl-input w-full"
                 required
               />
             </div>
-            <div className="form-group" style={{ textAlign: 'left' }}>
+            <div>
+              <label className="text-xs text-slate-400 uppercase font-bold mb-1.5 block">
+                Password
+              </label>
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="gcl-input w-full"
                 required
               />
             </div>
 
-            {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
+            {error && (
+              <div className="text-red-400 text-sm font-medium bg-red-950/40 p-2.5 rounded-lg border border-red-800/60">
+                {error}
+              </div>
+            )}
 
-            <button type="submit" className="primary" style={{ width: '100%', padding: '0.75rem' }} disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
+            <button
+              type="submit"
+              className="btn-login-submit mt-2"
+              disabled={loading}
+            >
+              <LogIn size={18} />
+              {loading ? 'Authenticating...' : 'Log In to Team Console'}
             </button>
           </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }

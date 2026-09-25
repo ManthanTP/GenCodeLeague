@@ -1705,332 +1705,41 @@ export default function AdminPanel() {
                 </button>
               </form>
 
-              {/* 4. Corrections Bar: Sleek Horizontal Strip Directly Below Final Bid */}
-              <div className="admin-card border-l-4 border-l-orange-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 px-6">
-                <div>
-                  <h2 className="card-title text-orange-400 mb-0.5 text-lg">
-                    <Undo2 size={20} /> Corrections
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Revert the latest item sale, refund the team's bid, and adjust score.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handlePromptUndoLastBid}
-                  disabled={items.length === 0}
-                  className={`btn-undo-action w-auto px-6 py-2.5 shrink-0 ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <Undo2 size={18} /> Undo Last Transaction
-                </button>
-              </div>
-
-              {/* 5. Team Management Card: Wide 2-Column Grid (Comfortable & Clean) */}
-              <div className="admin-card space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-teal-400">
-                    <Users size={22} />
-                    <h2 className="text-xl font-bold text-white">Team Management</h2>
-                  </div>
-                  <span className="text-xs text-slate-400">Click ✓ to save edit</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {teams.map((team, idx) => {
-                    const isEdited = editingTeamNames[team.id] !== undefined && editingTeamNames[team.id] !== team.name;
-                    const currentNameVal = editingTeamNames[team.id] !== undefined ? editingTeamNames[team.id] : team.name;
-                    return (
-                      <div key={team.id} className="team-manage-item">
-                        <span className="font-mono text-slate-500 text-sm w-5">{idx + 1}.</span>
-                        <input
-                          type="text"
-                          value={currentNameVal}
-                          onChange={(e) => setEditingTeamNames((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && isEdited) {
-                              e.preventDefault();
-                              setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal });
-                            }
-                          }}
-                          className={`gcl-input-inline ${isEdited ? 'border-cyan-400 ring-1 ring-cyan-400/50' : ''}`}
-                        />
-                        {isEdited && (
-                          <button
-                            type="button"
-                            title="Save Name Change"
-                            onClick={() => setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal })}
-                            className="p-1.5 rounded-md bg-green-600 hover:bg-green-500 text-white transition-all shadow-md flex items-center justify-center shrink-0"
-                          >
-                            <Check size={14} />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setTeamToRemove(team)}
-                          disabled={teams.length <= 1}
-                          className="btn-remove-circle shrink-0"
-                          title="Remove Team"
-                        >
-                          <Minus size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <form onSubmit={handleAddTeam} className="flex gap-2 pt-3 border-t border-slate-700/60">
-                  <input
-                    type="text"
-                    placeholder="Add New Team Name..."
-                    value={newTeamName}
-                    onChange={(e) => setNewTeamName(e.target.value)}
-                    className="gcl-input flex-1 py-1.5 text-sm"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newTeamName.trim()}
-                    className="btn-primary-add py-1.5 px-4 text-sm"
-                  >
-                    <Plus size={16} /> Add Team
-                  </button>
-                </form>
-              </div>
-
-              {/* 6. CURRENT ROUND SCOREBOARD (Clean table, inline badge, NO stretched borders!) */}
-              <div className="scoreboard-card-current">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <Trophy size={22} className="text-cyan-400" />
-                    <h2 className="text-xl font-bold text-white">Current Round Scoreboard</h2>
-                    <span className="inline-flex items-center px-2.5 py-0.5 bg-cyan-950/90 border border-cyan-500/60 rounded-full text-cyan-300 text-xs font-bold font-mono">
-                      Round {roundIdx + 1}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
-                  </p>
-                </div>
-
-                <div className="overflow-x-auto rounded-lg border border-slate-700/80">
-                  <table className="table-attractive">
-                    <thead>
-                      <tr>
-                        <th className="text-center w-16">Rank</th>
-                        <th>Team Name</th>
-                        <th className="text-center text-yellow-400">Round Score</th>
-                        <th className="text-center">Items Won</th>
-                        <th className="text-right">Round Spent</th>
-                        <th className="text-right text-green-400">Remaining Budget</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentRoundStats.map((team, idx) => {
-                        const isOutOfBudget = team.remainingBudget <= 0;
-                        const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
-                        return (
-                          <tr key={team.id}>
-                            <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
-                            <td>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-white text-base">{team.name}</span>
-                                {isOutOfBudget && (
-                                  <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                                )}
-                                {isLowBudget && (
-                                  <span className="badge-low-budget">⚠️ LOW</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="text-center font-black text-yellow-400 text-xl font-mono">
-                              {team.roundScore}
-                            </td>
-                            <td className="text-center font-semibold text-indigo-300 font-mono">
-                              {team.roundItemsCount}
-                            </td>
-                            <td className="text-right font-mono text-red-400 font-semibold">
-                              {formatCurrency(team.roundSpent)}
-                            </td>
-                            <td className="text-right font-mono font-bold text-green-400 text-base">
-                              {formatCurrency(team.remainingBudget)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 7. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
-              <div className="scoreboard-card-overall">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <Crown size={22} className="text-yellow-400" />
-                    <h2 className="text-xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
-                    <span className="inline-flex items-center px-2.5 py-0.5 bg-amber-950/90 border border-yellow-500/60 rounded-full text-yellow-300 text-xs font-bold font-mono">
-                      {Math.max(1, currentRoundIndex + 1)} Rounds
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Total Score → Total Items → Total Remaining Budget
-                  </p>
-                </div>
-
-                <div className="overflow-x-auto rounded-lg border border-slate-700/80">
-                  <table className="table-attractive">
-                    <thead>
-                      <tr>
-                        <th className="text-left">TEAM NAME</th>
-                        <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
-                        <th className="text-center text-slate-300">TOTAL ITEMS</th>
-                        <th className="text-right text-red-400">TOTAL SPENT</th>
-                        <th className="text-right text-green-400 font-black">TOTAL REM.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {overallStats.map((team, idx) => {
-                        const isGrandChampion = idx === 0 && team.totalScore > 0;
-                        const isOutOfBudget = team.totalRemaining <= 0;
-                        return (
-                          <tr
-                            key={team.id}
-                            className={isGrandChampion ? 'tr-grand-champion' : ''}
-                          >
-                            <td>
-                              <div className="flex items-center gap-3">
-                                <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
-                                  {idx + 1}.
-                                </span>
-                                <div>
-                                  <span className="font-bold text-white text-base">{team.name}</span>
-                                  {isGrandChampion && (
-                                    <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block">
-                                      GRAND CHAMPION
-                                    </span>
-                                  )}
-                                  {isOutOfBudget && (
-                                    <span className="badge-out-of-budget ml-2">⚠️ OUT OF BUDGET</span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="text-center font-black text-yellow-400 text-2xl font-mono">
-                              {team.totalScore}
-                            </td>
-                            <td className="text-center font-bold text-slate-200 text-lg font-mono">
-                              {team.totalItems}
-                            </td>
-                            <td className="text-right font-mono text-red-400 font-bold text-base">
-                              {formatCurrency(team.totalSpent)}
-                            </td>
-                            <td className="text-right font-mono font-black text-green-400 text-lg">
-                              {formatCurrency(team.totalRemaining)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 8. PREVIOUS ROUND SCOREBOARD */}
-              <div className="scoreboard-card-previous">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <HistoryIcon size={22} className="text-indigo-400" />
-                    <h2 className="text-xl font-bold text-white">Previous Round Scoreboard</h2>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Archived final snapshot of completed rounds
-                  </p>
-                </div>
-
-                {pastRounds.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700">
-                    <p className="text-slate-400 font-medium">No previous round completed yet.</p>
-                    <p className="text-slate-500 text-xs mt-1">
-                      When Round 1 finishes and advances to the next stage, its completed scoreboard will be displayed here.
+              {/* 4. Action & Corrections Bar: Directly below the Final Bid form */}
+              <div className="admin-card border-l-4 border-l-amber-500 py-4 px-6 space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="card-title text-amber-400 mb-0.5 text-lg">
+                      <Undo2 size={20} /> Auction Actions & Corrections
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      Quickly revert accidental bids or execute emergency administrative actions.
                     </p>
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    {pastRounds.map((snap) => (
-                      <div key={snap.roundIndex} className="space-y-2">
-                        <div className="flex justify-between items-center px-1">
-                          <h3 className="font-bold text-indigo-300 text-sm uppercase tracking-wide">
-                            {snap.roundName || `Round ${snap.roundIndex + 1}`} Final Results
-                          </h3>
-                          {snap.timestamp && (
-                            <span className="text-slate-500 text-xs">
-                              Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                        <div className="overflow-x-auto rounded-lg border border-slate-700/80">
-                          <table className="table-attractive">
-                            <thead>
-                              <tr>
-                                <th className="text-center w-16">Rank</th>
-                                <th>Team</th>
-                                <th className="text-center text-yellow-400">Score</th>
-                                <th className="text-center">Items Won</th>
-                                <th className="text-right">Total Spent</th>
-                                <th className="text-right text-green-400">Remaining Budget</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {[...(snap.results || [])]
-                                .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
-                                .map((res, idx) => (
-                                  <tr key={res.id || idx}>
-                                    <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
-                                    <td className="font-bold text-white">{res.name}</td>
-                                    <td className="text-center font-bold text-yellow-400 text-lg font-mono">
-                                      {res.score || 0}
-                                    </td>
-                                    <td className="text-center font-semibold text-indigo-300 font-mono">
-                                      {res.itemsCount || 0}
-                                    </td>
-                                    <td className="text-right font-mono text-red-400 font-semibold">
-                                      {formatCurrency(res.totalSpent || 0)}
-                                    </td>
-                                    <td className="text-right font-mono font-bold text-green-400">
-                                      {formatCurrency(res.remainingBudget || 0)}
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handlePromptUndoLastBid}
+                      disabled={items.length === 0}
+                      className={`btn-undo-action w-auto px-5 py-2.5 shrink-0 ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Undo2 size={18} /> Undo Last Transaction
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmingReset(true)}
+                      className="btn-danger-reset w-auto px-5 py-2.5 shrink-0"
+                    >
+                      <AlertCircle size={18} /> Full Reset (DANGER)
+                    </button>
                   </div>
-                )}
-              </div>
-
-              {/* 9. Danger Zone Bar: Sleek Horizontal Strip at the Bottom */}
-              <div className="admin-card border-l-4 border-l-red-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 px-6">
-                <div>
-                  <h2 className="card-title text-red-400 mb-0.5 text-lg">
-                    <AlertCircle size={20} /> Danger Zone
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Wipe all transactions, reset team scores to 0, and restore starting budgets.
-                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingReset(true)}
-                  className="btn-danger-reset w-auto px-6 py-2.5 shrink-0"
-                >
-                  Full Reset (DANGER)
-                </button>
               </div>
             </div>
 
-            {/* Right Sidebar Column: Pinned Transaction Log (NO other cards competing!) */}
-            <div className="lg:col-span-1 lg:sticky lg:top-20">
-              <div className="admin-card transaction-log-card flex flex-col h-[750px] max-h-[calc(100vh-100px)] shadow-2xl">
+            {/* Right Sidebar Column: Transaction Log */}
+            <div className="lg:col-span-1">
+              <div className="admin-card transaction-log-card flex flex-col h-[750px] shadow-2xl">
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-700/60">
                   <h2 className="card-title text-purple-400 mb-0 flex items-center gap-2">
                     <HistoryIcon size={20} /> Transaction Log
@@ -2070,6 +1779,292 @@ export default function AdminPanel() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* FULL WIDTH: Team Management Section */}
+          <div className="admin-card space-y-4 mt-8">
+            <div className="flex justify-between items-center flex-wrap gap-2 pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-teal-400">
+                <Users size={22} />
+                <h2 className="text-xl font-bold text-white">Team Management ({teams.length} Teams)</h2>
+              </div>
+              <span className="text-xs text-slate-400">Click ✓ to save edit or press Enter</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {teams.map((team, idx) => {
+                const isEdited = editingTeamNames[team.id] !== undefined && editingTeamNames[team.id] !== team.name;
+                const currentNameVal = editingTeamNames[team.id] !== undefined ? editingTeamNames[team.id] : team.name;
+                return (
+                  <div key={team.id} className="team-manage-item">
+                    <span className="font-mono text-slate-500 text-sm w-5 shrink-0">{idx + 1}.</span>
+                    <input
+                      type="text"
+                      value={currentNameVal}
+                      onChange={(e) => setEditingTeamNames((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && isEdited) {
+                          e.preventDefault();
+                          setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal });
+                        }
+                      }}
+                      className={`gcl-input-inline ${isEdited ? 'border-cyan-400 ring-1 ring-cyan-400/50' : ''}`}
+                    />
+                    {isEdited && (
+                      <button
+                        type="button"
+                        title="Save Name Change"
+                        onClick={() => setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal })}
+                        className="p-1.5 rounded-md bg-green-600 hover:bg-green-500 text-white transition-all shadow-md flex items-center justify-center shrink-0"
+                      >
+                        <Check size={14} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setTeamToRemove(team)}
+                      disabled={teams.length <= 1}
+                      className="btn-remove-circle shrink-0"
+                      title="Remove Team"
+                    >
+                      <Minus size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleAddTeam} className="flex gap-2 pt-3 border-t border-slate-700/60 max-w-lg">
+              <input
+                type="text"
+                placeholder="Add New Team Name..."
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                className="gcl-input flex-1 py-1.5 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={!newTeamName.trim()}
+                className="btn-primary-add py-1.5 px-4 text-sm shrink-0"
+              >
+                <Plus size={16} /> Add Team
+              </button>
+            </form>
+          </div>
+
+          {/* FULL WIDTH: Scoreboards Section */}
+          <div className="space-y-8 mt-8">
+            {/* 1. CURRENT ROUND SCORE (Renamed & Attractive Table with Clear Borders) */}
+            <div className="scoreboard-card-current">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <Trophy size={24} className="text-cyan-400" />
+                  <h2 className="text-2xl font-bold text-white">Current Round Score</h2>
+                  <span className="inline-flex items-center px-3 py-0.5 bg-cyan-950/90 border border-cyan-500/60 rounded-full text-cyan-300 text-xs font-bold font-mono">
+                    Round {roundIdx + 1}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl">
+                <table className="table-attractive">
+                  <thead>
+                    <tr>
+                      <th className="text-center w-16">Rank</th>
+                      <th>Team Name</th>
+                      <th className="text-center text-yellow-400">Round Score</th>
+                      <th className="text-center">Items Won</th>
+                      <th className="text-right">Round Spent</th>
+                      <th className="text-right text-green-400">Remaining Budget</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRoundStats.map((team, idx) => {
+                      const isOutOfBudget = team.remainingBudget <= 0;
+                      const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
+                      return (
+                        <tr key={team.id}>
+                          <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                          <td>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white text-base">{team.name}</span>
+                              {isOutOfBudget && (
+                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                              )}
+                              {isLowBudget && (
+                                <span className="badge-low-budget">⚠️ LOW</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-center font-black text-yellow-400 text-xl font-mono">
+                            {team.roundScore}
+                          </td>
+                          <td className="text-center font-semibold text-indigo-300 font-mono">
+                            {team.roundItemsCount}
+                          </td>
+                          <td className="text-right font-mono text-red-400 font-semibold">
+                            {formatCurrency(team.roundSpent)}
+                          </td>
+                          <td className="text-right font-mono font-bold text-green-400 text-base">
+                            {formatCurrency(team.remainingBudget)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
+            <div className="scoreboard-card-overall">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <Crown size={24} className="text-yellow-400" />
+                  <h2 className="text-2xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
+                  <span className="inline-flex items-center px-3 py-0.5 bg-amber-950/90 border border-yellow-500/60 rounded-full text-yellow-300 text-xs font-bold font-mono">
+                    {Math.max(1, currentRoundIndex + 1)} Rounds
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Ranking Priority: Total Score → Total Items → Total Remaining Budget
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl">
+                <table className="table-attractive">
+                  <thead>
+                    <tr>
+                      <th className="text-left">TEAM NAME</th>
+                      <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
+                      <th className="text-center text-slate-300">TOTAL ITEMS</th>
+                      <th className="text-right text-red-400">TOTAL SPENT</th>
+                      <th className="text-right text-green-400 font-black">TOTAL REM.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overallStats.map((team, idx) => {
+                      const isGrandChampion = idx === 0 && team.totalScore > 0;
+                      const isOutOfBudget = team.totalRemaining <= 0;
+                      return (
+                        <tr
+                          key={team.id}
+                          className={isGrandChampion ? 'tr-grand-champion' : ''}
+                        >
+                          <td>
+                            <div className="flex items-center gap-3">
+                              <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                                {idx + 1}.
+                              </span>
+                              <div>
+                                <span className="font-bold text-white text-base">{team.name}</span>
+                                {isGrandChampion && (
+                                  <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
+                                    ★ GRAND CHAMPION ★
+                                  </span>
+                                )}
+                                {isOutOfBudget && (
+                                  <span className="badge-out-of-budget ml-2">⚠️ OUT OF BUDGET</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="text-center font-black text-yellow-400 text-2xl font-mono">
+                            {team.totalScore}
+                          </td>
+                          <td className="text-center font-bold text-slate-200 text-lg font-mono">
+                            {team.totalItems}
+                          </td>
+                          <td className="text-right font-mono text-red-400 font-bold text-base">
+                            {formatCurrency(team.totalSpent)}
+                          </td>
+                          <td className="text-right font-mono font-black text-green-400 text-lg">
+                            {formatCurrency(team.totalRemaining)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 3. PREVIOUS ROUND SCOREBOARD */}
+            <div className="scoreboard-card-previous">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <HistoryIcon size={24} className="text-indigo-400" />
+                  <h2 className="text-2xl font-bold text-white">Previous Round Scoreboard</h2>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Archived final snapshot of completed rounds
+                </p>
+              </div>
+
+              {pastRounds.length === 0 ? (
+                <div className="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700">
+                  <p className="text-slate-400 font-medium">No previous round completed yet.</p>
+                  <p className="text-slate-500 text-xs mt-1">
+                    When Round 1 finishes and advances to the next stage, its completed scoreboard will be displayed here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {pastRounds.map((snap) => (
+                    <div key={snap.roundIndex} className="space-y-3">
+                      <div className="flex justify-between items-center px-1">
+                        <h3 className="font-bold text-indigo-300 text-base uppercase tracking-wide">
+                          {snap.roundName || `Round ${snap.roundIndex + 1}`} Final Results
+                        </h3>
+                        {snap.timestamp && (
+                          <span className="text-slate-500 text-xs font-mono">
+                            Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="overflow-x-auto rounded-xl">
+                        <table className="table-attractive">
+                          <thead>
+                            <tr>
+                              <th className="text-center w-16">Rank</th>
+                              <th>Team</th>
+                              <th className="text-center text-yellow-400">Score</th>
+                              <th className="text-center">Items Won</th>
+                              <th className="text-right">Total Spent</th>
+                              <th className="text-right text-green-400">Remaining Budget</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...(snap.results || [])]
+                              .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
+                              .map((res, idx) => (
+                                <tr key={res.id || idx}>
+                                  <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                                  <td className="font-bold text-white">{res.name}</td>
+                                  <td className="text-center font-bold text-yellow-400 text-lg font-mono">
+                                    {res.score || 0}
+                                  </td>
+                                  <td className="text-center font-semibold text-indigo-300 font-mono">
+                                    {res.itemsCount || 0}
+                                  </td>
+                                  <td className="text-right font-mono text-red-400 font-semibold">
+                                    {formatCurrency(res.totalSpent || 0)}
+                                  </td>
+                                  <td className="text-right font-mono font-bold text-green-400">
+                                    {formatCurrency(res.remainingBudget || 0)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

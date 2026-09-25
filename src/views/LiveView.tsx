@@ -94,7 +94,62 @@ export default function LiveView() {
     return { pastRounds: past, podiumState: podium };
   }, [eventState?.banner_message]);
 
-  // Last successful bid derived from team_items
+  const currentRoundIndex = eventState?.current_round_index ?? 0;
+
+  // Current Round Stats for LiveView
+  const currentRoundStats = useMemo(() => {
+    return teams.map((team) => {
+      const roundTeamItems = items.filter(
+        (it) => it.team_id === team.id && it.round_index === currentRoundIndex
+      );
+      const roundScore = roundTeamItems.filter((it) => it.is_correct).length;
+      const roundItemsCount = roundTeamItems.length;
+      const roundSpent = roundTeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      return {
+        ...team,
+        roundScore,
+        roundItemsCount,
+        roundSpent,
+        remainingBudget: team.budget,
+      };
+    }).sort((a, b) => {
+      if (b.roundScore !== a.roundScore) return b.roundScore - a.roundScore;
+      if (b.roundItemsCount !== a.roundItemsCount) return b.roundItemsCount - a.roundItemsCount;
+      return b.remainingBudget - a.remainingBudget;
+    });
+  }, [teams, items, currentRoundIndex]);
+
+  // Overall Stats across ALL rounds combined (Point 5: matching winner 2025 2.png)
+  const overallStats = useMemo(() => {
+    const standardBudget = edition?.starting_budget || 50000000;
+    const roundsCount = Math.max(1, currentRoundIndex + 1);
+
+    return teams.map((team) => {
+      const allTeamItems = items.filter((it) => it.team_id === team.id);
+      const totalScore = team.score || 0;
+      const totalItems = allTeamItems.length;
+      const totalSpent = allTeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const totalAllocated = roundsCount * standardBudget;
+      const totalRemaining = Math.max(0, totalAllocated - totalSpent);
+
+      return {
+        ...team,
+        totalScore,
+        totalItems,
+        totalSpent,
+        totalRemaining,
+      };
+    }).sort((a, b) => {
+      // 1. Highest total score
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      // 2. Highest total items
+      if (b.totalItems !== a.totalItems) return b.totalItems - a.totalItems;
+      // 3. Highest total remaining budget
+      return b.totalRemaining - a.totalRemaining;
+    });
+  }, [teams, items, edition?.starting_budget, currentRoundIndex]);
+
+  // Last successful bid derived from team_items (Result: Correct/Incorrect hidden from live view)
   const lastBidDetails = useMemo(() => {
     if (!items || items.length === 0) return null;
     const lastItem = items[0]; // sorted by created_at desc
@@ -104,7 +159,6 @@ export default function LiveView() {
       questionRef: lastItem.question_ref || `R${lastItem.round_index + 1} - Q${lastItem.question_index + 1}`,
       amount: formatCurrency(lastItem.cost),
       status: lastItem.is_correct ? 'correct' : 'wrong',
-      resultText: lastItem.is_correct ? 'Correct' : 'Incorrect',
     };
   }, [items, teams]);
 
@@ -374,86 +428,200 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Live Team Status Table with Budget Warnings */}
-          <div className="mt-8">
-            <h2 className="section-title-large">Live Team Status</h2>
-            <div className="scoreboard-container">
-              <div className="scoreboard-header">
-                <div>TEAM NAME</div>
-                <div className="text-right">TOTAL SPENT</div>
-                <div className="text-right">REMAINING</div>
+          {/* 1. CURRENT ROUND SCORE (Attractive Table with Clear Borders) */}
+          <div className="scoreboard-card-current mt-8">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Trophy size={24} className="text-cyan-400" />
+                <h2 className="text-2xl font-bold text-white">Current Round Score</h2>
+                <span className="inline-flex items-center px-3 py-0.5 bg-cyan-950/90 border border-cyan-500/60 rounded-full text-cyan-300 text-xs font-bold font-mono">
+                  Round {roundIdx + 1}
+                </span>
               </div>
-              <div className="space-y-3">
-                {teamsWithStats.length > 0 ? (
-                  [...teamsWithStats]
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((team) => {
+              <p className="text-sm text-slate-400">
+                Live performance for {DEFAULT_ROUNDS_DATA[roundIdx]?.name || `Round ${roundIdx + 1}`}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl">
+              <table className="table-attractive">
+                <thead>
+                  <tr>
+                    <th className="text-center w-16">Rank</th>
+                    <th>Team Name</th>
+                    <th className="text-center text-yellow-400">Round Score</th>
+                    <th className="text-center">Items Won</th>
+                    <th className="text-right">Round Spent</th>
+                    <th className="text-right text-green-400">Remaining Budget</th>
+                    <th className="text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentRoundStats.length > 0 ? (
+                    currentRoundStats.map((team, idx) => {
                       const isMyTeam = team.id === myTeamId;
-                      const isOutOfBudget = team.budget <= 0;
-                      const isLowBudget = team.budget > 0 && team.budget <= 2000000;
+                      const isOutOfBudget = team.remainingBudget <= 0;
+                      const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
 
                       return (
-                        <div
+                        <tr
                           key={team.id}
-                          className={`team-row ${
-                            isMyTeam ? 'team-row-me' : 'team-row-default'
-                          }`}
+                          className={isMyTeam ? 'bg-indigo-950/50' : ''}
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="team-row-name">
-                              {team.name}
-                              {isMyTeam && <span className="badge-you">YOU</span>}
-                            </span>
+                          <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                          <td>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white text-base">
+                                {team.name}
+                              </span>
+                              {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                              {isOutOfBudget && (
+                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                              )}
+                              {isLowBudget && (
+                                <span className="badge-low-budget">⚠️ LOW</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-center font-black text-yellow-400 text-xl font-mono">
+                            {team.roundScore}
+                          </td>
+                          <td className="text-center font-semibold text-indigo-300 font-mono">
+                            {team.roundItemsCount}
+                          </td>
+                          <td className="text-right font-mono text-red-400 font-semibold">
+                            {formatCurrency(team.roundSpent)}
+                          </td>
+                          <td className="text-right font-mono font-bold text-green-400 text-base">
+                            {formatCurrency(team.remainingBudget)}
+                          </td>
+                          <td className="text-center">
                             {isOutOfBudget ? (
-                              <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                            ) : isLowBudget ? (
-                              <span className="badge-low-budget">⚠️ LOW</span>
-                            ) : null}
-                          </div>
-                          <div className="text-right">
-                            <span className="font-semibold text-red-400 text-lg">
-                              {formatCurrency(team.totalSpent)}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <span
-                              className={`text-2xl font-black font-mono ${
-                                isOutOfBudget ? 'text-red-500' : 'text-green-400'
-                              }`}
-                            >
-                              {formatCurrency(team.budget)}
-                            </span>
-                          </div>
-                        </div>
+                              <span className="status-badge-exhausted">Exhausted</span>
+                            ) : (
+                              <span className="status-badge-active">Active</span>
+                            )}
+                          </td>
+                        </tr>
                       );
                     })
-                ) : (
-                  <div className="empty-notice">
-                    No teams are currently participating. Please add teams in the Admin Console.
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="text-center py-6 text-slate-500 italic">
+                        No teams are currently participating.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Completed Round Summaries with Rich Detailing */}
+          {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
+          <div className="scoreboard-card-overall mt-8">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Crown size={24} className="text-yellow-400" />
+                <h2 className="text-2xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
+                <span className="inline-flex items-center px-3 py-0.5 bg-amber-950/90 border border-yellow-500/60 rounded-full text-yellow-300 text-xs font-bold font-mono">
+                  {Math.max(1, currentRoundIndex + 1)} Rounds
+                </span>
+              </div>
+              <p className="text-sm text-slate-400">
+                Ranking Priority: Total Score → Total Items → Total Remaining Budget
+              </p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl">
+              <table className="table-attractive">
+                <thead>
+                  <tr>
+                    <th className="text-left">TEAM NAME</th>
+                    <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
+                    <th className="text-center text-slate-300">TOTAL ITEMS</th>
+                    <th className="text-right text-red-400">TOTAL SPENT</th>
+                    <th className="text-right text-green-400 font-black">TOTAL REM.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overallStats.map((team, idx) => {
+                    const isGrandChampion = idx === 0 && team.totalScore > 0;
+                    const isOutOfBudget = team.totalRemaining <= 0;
+                    const isMyTeam = team.id === myTeamId;
+
+                    return (
+                      <tr
+                        key={team.id}
+                        className={`${isGrandChampion ? 'tr-grand-champion' : ''} ${isMyTeam && !isGrandChampion ? 'bg-indigo-950/50' : ''}`}
+                      >
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                              {idx + 1}.
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-white text-base">{team.name}</span>
+                                {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                                {isOutOfBudget && (
+                                  <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                                )}
+                              </div>
+                              {isGrandChampion && (
+                                <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
+                                  ★ GRAND CHAMPION ★
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-center font-black text-yellow-400 text-2xl font-mono">
+                          {team.totalScore}
+                        </td>
+                        <td className="text-center font-bold text-slate-200 text-lg font-mono">
+                          {team.totalItems}
+                        </td>
+                        <td className="text-right font-mono text-red-400 font-bold text-base">
+                          {formatCurrency(team.totalSpent)}
+                        </td>
+                        <td className="text-right font-mono font-black text-green-400 text-lg">
+                          {formatCurrency(team.totalRemaining)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 3. Completed Round Summaries (Previous Rounds Scoreboard with Rich Detailing) */}
           {pastRounds.length > 0 && (
-            <div className="mt-12">
-              <h2 className="section-title-muted">
-                <History size={24} /> Completed Round Summaries
-              </h2>
-              <div className="grid grid-cols-1 gap-6">
+            <div className="scoreboard-card-previous mt-8">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <History size={24} className="text-indigo-400" />
+                  <h2 className="text-2xl font-bold text-white">Previous Round Scoreboard</h2>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Archived final snapshot of completed rounds
+                </p>
+              </div>
+
+              <div className="space-y-6">
                 {pastRounds.map((round, rIdx) => {
                   const roundTotalSpent = round.results.reduce((acc, r) => acc + (r.totalSpent || 0), 0);
                   const roundTotalItems = round.results.reduce((acc, r) => acc + (r.itemsCount || 0), 0);
 
                   return (
-                    <div key={rIdx} className="round-summary-card">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-slate-700/60">
+                    <div key={rIdx} className="space-y-3">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 px-1">
                         <div>
-                          <h3 className="text-2xl font-black text-indigo-400">{round.roundName}</h3>
+                          <h3 className="text-xl font-bold text-indigo-300 uppercase tracking-wide">
+                            {round.roundName} Final Results
+                          </h3>
                           <span className="text-slate-400 text-xs font-mono">
-                            Recorded at {new Date(round.timestamp).toLocaleTimeString()}
+                            Finished at {new Date(round.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -466,45 +634,52 @@ export default function LiveView() {
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto rounded-lg border border-slate-800">
-                        <table className="w-full text-left">
-                          <thead className="bg-slate-900 border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                      <div className="overflow-x-auto rounded-xl">
+                        <table className="table-attractive">
+                          <thead>
                             <tr>
-                              <th className="p-3">Team</th>
-                              <th className="p-3 text-center">Items Won</th>
-                              <th className="p-3 text-right">Total Spent</th>
-                              <th className="p-3 text-right">Remaining Budget</th>
-                              <th className="p-3 text-center">Round Status</th>
+                              <th className="text-center w-16">Rank</th>
+                              <th>Team</th>
+                              <th className="text-center text-yellow-400">Score</th>
+                              <th className="text-center">Items Won</th>
+                              <th className="text-right">Total Spent</th>
+                              <th className="text-right text-green-400">Remaining Budget</th>
+                              <th className="text-center">Status</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-800">
+                          <tbody>
                             {[...round.results]
-                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
                               .map((res, i) => {
                                 const isExhausted = (res.remainingBudget || 0) <= 0;
+                                const isMyTeam = res.id === myTeamId;
                                 return (
                                   <tr
                                     key={i}
-                                    className={`hover:bg-slate-800/40 ${
-                                      res.id === myTeamId ? 'bg-indigo-900/30' : ''
-                                    }`}
+                                    className={isMyTeam ? 'bg-indigo-950/50' : ''}
                                   >
-                                    <td className="p-3 font-bold text-white">
-                                      {res.name}
-                                      {res.id === myTeamId && (
-                                        <span className="badge-you-inline">YOU</span>
-                                      )}
+                                    <td className="text-center font-mono text-slate-400 font-bold">{i + 1}</td>
+                                    <td className="font-bold text-white">
+                                      <div className="flex items-center gap-2">
+                                        <span>{res.name}</span>
+                                        {isMyTeam && (
+                                          <span className="badge-you-inline">YOU</span>
+                                        )}
+                                      </div>
                                     </td>
-                                    <td className="p-3 text-center">
-                                      <span className="badge-items-sm">{res.itemsCount || 0}</span>
+                                    <td className="text-center font-bold text-yellow-400 text-lg font-mono">
+                                      {res.score || 0}
                                     </td>
-                                    <td className="p-3 text-right text-red-400 font-semibold font-mono">
+                                    <td className="text-center font-semibold text-indigo-300 font-mono">
+                                      {res.itemsCount || 0}
+                                    </td>
+                                    <td className="text-right font-mono text-red-400 font-semibold">
                                       {formatCurrency(res.totalSpent)}
                                     </td>
-                                    <td className="p-3 text-right text-green-400 font-bold font-mono">
+                                    <td className="text-right font-mono font-bold text-green-400">
                                       {formatCurrency(res.remainingBudget)}
                                     </td>
-                                    <td className="p-3 text-center">
+                                    <td className="text-center">
                                       {isExhausted ? (
                                         <span className="status-badge-exhausted">Exhausted</span>
                                       ) : (

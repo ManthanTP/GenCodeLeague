@@ -749,6 +749,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .gcl-input-inline {
+  flex: 1 1 0%;
+  min-width: 0;
   width: 100%;
   background: #0b1120;
   border: 1px solid #334155;
@@ -757,10 +759,12 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.95rem;
   color: #ffffff;
   outline: none;
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
 }
 
 .gcl-input-inline:focus {
   border-color: #14b8a6;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
 }
 
 .gcl-textarea {
@@ -3268,44 +3272,72 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid #334155;
+  border: 2px solid #334155;
   border-radius: 0.75rem;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .table-attractive th {
-  background: #1e293b;
+  background: #0f172a;
   color: #94a3b8;
   font-size: 0.8rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 0.85rem 1rem;
-  border-bottom: 2px solid #334155;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 2px solid #475569;
+  border-right: 1px solid #334155;
+}
+
+.table-attractive th:last-child {
+  border-right: none;
 }
 
 .table-attractive td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid #1e293b;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #334155;
   transition: background 0.15s ease;
 }
 
-.table-attractive tr:last-child td {
+.table-attractive td:last-child {
+  border-right: none;
+}
+
+.table-attractive tbody tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.table-attractive tbody tr:nth-child(odd) td {
+  background: rgba(30, 41, 59, 0.25);
+}
+
+.table-attractive tbody tr:last-child td {
   border-bottom: none;
 }
 
-.table-attractive tr:hover td {
-  background: rgba(30, 41, 59, 0.6);
+.table-attractive tbody tr:hover td {
+  background: rgba(59, 130, 246, 0.2) !important;
 }
 
+/* Reference: winner 2025 2.png - Grand Champion Podium Row */
 .tr-grand-champion td {
-  background: rgba(234, 179, 8, 0.08) !important;
-  border-top: 1px solid rgba(234, 179, 8, 0.4);
-  border-bottom: 1px solid rgba(234, 179, 8, 0.4) !important;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.2) 0%, rgba(202, 138, 4, 0.1) 100%) !important;
+  border-top: 2px solid #eab308 !important;
+  border-bottom: 2px solid #eab308 !important;
+}
+
+.tr-grand-champion td:first-child {
+  border-left: 3px solid #eab308 !important;
+}
+
+.tr-grand-champion td:last-child {
+  border-right: 3px solid #eab308 !important;
 }
 
 .tr-grand-champion:hover td {
-  background: rgba(234, 179, 8, 0.14) !important;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.28) 0%, rgba(202, 138, 4, 0.16) 100%) !important;
 }
 
 /* --- CONFIRMATION MODALS --- */
