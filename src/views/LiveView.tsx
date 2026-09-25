@@ -180,6 +180,7 @@ export default function LiveView() {
 
   const gameState = eventState?.game_state || 'setup';
   const roundIdx = eventState?.current_round_index ?? 0;
+  const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
   const questionIdx = eventState?.current_question_index ?? 0;
   const currentRound = DEFAULT_ROUNDS_DATA[roundIdx] || {
     name: `Round ${roundIdx + 1}`,
@@ -443,7 +444,7 @@ export default function LiveView() {
         <div className="live-centered-screen">
           <div className="text-center mb-8">
             <h1 className="intermission-title">
-              {roundIdx >= 2 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
+              {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
             </h1>
             <p className="intermission-subtitle">STAND BY...</p>
             <div className="intermission-warning-banner">

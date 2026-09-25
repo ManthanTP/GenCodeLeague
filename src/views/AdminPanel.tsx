@@ -554,7 +554,7 @@ export default function AdminPanel() {
     if (rIdx === 2) {
       // Round 3 completed -> Enter Intermission with Tie Breaker & Podium options
       nextGameState = 'intermission';
-      nextRoundIdx = 2;
+      nextRoundIdx = 3;
       showNotification('Round 3 Completed! Intermission active.', 'success');
       addHistory('Round 3 Complete', 'Ready for Tie Breaker or Winner Announcement.');
     } else if (rIdx < 2) {
@@ -1034,11 +1034,11 @@ export default function AdminPanel() {
       if (rIdx === 2) {
         // Round 3 completed -> Enter Intermission with Tie Breaker & Reveal options
         nextGameState = 'intermission';
-        nextRoundIdx = 2;
+        nextRoundIdx = 3;
         nextQuestionIdx = 0;
         showNotification('Round 3 Finished! Intermission active.', 'success');
         addHistory('Round 3 Complete', 'Ready for Tie Breaker or Winner Announcement.');
-      } else if (rIdx + 1 < DEFAULT_ROUNDS_DATA.length) {
+      } else if (rIdx < 2) {
         // Intermission before next round
         nextGameState = 'intermission';
         nextRoundIdx = rIdx + 1;
@@ -1047,6 +1047,8 @@ export default function AdminPanel() {
         addHistory('Round Complete', `Round ${rIdx + 1} finished.`);
       } else {
         nextGameState = 'winner_reveal';
+        showNotification('Tie Breaker completed! Ready for Podium Reveal.', 'success');
+        addHistory('Tie Breaker Complete', 'Revealing Podium.');
       }
 
       const payload = {
@@ -1226,6 +1228,8 @@ export default function AdminPanel() {
   const maxIdx = totalQuestions > 0 ? totalQuestions - 1 : 0;
   const isLastQuestion = questionIdx === maxIdx && totalQuestions > 0;
   const isRoundEnd = roundIdx >= DEFAULT_ROUNDS_DATA.length;
+  const lastCompletedRound = pastRounds.length > 0 ? pastRounds[pastRounds.length - 1] : null;
+  const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans">
@@ -1458,6 +1462,8 @@ export default function AdminPanel() {
                     <ChevronRight size={20} />
                     {roundIdx === 2
                       ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
+                      : roundIdx >= 3
+                      ? 'End Tie Breaker & Reveal Winners'
                       : `Advance to Round ${roundIdx + 2} Intermission`}
                   </button>
                 </div>
@@ -2127,15 +2133,15 @@ export default function AdminPanel() {
               <Loader2 size={60} className="animate-spin mb-4" />
               <h2 className="text-3xl font-extrabold text-white">Intermission in Progress</h2>
               <p className="text-base text-slate-400 mt-2 max-w-xl">
-                {roundIdx === 2 ? (
+                {isAfterRound3 ? (
                   <>
                     Round 3 results are currently displayed on the live screen.
                     <br />
-                    Teams have been reset. Waiting to start Round 4.
+                    All standard rounds completed. Ready to start Tie Breaker or announce winners.
                   </>
                 ) : (
                   <>
-                    Round {roundIdx} results are currently displayed on the live screen.
+                    {lastCompletedRound?.roundName || `Round ${roundIdx}`} results are currently displayed on the live screen.
                     <br />
                     Teams will receive their reset round budgets. Ready to start {currentRoundData.name}.
                   </>
@@ -2143,7 +2149,7 @@ export default function AdminPanel() {
               </p>
             </div>
 
-            {roundIdx === 2 ? (
+            {isAfterRound3 ? (
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
                 <button
                   type="button"
