@@ -1376,16 +1376,16 @@ export default function AdminPanel() {
 
       {/* 3. ACTIVE ROUND CONTROLS */}
       {gameState === 'active' && (
-        <div className="admin-page-container max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Main Left Column (2 Cols Wide) */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* 1. Round Progression Card */}
-              <div className="admin-card space-y-4">
+        <div className="admin-page-container max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* Top Row: Round Progression & Question/Timer side-by-side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* 1. Round Progression Card */}
+            <div className="admin-card space-y-4 flex flex-col justify-between">
+              <div>
                 <h2 className="card-title text-indigo-400">
                   <RefreshCw size={22} /> Round Progression
                 </h2>
-                <div className="round-progress-banner">
+                <div className="round-progress-banner mt-3">
                   {isRoundEnd ? (
                     <span className="font-mono text-2xl font-bold text-red-300">
                       AUCTION FINISHED
@@ -1397,7 +1397,7 @@ export default function AdminPanel() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="input-label">Manual Round Selection</label>
                     <select
@@ -1440,31 +1440,33 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </div>
-
-                {isLastQuestion && (
-                  <div className="advance-notice-box space-y-3">
-                    <div>
-                      <p className="advance-title">Round End: Ready to Advance</p>
-                      <p className="advance-desc">
-                        Question {questionIdx + 1} of {totalQuestions} reached. Click below to advance the auction to the next stage!
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAdvanceToNextStage}
-                      className="btn-advance-intermission"
-                    >
-                      <ChevronRight size={20} />
-                      {roundIdx === 2
-                        ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
-                        : `Advance to Round ${roundIdx + 2} Intermission`}
-                    </button>
-                  </div>
-                )}
               </div>
 
-              {/* 2. Question & Timer Card */}
-              <div className="admin-card">
+              {isLastQuestion && (
+                <div className="advance-notice-box space-y-3 mt-4">
+                  <div>
+                    <p className="advance-title">Round End: Ready to Advance</p>
+                    <p className="advance-desc">
+                      Question {questionIdx + 1} of {totalQuestions} reached. Click below to advance the auction to the next stage!
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAdvanceToNextStage}
+                    className="btn-advance-intermission"
+                  >
+                    <ChevronRight size={20} />
+                    {roundIdx === 2
+                      ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
+                      : `Advance to Round ${roundIdx + 2} Intermission`}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Question & Timer Card */}
+            <div className="admin-card flex flex-col justify-between">
+              <div>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2 text-yellow-400">
                     <HelpCircle size={22} />
@@ -1494,290 +1496,302 @@ export default function AdminPanel() {
                     className="gcl-textarea"
                   />
                 </div>
-
-                {/* Timer Controls Row */}
-                <div className="timer-controls-bar">
-                  <div className="flex items-center gap-3">
-                    <div className="timer-icon-badge">
-                      <Clock size={20} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
-                    </div>
-                    <div>
-                      <p className="timer-label">BID TIMER</p>
-                      <p className={`font-mono text-2xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                        {timerFormatted}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {!isTimerRunning ? (
-                      <button
-                        type="button"
-                        onClick={handleStartTimer}
-                        className="btn-timer-start"
-                      >
-                        <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handlePauseTimer}
-                        className="btn-timer-pause"
-                      >
-                        <Pause size={18} /> Pause
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleResetTimer}
-                      className="btn-timer-reset"
-                    >
-                      <RotateCcw size={16} /> Reset
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* 3. Final Bid & Answer Form (Spacious full-width team grid & clear evaluation) */}
-              <form onSubmit={handlePromptBidSubmit} className="admin-card space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="card-title text-blue-400 mb-0">
-                    <Hammer size={22} /> Final Bid & Answer Evaluation
-                  </h2>
-                  {selectedTeamId && (
-                    <span className="text-xs text-blue-300 font-mono bg-blue-950/80 px-2.5 py-1 rounded-full border border-blue-800">
-                      Selected: <strong>{teams.find(t => t.id === selectedTeamId)?.name}</strong>
-                    </span>
-                  )}
-                </div>
-
-                {/* Team Selection: Full Width Grid - ALL teams visible without scrolling */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="input-label mb-0">Select Winning Team</label>
-                    <span className="text-xs text-slate-400">{teams.length} teams available</span>
+              {/* Timer Controls Row */}
+              <div className="timer-controls-bar mt-2">
+                <div className="flex items-center gap-3">
+                  <div className="timer-icon-badge">
+                    <Clock size={20} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-                    {teams.map((t) => {
-                      const isSelected = selectedTeamId === t.id;
-                      const isExhausted = t.budget <= 0;
-                      const isLow = !isExhausted && t.budget <= 5000000;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => handleTeamSelection(t.id)}
-                          className={`team-select-btn ${
-                            isSelected ? 'team-btn-selected' : 'team-btn-default'
-                          } ${isExhausted ? 'border-red-500/80 bg-red-950/20' : ''}`}
-                        >
-                          <div className="flex flex-col w-full text-left">
-                            <span className="font-bold text-sm truncate w-full text-white">{t.name}</span>
-                            {isExhausted ? (
-                              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">⚠️ NO BUDGET</span>
-                            ) : isLow ? (
-                              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">⚠️ {formatCurrency(t.budget)}</span>
-                            ) : (
-                              <span className="text-[11px] text-green-400 font-mono font-semibold mt-0.5">{formatCurrency(t.budget)}</span>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center w-full mt-1.5 pt-1 border-t border-slate-700/50">
-                            <span className="text-[10px] text-slate-400 uppercase font-semibold">Score</span>
-                            <span className="badge-team-score">★ {t.score || 0}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Bid Amount & Answer Evaluation: Side-by-Side Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-700/60">
-                  {/* Left: Bid Amount & Fast Buttons */}
                   <div>
-                    <label className="input-label">
-                      Bid Amount (Base: {formatCurrency(BASE_PRICE)})
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={bidAmount}
-                        onChange={handleBidAmountChange}
-                        placeholder={String(BASE_PRICE)}
-                        className="gcl-input font-mono text-xl"
-                      />
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickSet(BASE_PRICE)}
-                          className="quick-btn-base"
-                        >
-                          {formatCurrency(BASE_PRICE)}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickAdd(MIN_INCREMENT)}
-                          className="quick-btn-inc"
-                        >
-                          +{formatCurrency(MIN_INCREMENT)}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickAdd(5000000)}
-                          className="quick-btn-green"
-                        >
-                          + 50 L
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickAdd(-1000000)}
-                          className="quick-btn-red"
-                        >
-                          - 10 L
-                        </button>
-                      </div>
-                    </div>
-                    {bidAmount && parseFloat(bidAmount) > 0 && (
-                      <p className="mt-2 text-sm text-slate-400">
-                        Formatted Bid:{' '}
-                        <span className="text-white font-bold font-mono">
-                          {formatCurrency(parseFloat(bidAmount))}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Right: Answer Result Evaluation Toggle */}
-                  <div>
-                    <label className="input-label">Answer Evaluation</label>
-                    <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <HelpCircle className="text-yellow-400 shrink-0" size={20} />
-                        <div>
-                          <p className="text-white font-bold text-sm">Did the team answer correctly?</p>
-                          <p className="text-slate-400 text-xs">Correct gives +1 score; Incorrect gives 0 score.</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsAnswerCorrect(false)}
-                          className={`flex items-center justify-center gap-2 py-3 px-3 rounded-lg font-bold text-sm transition-all ${
-                            !isAnswerCorrect
-                              ? 'bg-red-600 text-white shadow-lg shadow-red-900/40 ring-2 ring-red-400'
-                              : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                          }`}
-                        >
-                          <XCircle size={18} /> Incorrect (0)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsAnswerCorrect(true)}
-                          className={`flex items-center justify-center gap-2 py-3 px-3 rounded-lg font-bold text-sm transition-all ${
-                            isAnswerCorrect
-                              ? 'bg-green-600 text-white shadow-lg shadow-green-900/40 ring-2 ring-green-400'
-                              : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                          }`}
-                        >
-                          <Check size={18} /> Correct (+1)
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SOLD Action Button */}
-                <button
-                  type="submit"
-                  disabled={!selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE}
-                  className={`btn-sold-action ${
-                    !selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE
-                      ? 'btn-sold-disabled'
-                      : 'btn-sold-ready'
-                  }`}
-                >
-                  <CheckCircle2 size={22} fill="currentColor" />
-                  {isAnswerCorrect
-                    ? 'SOLD! (Correct Answer +1 Score)'
-                    : 'SOLD! (Incorrect Answer +0 Score)'}
-                </button>
-              </form>
-
-              {/* 4. Action & Corrections Bar: Directly below the Final Bid form */}
-              <div className="admin-card border-l-4 border-l-amber-500 py-4 px-6 space-y-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="card-title text-amber-400 mb-0.5 text-lg">
-                      <Undo2 size={20} /> Auction Actions & Corrections
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      Quickly revert accidental bids or execute emergency administrative actions.
+                    <p className="timer-label">BID TIMER</p>
+                    <p className={`font-mono text-2xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                      {timerFormatted}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap">
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!isTimerRunning ? (
                     <button
                       type="button"
-                      onClick={handlePromptUndoLastBid}
-                      disabled={items.length === 0}
-                      className={`btn-undo-action w-auto px-5 py-2.5 shrink-0 ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={handleStartTimer}
+                      className="btn-timer-start"
                     >
-                      <Undo2 size={18} /> Undo Last Transaction
+                      <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
                     </button>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => setIsConfirmingReset(true)}
-                      className="btn-danger-reset w-auto px-5 py-2.5 shrink-0"
+                      onClick={handlePauseTimer}
+                      className="btn-timer-pause"
                     >
-                      <AlertCircle size={18} /> Full Reset (DANGER)
+                      <Pause size={18} /> Pause
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleResetTimer}
+                    className="btn-timer-reset"
+                  >
+                    <RotateCcw size={16} /> Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Final Bid & Answer Form (FULL WIDTH: Wide & Balanced with Vibrant Evaluation) */}
+          <form onSubmit={handlePromptBidSubmit} className="admin-card space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-700/60">
+              <h2 className="card-title text-blue-400 mb-0">
+                <Hammer size={22} /> Final Bid & Answer Evaluation
+              </h2>
+              {selectedTeamId && (
+                <span className="text-xs text-blue-300 font-mono bg-blue-950/80 px-3 py-1 rounded-full border border-blue-800">
+                  Selected: <strong>{teams.find(t => t.id === selectedTeamId)?.name}</strong>
+                </span>
+              )}
+            </div>
+
+            {/* Team Selection: Full Width Grid - ALL teams visible without scrolling */}
+            <div>
+              <div className="flex justify-between items-center mb-2.5">
+                <label className="input-label mb-0">Select Winning Team</label>
+                <span className="text-xs text-slate-400">{teams.length} teams available</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                {teams.map((t) => {
+                  const isSelected = selectedTeamId === t.id;
+                  const isExhausted = t.budget <= 0;
+                  const isLow = !isExhausted && t.budget <= 5000000;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleTeamSelection(t.id)}
+                      className={`team-select-btn ${
+                        isSelected ? 'team-btn-selected' : 'team-btn-default'
+                      } ${isExhausted ? 'border-red-500/80 bg-red-950/20' : ''}`}
+                    >
+                      <div className="flex flex-col w-full text-left">
+                        <span className="font-bold text-sm truncate w-full text-white">{t.name}</span>
+                        {isExhausted ? (
+                          <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">⚠️ NO BUDGET</span>
+                        ) : isLow ? (
+                          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">⚠️ {formatCurrency(t.budget)}</span>
+                        ) : (
+                          <span className="text-[11px] text-green-400 font-mono font-semibold mt-0.5">{formatCurrency(t.budget)}</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center w-full mt-1.5 pt-1 border-t border-slate-700/50">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold">Score</span>
+                        <span className="badge-team-score">★ {t.score || 0}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bid Amount & Answer Evaluation: Side-by-Side Grid (Wide, Balanced & Vibrant) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-slate-700/60 items-stretch">
+              {/* Left: Bid Amount & Fast Buttons */}
+              <div className="flex flex-col justify-between">
+                <div>
+                  <label className="input-label mb-2 block">
+                    Bid Amount (Base: {formatCurrency(BASE_PRICE)})
+                  </label>
+                  <div className="space-y-2.5">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={bidAmount}
+                      onChange={handleBidAmountChange}
+                      placeholder={String(BASE_PRICE)}
+                      className="gcl-input font-mono text-xl"
+                    />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickSet(BASE_PRICE)}
+                        className="quick-btn-base"
+                      >
+                        {formatCurrency(BASE_PRICE)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(MIN_INCREMENT)}
+                        className="quick-btn-inc"
+                      >
+                        +{formatCurrency(MIN_INCREMENT)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(5000000)}
+                        className="quick-btn-green"
+                      >
+                        + 50 L
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(-1000000)}
+                        className="quick-btn-red"
+                      >
+                        - 10 L
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {bidAmount && parseFloat(bidAmount) > 0 && (
+                  <p className="mt-3 text-sm text-slate-400">
+                    Formatted Bid:{' '}
+                    <span className="text-white font-bold font-mono text-base">
+                      {formatCurrency(parseFloat(bidAmount))}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* Right: Answer Result Evaluation (Vibrant, Wide & Modern Design) */}
+              <div className="flex flex-col justify-between">
+                <label className="input-label flex items-center justify-between mb-2">
+                  <span>Answer Evaluation</span>
+                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                    isAnswerCorrect
+                      ? 'bg-green-500/20 text-green-300 border border-green-500/40'
+                      : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                  }`}>
+                    {isAnswerCorrect ? 'Award: +1 Point' : 'Award: 0 Points'}
+                  </span>
+                </label>
+
+                <div className="p-4 rounded-xl border border-blue-500/20 bg-slate-900/90 shadow-inner flex flex-col justify-between flex-1 gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                      <HelpCircle className="text-amber-400" size={18} />
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm">Did the team answer correctly?</p>
+                      <p className="text-slate-400 text-xs">
+                        Correct adds +1 to team score; Incorrect gives 0 score.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAnswerCorrect(false)}
+                      className={`answer-eval-card ${
+                        !isAnswerCorrect
+                          ? 'answer-eval-incorrect-active'
+                          : 'answer-eval-incorrect-inactive'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        !isAnswerCorrect ? 'bg-red-500 text-white' : 'bg-red-950/60 text-red-400 border border-red-800/60'
+                      }`}>
+                        <XCircle size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className={`block font-black text-sm uppercase tracking-wide ${
+                          !isAnswerCorrect ? 'text-white' : 'text-slate-300'
+                        }`}>
+                          Incorrect (0)
+                        </span>
+                        <span className={`block text-[11px] font-mono ${
+                          !isAnswerCorrect ? 'text-red-200' : 'text-slate-500'
+                        }`}>
+                          0 Points Added
+                        </span>
+                      </div>
+                      {!isAnswerCorrect && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_#ef4444] shrink-0"></span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAnswerCorrect(true)}
+                      className={`answer-eval-card ${
+                        isAnswerCorrect
+                          ? 'answer-eval-correct-active'
+                          : 'answer-eval-correct-inactive'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        isAnswerCorrect ? 'bg-green-500 text-white' : 'bg-green-950/60 text-green-400 border border-green-800/60'
+                      }`}>
+                        <Check size={18} strokeWidth={3} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className={`block font-black text-sm uppercase tracking-wide ${
+                          isAnswerCorrect ? 'text-white' : 'text-slate-300'
+                        }`}>
+                          Correct (+1)
+                        </span>
+                        <span className={`block text-[11px] font-mono ${
+                          isAnswerCorrect ? 'text-green-200' : 'text-slate-500'
+                        }`}>
+                          +1 Point to Team
+                        </span>
+                      </div>
+                      {isAnswerCorrect && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_#22c55e] shrink-0"></span>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Sidebar Column: Transaction Log */}
-            <div className="lg:col-span-1">
-              <div className="admin-card transaction-log-card flex flex-col h-[750px] shadow-2xl">
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-700/60">
-                  <h2 className="card-title text-purple-400 mb-0 flex items-center gap-2">
-                    <HistoryIcon size={20} /> Transaction Log
-                  </h2>
-                  <span className="text-xs font-mono text-purple-300 bg-purple-950/80 px-2.5 py-0.5 rounded-full border border-purple-800">
-                    {localHistory.length} events
-                  </span>
-                </div>
-                <div className="space-y-3 transaction-log-scroll flex-grow overflow-y-auto pr-1">
-                  {localHistory.length === 0 ? (
-                    <p className="text-slate-500 italic text-sm py-4 text-center">
-                      No transactions recorded yet. Submit bids to see live logs!
-                    </p>
-                  ) : (
-                    localHistory.map((item) => {
-                      const isSold = item.action === 'SOLD';
-                      const isUndo = item.action === 'UNDO';
-                      return (
-                        <div
-                          key={item.id}
-                          className={`log-item ${
-                            isSold
-                              ? 'log-sold'
-                              : isUndo
-                              ? 'log-undo'
-                              : 'log-default'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className="log-action">{item.action}</span>
-                            <span className="log-time">{item.time}</span>
-                          </div>
-                          <p className="log-details">{item.details}</p>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+            {/* SOLD Action Button */}
+            <button
+              type="submit"
+              disabled={!selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE}
+              className={`btn-sold-action ${
+                !selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE
+                  ? 'btn-sold-disabled'
+                  : 'btn-sold-ready'
+              }`}
+            >
+              <CheckCircle2 size={22} fill="currentColor" />
+              {isAnswerCorrect
+                ? 'SOLD! (Correct Answer +1 Score)'
+                : 'SOLD! (Incorrect Answer +0 Score)'}
+            </button>
+          </form>
+
+          {/* 4. Action & Corrections Bar: Full Width below Final Bid */}
+          <div className="admin-card border-l-4 border-l-amber-500 py-4 px-6 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="card-title text-amber-400 mb-0.5 text-lg">
+                  <Undo2 size={20} /> Auction Actions & Corrections
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Quickly revert accidental bids or execute emergency administrative actions.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handlePromptUndoLastBid}
+                  disabled={items.length === 0}
+                  className={`btn-undo-action w-auto px-5 py-2.5 shrink-0 ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Undo2 size={18} /> Undo Last Transaction
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingReset(true)}
+                  className="btn-danger-reset w-auto px-5 py-2.5 shrink-0"
+                >
+                  <AlertCircle size={18} /> Full Reset (DANGER)
+                </button>
               </div>
             </div>
           </div>
@@ -2052,6 +2066,53 @@ export default function AdminPanel() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. TRANSACTION LOG (Positioned at the very end of Active view as requested) */}
+          <div className="admin-card transaction-log-card shadow-2xl mt-8">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-700/60 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <HistoryIcon size={24} className="text-purple-400" />
+                <h2 className="text-2xl font-bold text-white">Transaction Log</h2>
+                <span className="text-xs font-mono text-purple-300 bg-purple-950/80 px-3 py-0.5 rounded-full border border-purple-800">
+                  {localHistory.length} events
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Real-time audit log of all sold items, corrections, and budget updates
+              </p>
+            </div>
+
+            <div className="space-y-2 transaction-log-scroll max-h-[380px] overflow-y-auto pr-1">
+              {localHistory.length === 0 ? (
+                <p className="text-slate-500 italic text-sm py-8 text-center">
+                  No transactions recorded yet. Submit bids to see live logs!
+                </p>
+              ) : (
+                localHistory.map((item) => {
+                  const isSold = item.action === 'SOLD';
+                  const isUndo = item.action === 'UNDO';
+                  return (
+                    <div
+                      key={item.id}
+                      className={`log-item ${
+                        isSold
+                          ? 'log-sold'
+                          : isUndo
+                          ? 'log-undo'
+                          : 'log-default'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="log-action">{item.action}</span>
+                        <span className="log-time font-mono text-xs">{item.time}</span>
+                      </div>
+                      <p className="log-details mt-1">{item.details}</p>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
