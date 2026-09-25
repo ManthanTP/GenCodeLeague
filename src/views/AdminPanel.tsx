@@ -897,8 +897,8 @@ export default function AdminPanel() {
     broadcastBidPreview(selectedTeamId, val, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
-  // --- SOLD SUBMISSION ---
-  const handleBidSubmit = async (e: React.FormEvent) => {
+  // --- SOLD SUBMISSION WITH CONFIRMATION (Point 7) ---
+  const handlePromptBidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventState?.id || !edition?.id) return;
     if (!selectedTeamId) {
@@ -926,6 +926,15 @@ export default function AdminPanel() {
       );
       return;
     }
+
+    setIsConfirmingSold(true);
+  };
+
+  const handleExecuteBidSubmit = async () => {
+    if (!eventState?.id || !edition?.id) return;
+    const amount = parseFloat(bidAmount);
+    const winningTeam = teams.find((t) => t.id === selectedTeamId);
+    if (!winningTeam) return;
 
     const rIdx = eventState.current_round_index ?? 0;
     const qIdx = eventState.current_question_index ?? 0;
@@ -1093,12 +1102,17 @@ export default function AdminPanel() {
     setIsAnswerCorrect(false);
   };
 
-  // --- UNDO LAST BID ---
-  const handleUndoLastBid = async () => {
+  // --- UNDO LAST BID WITH CONFIRMATION (Point 7) ---
+  const handlePromptUndoLastBid = () => {
     if (!items || items.length === 0 || !eventState?.id) {
       showNotification('No transactions to undo.', 'error');
       return;
     }
+    setIsConfirmingUndo(true);
+  };
+
+  const handleExecuteUndoLastBid = async () => {
+    if (!items || items.length === 0 || !eventState?.id) return;
 
     const lastItem = items[0];
     const teamToRefund = teams.find((t) => t.id === lastItem.team_id);
@@ -1362,447 +1376,658 @@ export default function AdminPanel() {
 
       {/* 3. ACTIVE ROUND CONTROLS */}
       {gameState === 'active' && (
-        <div className="admin-page-container grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Controls Column */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Round Progression Card */}
-            <div className="admin-card space-y-4">
-              <h2 className="card-title text-indigo-400">
-                <RefreshCw size={22} /> Round Progression
-              </h2>
-              <div className="round-progress-banner">
-                {isRoundEnd ? (
-                  <span className="font-mono text-2xl font-bold text-red-300">
-                    AUCTION FINISHED
-                  </span>
-                ) : (
-                  <span className="font-mono text-2xl font-bold text-yellow-300">
-                    R{roundIdx + 1} - Q{questionIdx + 1} of {totalQuestions}
-                  </span>
+        <div className="admin-page-container space-y-8">
+          {/* Top Section: Control Columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Controls Column */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Round Progression Card */}
+              <div className="admin-card space-y-4">
+                <h2 className="card-title text-indigo-400">
+                  <RefreshCw size={22} /> Round Progression
+                </h2>
+                <div className="round-progress-banner">
+                  {isRoundEnd ? (
+                    <span className="font-mono text-2xl font-bold text-red-300">
+                      AUCTION FINISHED
+                    </span>
+                  ) : (
+                    <span className="font-mono text-2xl font-bold text-yellow-300">
+                      R{roundIdx + 1} - Q{questionIdx + 1} of {totalQuestions}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label">Manual Round Selection</label>
+                    <select
+                      value={roundIdx}
+                      onChange={(e) => handleManualSetTracker(Number(e.target.value), questionIdx)}
+                      className="gcl-select"
+                    >
+                      {DEFAULT_ROUNDS_DATA.map((r, idx) => (
+                        <option key={r.name} value={idx}>
+                          Round {idx + 1} ({r.name})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="input-label">Question Index</label>
+                    <div className="stepper-box">
+                      <button
+                        type="button"
+                        onClick={() => handleManualSetTracker(roundIdx, Math.max(0, questionIdx - 1))}
+                        disabled={questionIdx === 0}
+                        className="stepper-btn"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <div className="flex-grow text-center">
+                        <span className="font-mono text-xl font-bold text-yellow-300">
+                          {questionIdx + 1}
+                        </span>
+                        <span className="text-slate-400 text-sm"> of {totalQuestions}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleManualSetTracker(roundIdx, Math.min(maxIdx, questionIdx + 1))}
+                        disabled={questionIdx === maxIdx}
+                        className="stepper-btn"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {isLastQuestion && (
+                  <div className="advance-notice-box space-y-3">
+                    <div>
+                      <p className="advance-title">Round End: Ready to Advance</p>
+                      <p className="advance-desc">
+                        Question {questionIdx + 1} of {totalQuestions} reached. Click below to advance the auction to the next stage!
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAdvanceToNextStage}
+                      className="btn-advance-intermission"
+                    >
+                      <ChevronRight size={20} />
+                      {roundIdx === 2
+                        ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
+                        : `Advance to Round ${roundIdx + 2} Intermission`}
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="input-label">Manual Round Selection</label>
-                  <select
-                    value={roundIdx}
-                    onChange={(e) => handleManualSetTracker(Number(e.target.value), questionIdx)}
-                    className="gcl-select"
-                  >
-                    {DEFAULT_ROUNDS_DATA.map((r, idx) => (
-                      <option key={r.name} value={idx}>
-                        Round {idx + 1} ({r.name})
-                      </option>
-                    ))}
-                  </select>
+              {/* Question & Timer Card */}
+              <div className="admin-card">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2 text-yellow-400">
+                    <HelpCircle size={22} />
+                    <h2 className="text-xl font-bold text-white">Question & Timer</h2>
+                  </div>
+                  <div>
+                    {isRevealed ? (
+                      <span className="badge-revealed-to-players">● REVEALED TO PLAYERS</span>
+                    ) : (
+                      <span className="badge-hidden-from-players">HIDDEN FROM PLAYERS</span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="input-label">Question Index</label>
-                  <div className="stepper-box">
-                    <button
-                      type="button"
-                      onClick={() => handleManualSetTracker(roundIdx, Math.max(0, questionIdx - 1))}
-                      disabled={questionIdx === 0}
-                      className="stepper-btn"
-                    >
-                      <ChevronLeft size={20} />
+
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="input-label mb-0">Item / Question Name</label>
+                    <button type="button" onClick={handleLoadQuestionFromData} className="btn-secondary-load">
+                      <FileText size={15} /> Load Q{questionIdx + 1} from Data
                     </button>
-                    <div className="flex-grow text-center">
-                      <span className="font-mono text-xl font-bold text-yellow-300">
-                        {questionIdx + 1}
-                      </span>
-                      <span className="text-slate-400 text-sm"> of {totalQuestions}</span>
+                  </div>
+                  <textarea
+                    value={currentItem}
+                    onChange={(e) => handleItemNameChange(e.target.value)}
+                    placeholder={`Enter question for Round ${roundIdx + 1} - Q${questionIdx + 1}...`}
+                    rows={4}
+                    className="gcl-textarea"
+                  />
+                </div>
+
+                {/* Timer Controls Row */}
+                <div className="timer-controls-bar">
+                  <div className="flex items-center gap-3">
+                    <div className="timer-icon-badge">
+                      <Clock size={20} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleManualSetTracker(roundIdx, Math.min(maxIdx, questionIdx + 1))}
-                      disabled={questionIdx === maxIdx}
-                      className="stepper-btn"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {isLastQuestion && (
-                <div className="advance-notice-box space-y-3">
-                  <div>
-                    <p className="advance-title">Round End: Ready to Advance</p>
-                    <p className="advance-desc">
-                      Question {questionIdx + 1} of {totalQuestions} reached. Click below to advance the auction to the next stage!
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAdvanceToNextStage}
-                    className="btn-advance-intermission"
-                  >
-                    <ChevronRight size={20} />
-                    {roundIdx === 2
-                      ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
-                      : `Advance to Round ${roundIdx + 2} Intermission`}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Question & Timer Card */}
-            <div className="admin-card">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2 text-yellow-400">
-                  <HelpCircle size={22} />
-                  <h2 className="text-xl font-bold text-white">Question & Timer</h2>
-                </div>
-                <div>
-                  {isRevealed ? (
-                    <span className="badge-revealed-to-players">● REVEALED TO PLAYERS</span>
-                  ) : (
-                    <span className="badge-hidden-from-players">HIDDEN FROM PLAYERS</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="input-label mb-0">Item / Question Name</label>
-                  <button type="button" onClick={handleLoadQuestionFromData} className="btn-secondary-load">
-                    <FileText size={15} /> Load Q{questionIdx + 1} from Data
-                  </button>
-                </div>
-                <textarea
-                  value={currentItem}
-                  onChange={(e) => handleItemNameChange(e.target.value)}
-                  placeholder={`Enter question for Round ${roundIdx + 1} - Q${questionIdx + 1}...`}
-                  rows={4}
-                  className="gcl-textarea"
-                />
-              </div>
-
-              {/* Timer Controls Row */}
-              <div className="timer-controls-bar">
-                <div className="flex items-center gap-3">
-                  <div className="timer-icon-badge">
-                    <Clock size={20} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
-                  </div>
-                  <div>
-                    <p className="timer-label">BID TIMER</p>
-                    <p className={`font-mono text-2xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                      {timerFormatted}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {!isTimerRunning ? (
-                    <button
-                      type="button"
-                      onClick={handleStartTimer}
-                      className="btn-timer-start"
-                    >
-                      <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handlePauseTimer}
-                      className="btn-timer-pause"
-                    >
-                      <Pause size={18} /> Pause
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleResetTimer}
-                    className="btn-timer-reset"
-                  >
-                    <RotateCcw size={16} /> Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Final Bid & Answer Form */}
-            <form onSubmit={handleBidSubmit} className="admin-card">
-              <h2 className="card-title text-blue-400 mb-4">
-                <Hammer size={22} /> Final Bid & Answer Evaluation
-              </h2>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Team Selection */}
-                <div>
-                  <label className="input-label">Select Winning Team</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
-                    {teams.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => handleTeamSelection(t.id)}
-                        className={`team-select-btn ${
-                          selectedTeamId === t.id ? 'team-btn-selected' : 'team-btn-default'
-                        }`}
-                      >
-                        <span className="font-semibold text-sm truncate w-full">{t.name}</span>
-                        <span className="badge-team-score">★ {t.score || 0}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Bid Amount & Fast Buttons */}
-                <div>
-                  <label className="input-label">
-                    Bid Amount (Base: {formatCurrency(BASE_PRICE)})
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={bidAmount}
-                      onChange={handleBidAmountChange}
-                      placeholder={String(BASE_PRICE)}
-                      className="gcl-input font-mono text-xl"
-                    />
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickSet(BASE_PRICE)}
-                        className="quick-btn-base"
-                      >
-                        {formatCurrency(BASE_PRICE)}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAdd(MIN_INCREMENT)}
-                        className="quick-btn-inc"
-                      >
-                        +{formatCurrency(MIN_INCREMENT)}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAdd(5000000)}
-                        className="quick-btn-green"
-                      >
-                        + 50 L
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAdd(-1000000)}
-                        className="quick-btn-red"
-                      >
-                        - 10 L
-                      </button>
+                    <div>
+                      <p className="timer-label">BID TIMER</p>
+                      <p className={`font-mono text-2xl font-black ${isExpired ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                        {timerFormatted}
+                      </p>
                     </div>
                   </div>
-                  {bidAmount && parseFloat(bidAmount) > 0 && (
-                    <p className="mt-2 text-sm text-slate-400">
-                      Formatted Bid:{' '}
-                      <span className="text-white font-bold">
-                        {formatCurrency(parseFloat(bidAmount))}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              {/* Answer Result Evaluation Toggle */}
-              <div className="answer-toggle-row">
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="text-yellow-400" size={24} />
-                  <div>
-                    <p className="text-white font-bold">Answer Evaluation</p>
-                    <p className="text-slate-400 text-xs">Did the winning team answer correctly?</p>
+                  <div className="flex items-center gap-2">
+                    {!isTimerRunning ? (
+                      <button
+                        type="button"
+                        onClick={handleStartTimer}
+                        className="btn-timer-start"
+                      >
+                        <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handlePauseTimer}
+                        className="btn-timer-pause"
+                      >
+                        <Pause size={18} /> Pause
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleResetTimer}
+                      className="btn-timer-reset"
+                    >
+                      <RotateCcw size={16} /> Reset
+                    </button>
                   </div>
                 </div>
-                <div className="toggle-pill-wrapper">
-                  <button
-                    type="button"
-                    onClick={() => setIsAnswerCorrect(false)}
-                    className={`btn-toggle-option ${
-                      !isAnswerCorrect ? 'toggle-wrong' : 'toggle-inactive'
-                    }`}
-                  >
-                    <XCircle size={18} /> Incorrect (0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAnswerCorrect(true)}
-                    className={`btn-toggle-option ${
-                      isAnswerCorrect ? 'toggle-correct' : 'toggle-inactive'
-                    }`}
-                  >
-                    <Check size={18} /> Correct (+1)
-                  </button>
-                </div>
               </div>
 
-              {/* SOLD Action Button */}
-              <button
-                type="submit"
-                disabled={!selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE}
-                className={`btn-sold-action ${
-                  !selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE
-                    ? 'btn-sold-disabled'
-                    : 'btn-sold-ready'
-                }`}
-              >
-                <CheckCircle2 size={22} fill="currentColor" />
-                {isAnswerCorrect
-                  ? 'SOLD! (Correct Answer +1 Score)'
-                  : 'SOLD! (Incorrect Answer +0 Score)'}
-              </button>
-            </form>
+              {/* Final Bid & Answer Form with SOLD confirmation prompt */}
+              <form onSubmit={handlePromptBidSubmit} className="admin-card">
+                <h2 className="card-title text-blue-400 mb-4">
+                  <Hammer size={22} /> Final Bid & Answer Evaluation
+                </h2>
 
-            {/* Corrections Section */}
-            <div className="admin-card border-l-4 border-l-orange-500">
-              <h2 className="card-title text-orange-400 mb-3">
-                <Undo2 size={22} /> Corrections
-              </h2>
-              <button onClick={handleUndoLastBid} className="btn-undo-action">
-                <Undo2 size={20} /> Undo Last Transaction
-              </button>
-            </div>
-
-            {/* Admin Live Scoreboard */}
-            <div className="admin-card">
-              <h2 className="card-title text-yellow-400 mb-4">
-                <Trophy size={22} /> Admin Live Scoreboard
-              </h2>
-              <div className="overflow-x-auto rounded-lg border border-slate-800">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-900 text-slate-400 text-xs uppercase">
-                    <tr>
-                      <th className="p-3">Rank</th>
-                      <th className="p-3">Team</th>
-                      <th className="p-3 text-right text-yellow-400">Score</th>
-                      <th className="p-3 text-right">Items</th>
-                      <th className="p-3 text-right">Spent</th>
-                      <th className="p-3 text-right">Remaining</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {[...teamsWithStats]
-                      .sort((a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget)
-                      .map((t, idx) => (
-                        <tr key={t.id} className="hover:bg-slate-800/40">
-                          <td className="p-3 font-mono text-slate-500">{idx + 1}</td>
-                          <td className="p-3 font-bold text-white">{t.name}</td>
-                          <td className="p-3 text-right font-black text-yellow-400 text-lg">
-                            {t.score || 0}
-                          </td>
-                          <td className="p-3 text-right text-indigo-300">{t.itemsCount}</td>
-                          <td className="p-3 text-right text-red-400 font-semibold">
-                            {formatCurrency(t.totalSpent)}
-                          </td>
-                          <td className="p-3 text-right text-green-400 font-bold">
-                            {formatCurrency(t.budget)}
-                          </td>
-                        </tr>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Team Selection */}
+                  <div>
+                    <label className="input-label">Select Winning Team</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
+                      {teams.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => handleTeamSelection(t.id)}
+                          className={`team-select-btn ${
+                            selectedTeamId === t.id ? 'team-btn-selected' : 'team-btn-default'
+                          } ${t.budget <= 0 ? 'border-red-500/80 bg-red-950/20' : ''}`}
+                        >
+                          <div className="flex flex-col w-full text-left">
+                            <span className="font-semibold text-sm truncate w-full">{t.name}</span>
+                            {t.budget <= 0 ? (
+                              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">⚠️ OUT OF BUDGET</span>
+                            ) : t.budget <= 5000000 ? (
+                              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">⚠️ LOW ({formatCurrency(t.budget)})</span>
+                            ) : (
+                              <span className="text-[11px] text-green-400 font-mono">{formatCurrency(t.budget)}</span>
+                            )}
+                          </div>
+                          <span className="badge-team-score">★ {t.score || 0}</span>
+                        </button>
                       ))}
-                  </tbody>
-                </table>
-              </div>
+                    </div>
+                  </div>
+
+                  {/* Bid Amount & Fast Buttons */}
+                  <div>
+                    <label className="input-label">
+                      Bid Amount (Base: {formatCurrency(BASE_PRICE)})
+                    </label>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={bidAmount}
+                        onChange={handleBidAmountChange}
+                        placeholder={String(BASE_PRICE)}
+                        className="gcl-input font-mono text-xl"
+                      />
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSet(BASE_PRICE)}
+                          className="quick-btn-base"
+                        >
+                          {formatCurrency(BASE_PRICE)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(MIN_INCREMENT)}
+                          className="quick-btn-inc"
+                        >
+                          +{formatCurrency(MIN_INCREMENT)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(5000000)}
+                          className="quick-btn-green"
+                        >
+                          + 50 L
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(-1000000)}
+                          className="quick-btn-red"
+                        >
+                          - 10 L
+                        </button>
+                      </div>
+                    </div>
+                    {bidAmount && parseFloat(bidAmount) > 0 && (
+                      <p className="mt-2 text-sm text-slate-400">
+                        Formatted Bid:{' '}
+                        <span className="text-white font-bold">
+                          {formatCurrency(parseFloat(bidAmount))}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Answer Result Evaluation Toggle */}
+                <div className="answer-toggle-row">
+                  <div className="flex items-center gap-2">
+                    <HelpCircle className="text-yellow-400" size={24} />
+                    <div>
+                      <p className="text-white font-bold">Answer Evaluation</p>
+                      <p className="text-slate-400 text-xs">Did the winning team answer correctly?</p>
+                    </div>
+                  </div>
+                  <div className="toggle-pill-wrapper">
+                    <button
+                      type="button"
+                      onClick={() => setIsAnswerCorrect(false)}
+                      className={`btn-toggle-option ${
+                        !isAnswerCorrect ? 'toggle-wrong' : 'toggle-inactive'
+                      }`}
+                    >
+                      <XCircle size={18} /> Incorrect (0)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAnswerCorrect(true)}
+                      className={`btn-toggle-option ${
+                        isAnswerCorrect ? 'toggle-correct' : 'toggle-inactive'
+                      }`}
+                    >
+                      <Check size={18} /> Correct (+1)
+                    </button>
+                  </div>
+                </div>
+
+                {/* SOLD Action Button */}
+                <button
+                  type="submit"
+                  disabled={!selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE}
+                  className={`btn-sold-action ${
+                    !selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE
+                      ? 'btn-sold-disabled'
+                      : 'btn-sold-ready'
+                  }`}
+                >
+                  <CheckCircle2 size={22} fill="currentColor" />
+                  {isAnswerCorrect
+                    ? 'SOLD! (Correct Answer +1 Score)'
+                    : 'SOLD! (Incorrect Answer +0 Score)'}
+                </button>
+              </form>
             </div>
 
-            {/* Danger Zone: Full Reset */}
-            <div className="admin-card border-l-4 border-l-red-500">
-              <h2 className="card-title text-red-400 mb-3">
-                <AlertCircle size={22} /> Danger Zone
-              </h2>
-              {!isConfirmingReset ? (
+            {/* Right Sidebar Column: Team Management, Corrections, Danger Zone, Log */}
+            <div className="space-y-8">
+              {/* Live Team Management with edit confirmation */}
+              <div className="admin-card space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="card-title text-teal-400 mb-0">
+                    <Users size={22} /> Team Management
+                  </h2>
+                  <span className="text-xs text-slate-400">Click ✓ to save edit</span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {teams.map((team, idx) => {
+                    const isEdited = editingTeamNames[team.id] !== undefined && editingTeamNames[team.id] !== team.name;
+                    const currentNameVal = editingTeamNames[team.id] !== undefined ? editingTeamNames[team.id] : team.name;
+                    return (
+                      <div key={team.id} className="team-manage-item">
+                        <span className="font-mono text-slate-500 text-sm w-5">{idx + 1}.</span>
+                        <input
+                          type="text"
+                          value={currentNameVal}
+                          onChange={(e) => setEditingTeamNames((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && isEdited) {
+                              e.preventDefault();
+                              setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal });
+                            }
+                          }}
+                          className={`gcl-input-inline ${isEdited ? 'border-cyan-400 ring-1 ring-cyan-400/50' : ''}`}
+                        />
+                        {isEdited && (
+                          <button
+                            type="button"
+                            title="Save Name Change"
+                            onClick={() => setTeamPendingEdit({ id: team.id, oldName: team.name, newName: currentNameVal })}
+                            className="p-1.5 rounded-md bg-green-600 hover:bg-green-500 text-white transition-all shadow-md flex items-center justify-center shrink-0"
+                          >
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setTeamToRemove(team)}
+                          disabled={teams.length <= 1}
+                          className="btn-remove-circle shrink-0"
+                          title="Remove Team"
+                        >
+                          <Minus size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Corrections Section (Undo Last Transaction) */}
+              <div className="admin-card border-l-4 border-l-orange-500">
+                <h2 className="card-title text-orange-400 mb-2">
+                  <Undo2 size={22} /> Corrections
+                </h2>
+                <p className="text-xs text-slate-400 mb-3">
+                  Revert the latest item sale and restore the team's budget and score.
+                </p>
                 <button
+                  type="button"
+                  onClick={handlePromptUndoLastBid}
+                  disabled={items.length === 0}
+                  className={`btn-undo-action ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Undo2 size={20} /> Undo Last Transaction
+                </button>
+              </div>
+
+              {/* Danger Zone: Full Reset */}
+              <div className="admin-card border-l-4 border-l-red-500">
+                <h2 className="card-title text-red-400 mb-2">
+                  <AlertCircle size={22} /> Danger Zone
+                </h2>
+                <p className="text-xs text-slate-400 mb-3">
+                  Wipe all transactions, reset team scores, and restore starting budgets.
+                </p>
+                <button
+                  type="button"
                   onClick={() => setIsConfirmingReset(true)}
                   className="btn-danger-reset"
                 >
                   Full Reset (DANGER)
                 </button>
-              ) : (
-                <div className="reset-confirmation-card">
-                  <p className="text-white font-medium mb-3">
-                    Are you sure? This will wipe all current scores and transactions, and restore default teams and starting budgets.
-                  </p>
-                  <div className="flex gap-3">
-                    <button onClick={resetGameAndDatabase} className="btn-confirm-wipe">
-                      Yes, Reset Everything
-                    </button>
-                    <button
-                      onClick={() => setIsConfirmingReset(false)}
-                      className="btn-cancel-wipe"
-                    >
-                      No, Cancel
-                    </button>
-                  </div>
+              </div>
+
+              {/* Transaction Log */}
+              <div className="admin-card transaction-log-card">
+                <h2 className="card-title text-purple-400 mb-3">
+                  <HistoryIcon size={22} /> Transaction Log
+                </h2>
+                <div className="space-y-3 transaction-log-scroll">
+                  {localHistory.length === 0 ? (
+                    <p className="text-slate-500 italic text-sm">
+                      No transactions recorded yet. Submit bids to see live logs!
+                    </p>
+                  ) : (
+                    localHistory.map((item) => {
+                      const isSold = item.action === 'SOLD';
+                      const isUndo = item.action === 'UNDO';
+                      return (
+                        <div
+                          key={item.id}
+                          className={`log-item ${
+                            isSold
+                              ? 'log-sold'
+                              : isUndo
+                              ? 'log-undo'
+                              : 'log-default'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <span className="log-action">{item.action}</span>
+                            <span className="log-time">{item.time}</span>
+                          </div>
+                          <p className="log-details">{item.details}</p>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Right Sidebar: Live Team Management & Transaction Log */}
-          <div className="space-y-8">
-            {/* Live Team Management */}
-            <div className="admin-card space-y-4">
-              <h2 className="card-title text-teal-400">
-                <Users size={22} /> Team Management
-              </h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {teams.map((team, idx) => (
-                  <div key={team.id} className="team-manage-item">
-                    <span className="font-mono text-slate-500 text-sm w-5">{idx + 1}.</span>
-                    <input
-                      type="text"
-                      value={team.name}
-                      onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                      className="gcl-input-inline"
-                    />
-                    <button
-                      onClick={() => setTeamToRemove(team)}
-                      disabled={teams.length <= 1}
-                      className="btn-remove-circle"
-                    >
-                      <Minus size={14} />
-                    </button>
+          {/* Full-Width Dedicated Scoreboard Section (No collisions!) */}
+          <div className="space-y-8 pt-4">
+            {/* 1. CURRENT ROUND SCOREBOARD (renamed from Admin Live Scoreboard) */}
+            <div className="scoreboard-card-current">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Trophy size={24} className="text-cyan-400" />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Current Round Scoreboard</h2>
+                    <p className="text-xs text-slate-400">
+                      Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
+                    </p>
                   </div>
-                ))}
+                </div>
+                <span className="px-3 py-1 bg-cyan-950/80 border border-cyan-500/50 rounded-full text-cyan-300 text-xs font-bold font-mono self-start sm:self-auto">
+                  ACTIVE: R{roundIdx + 1}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-slate-700/80">
+                <table className="table-attractive">
+                  <thead>
+                    <tr>
+                      <th className="text-center w-16">Rank</th>
+                      <th>Team Name</th>
+                      <th className="text-center text-yellow-400">Round Score</th>
+                      <th className="text-center">Items Won</th>
+                      <th className="text-right">Round Spent</th>
+                      <th className="text-right text-green-400">Remaining Budget</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRoundStats.map((team, idx) => {
+                      const isOutOfBudget = team.remainingBudget <= 0;
+                      const isLowBudget = !isOutOfBudget && team.remainingBudget <= 5000000;
+                      return (
+                        <tr key={team.id}>
+                          <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                          <td>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white text-base">{team.name}</span>
+                              {isOutOfBudget && (
+                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                              )}
+                              {isLowBudget && (
+                                <span className="badge-low-budget">⚠️ LOW</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-center font-black text-yellow-400 text-xl font-mono">
+                            {team.roundScore}
+                          </td>
+                          <td className="text-center font-semibold text-indigo-300 font-mono">
+                            {team.roundItemsCount}
+                          </td>
+                          <td className="text-right font-mono text-red-400 font-semibold">
+                            {formatCurrency(team.roundSpent)}
+                          </td>
+                          <td className="text-right font-mono font-bold text-green-400 text-base">
+                            {formatCurrency(team.remainingBudget)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Transaction Log */}
-            <div className="admin-card transaction-log-card">
-              <h2 className="card-title text-purple-400 mb-3">
-                <HistoryIcon size={22} /> Transaction Log
-              </h2>
-              <div className="space-y-3 transaction-log-scroll">
-                {localHistory.length === 0 ? (
-                  <p className="text-slate-500 italic text-sm">
-                    No transactions recorded yet. Submit bids to see live logs!
-                  </p>
-                ) : (
-                  localHistory.map((item) => {
-                    const isSold = item.action === 'SOLD';
-                    const isUndo = item.action === 'UNDO';
-                    return (
-                      <div
-                        key={item.id}
-                        className={`log-item ${
-                          isSold
-                            ? 'log-sold'
-                            : isUndo
-                            ? 'log-undo'
-                            : 'log-default'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <span className="log-action">{item.action}</span>
-                          <span className="log-time">{item.time}</span>
-                        </div>
-                        <p className="log-details">{item.details}</p>
-                      </div>
-                    );
-                  })
-                )}
+            {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
+            <div className="scoreboard-card-overall">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Crown size={24} className="text-yellow-400" />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
+                    <p className="text-xs text-slate-400">
+                      Leaderboard priority: Total Score → Total Items → Total Remaining Budget
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-amber-950/80 border border-yellow-500/50 rounded-full text-yellow-300 text-xs font-bold font-mono self-start sm:self-auto">
+                  {Math.max(1, currentRoundIndex + 1)} ROUNDS ACCUMULATED
+                </span>
               </div>
+
+              <div className="overflow-x-auto rounded-lg border border-slate-700/80">
+                <table className="table-attractive">
+                  <thead>
+                    <tr>
+                      <th className="text-left">TEAM NAME</th>
+                      <th className="text-center text-yellow-400 font-black">TOTAL SCORE</th>
+                      <th className="text-center text-slate-300">TOTAL ITEMS</th>
+                      <th className="text-right text-red-400">TOTAL SPENT</th>
+                      <th className="text-right text-green-400 font-black">TOTAL REM.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overallStats.map((team, idx) => {
+                      const isGrandChampion = idx === 0 && team.totalScore > 0;
+                      const isOutOfBudget = team.totalRemaining <= 0;
+                      return (
+                        <tr
+                          key={team.id}
+                          className={isGrandChampion ? 'tr-grand-champion' : ''}
+                        >
+                          <td>
+                            <div className="flex items-center gap-3">
+                              <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                                {idx + 1}.
+                              </span>
+                              <div>
+                                <span className="font-bold text-white text-base">{team.name}</span>
+                                {isGrandChampion && (
+                                  <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block">
+                                    GRAND CHAMPION
+                                  </span>
+                                )}
+                                {isOutOfBudget && (
+                                  <span className="badge-out-of-budget ml-2">⚠️ OUT OF BUDGET</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="text-center font-black text-yellow-400 text-2xl font-mono">
+                            {team.totalScore}
+                          </td>
+                          <td className="text-center font-bold text-slate-200 text-lg font-mono">
+                            {team.totalItems}
+                          </td>
+                          <td className="text-right font-mono text-red-400 font-bold text-base">
+                            {formatCurrency(team.totalSpent)}
+                          </td>
+                          <td className="text-right font-mono font-black text-green-400 text-lg">
+                            {formatCurrency(team.totalRemaining)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 3. PREVIOUS ROUND SCOREBOARD */}
+            <div className="scoreboard-card-previous">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <HistoryIcon size={24} className="text-indigo-400" />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Previous Round Scoreboard</h2>
+                    <p className="text-xs text-slate-400">
+                      Archived final snapshot of completed rounds
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {pastRounds.length === 0 ? (
+                <div className="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700">
+                  <p className="text-slate-400 font-medium">No previous round completed yet.</p>
+                  <p className="text-slate-500 text-xs mt-1">
+                    When Round 1 finishes and advances to the next stage, its completed scoreboard will be displayed here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {pastRounds.map((snap) => (
+                    <div key={snap.roundIndex} className="space-y-2">
+                      <div className="flex justify-between items-center px-1">
+                        <h3 className="font-bold text-indigo-300 text-sm uppercase tracking-wide">
+                          {snap.roundName || `Round ${snap.roundIndex + 1}`} Final Results
+                        </h3>
+                        {snap.timestamp && (
+                          <span className="text-slate-500 text-xs">
+                            Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="overflow-x-auto rounded-lg border border-slate-700/80">
+                        <table className="table-attractive">
+                          <thead>
+                            <tr>
+                              <th className="text-center w-16">Rank</th>
+                              <th>Team</th>
+                              <th className="text-center text-yellow-400">Score</th>
+                              <th className="text-center">Items Won</th>
+                              <th className="text-right">Total Spent</th>
+                              <th className="text-right text-green-400">Remaining Budget</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...(snap.results || [])]
+                              .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
+                              .map((res, idx) => (
+                                <tr key={res.id || idx}>
+                                  <td className="text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                                  <td className="font-bold text-white">{res.name}</td>
+                                  <td className="text-center font-bold text-yellow-400 text-lg font-mono">
+                                    {res.score || 0}
+                                  </td>
+                                  <td className="text-center font-semibold text-indigo-300 font-mono">
+                                    {res.itemsCount || 0}
+                                  </td>
+                                  <td className="text-right font-mono text-red-400 font-semibold">
+                                    {formatCurrency(res.totalSpent || 0)}
+                                  </td>
+                                  <td className="text-right font-mono font-bold text-green-400">
+                                    {formatCurrency(res.remainingBudget || 0)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2015,21 +2240,19 @@ export default function AdminPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {[...teamsWithStats]
-                    .sort((a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget)
-                    .map((team, idx) => (
-                      <tr key={team.id} className="hover:bg-slate-800/40">
-                        <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                        <td className="p-3 font-bold text-white">{team.name}</td>
-                        <td className="p-3 text-center font-bold text-yellow-400">
-                          {team.score || 0}
-                        </td>
-                        <td className="p-3 text-center text-slate-300">{team.itemsCount}</td>
-                        <td className="p-3 text-right font-mono text-green-400">
-                          {formatCurrency(team.budget)}
-                        </td>
-                      </tr>
-                    ))}
+                  {overallStats.map((team, idx) => (
+                    <tr key={team.id} className="hover:bg-slate-800/40">
+                      <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                      <td className="p-3 font-bold text-white">{team.name}</td>
+                      <td className="p-3 text-center font-bold text-yellow-400 font-mono text-lg">
+                        {team.totalScore}
+                      </td>
+                      <td className="p-3 text-center text-slate-300 font-mono">{team.totalItems}</td>
+                      <td className="p-3 text-right font-mono text-green-400 font-bold">
+                        {formatCurrency(team.totalRemaining)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -2045,7 +2268,7 @@ export default function AdminPanel() {
 
               <button
                 type="button"
-                onClick={resetGameAndDatabase}
+                onClick={() => setIsConfirmingReset(true)}
                 className="btn-end-reset w-full sm:w-auto"
               >
                 <RefreshCw size={18} /> End Event & Reset
@@ -2053,6 +2276,226 @@ export default function AdminPanel() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* --- CONFIRMATION MODALS (Point 7) --- */}
+
+      {/* 1. Confirm SOLD Modal */}
+      {isConfirmingSold && selectedWinningTeam && (
+        <div className="gcl-modal-overlay" onClick={() => setIsConfirmingSold(false)}>
+          <div className="gcl-modal-box border-green-500/60" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-green-400">
+              <CheckCircle2 size={26} className="text-green-400" />
+              Confirm Winning Bid (SOLD!)
+            </h3>
+            <p className="gcl-modal-body">
+              Please review and confirm this auction sale before recording it:
+            </p>
+
+            <div className="gcl-modal-details">
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Winning Team:</span>
+                <span className="font-bold text-white text-base">{selectedWinningTeam.name}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Question Ref:</span>
+                <span className="font-mono font-bold text-yellow-400">R{roundIdx + 1} - Q{questionIdx + 1}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Final Bid Amount:</span>
+                <span className="font-mono font-bold text-cyan-400 text-lg">{formatCurrency(parseFloat(bidAmount))}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Answer Evaluation:</span>
+                <span className={`font-bold ${isAnswerCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                  {isAnswerCorrect ? '✓ CORRECT (+1 Point Score)' : '✗ INCORRECT (0 Points Score)'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1">
+                <span className="text-slate-400">Remaining Budget After:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {formatCurrency(Math.max(0, selectedWinningTeam.budget - parseFloat(bidAmount)))}
+                </span>
+              </div>
+            </div>
+
+            <div className="gcl-modal-actions">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingSold(false)}
+                className="btn-modal-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmingSold(false);
+                  handleExecuteBidSubmit();
+                }}
+                className="btn-modal-confirm-green"
+              >
+                Confirm & Mark SOLD
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Confirm Undo Modal */}
+      {isConfirmingUndo && lastItem && (
+        <div className="gcl-modal-overlay" onClick={() => setIsConfirmingUndo(false)}>
+          <div className="gcl-modal-box border-orange-500/70" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-orange-400">
+              <Undo2 size={26} className="text-orange-400" />
+              Confirm Undo Last Transaction
+            </h3>
+            <p className="gcl-modal-body">
+              Are you sure you want to revert the most recent sale? This will refund the bid amount and roll back the team's score.
+            </p>
+
+            <div className="gcl-modal-details">
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Transaction Item:</span>
+                <span className="font-semibold text-white truncate max-w-[200px]">{lastItem.item_name}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Question Ref:</span>
+                <span className="font-mono font-bold text-yellow-400">{lastItem.question_ref || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Team to Refund:</span>
+                <span className="font-bold text-white">{lastItemTeam?.name || 'Unknown Team'}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Refund Amount:</span>
+                <span className="font-mono font-bold text-green-400">+{formatCurrency(lastItem.cost)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1">
+                <span className="text-slate-400">Score Reversion:</span>
+                <span className="font-bold text-orange-400">
+                  {lastItem.is_correct ? '-1 Point' : '0 Points (No change)'}
+                </span>
+              </div>
+            </div>
+
+            <div className="gcl-modal-actions">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingUndo(false)}
+                className="btn-modal-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmingUndo(false);
+                  handleExecuteUndoLastBid();
+                }}
+                className="btn-modal-confirm-red bg-orange-600 hover:bg-orange-500 shadow-orange-600/40"
+              >
+                Yes, Undo Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Confirm Full Reset (DANGER) Modal */}
+      {isConfirmingReset && (
+        <div className="gcl-modal-overlay" onClick={() => setIsConfirmingReset(false)}>
+          <div className="gcl-modal-box border-red-500/80" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-red-400">
+              <AlertTriangle size={26} className="text-red-500 animate-pulse" />
+              Full Reset (DANGER)
+            </h3>
+            <p className="gcl-modal-body">
+              <strong className="text-red-300">Warning: You are about to initiate a complete system wipe!</strong>
+              <br /><br />
+              This will:
+              <br />• Delete all recorded bids, sold items, and questions
+              <br />• Reset all team scores to 0
+              <br />• Restore team budgets to starting amount ({formatCurrency(parseInt(budgetInput) || 50000000)})
+              <br />• Reset the entire auction back to initial setup
+              <br /><br />
+              <span className="text-red-400 font-bold">This action CANNOT be undone!</span>
+            </p>
+
+            <div className="gcl-modal-actions">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingReset(false)}
+                className="btn-modal-cancel"
+              >
+                Cancel, Keep Everything
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmingReset(false);
+                  resetGameAndDatabase();
+                }}
+                className="btn-modal-confirm-red"
+              >
+                Yes, Wipe & Reset Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Confirm Team Rename Modal */}
+      {teamPendingEdit && (
+        <div className="gcl-modal-overlay" onClick={() => setTeamPendingEdit(null)}>
+          <div className="gcl-modal-box border-cyan-500/70" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-cyan-400">
+              <Users size={24} className="text-cyan-400" />
+              Confirm Team Name Change
+            </h3>
+            <p className="gcl-modal-body">
+              Please confirm the new name for this team across the live auction:
+            </p>
+
+            <div className="gcl-modal-details">
+              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
+                <span className="text-slate-400">Current Name:</span>
+                <span className="font-semibold text-slate-300 line-through">{teamPendingEdit.oldName}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm py-1">
+                <span className="text-slate-400">New Name:</span>
+                <span className="font-bold text-cyan-300 text-base">{teamPendingEdit.newName}</span>
+              </div>
+            </div>
+
+            <div className="gcl-modal-actions">
+              <button
+                type="button"
+                onClick={() => setTeamPendingEdit(null)}
+                className="btn-modal-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTeamRename}
+                className="btn-modal-confirm-green bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/40"
+              >
+                Save & Rename Team
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Confirm Team Removal Modal */}
+      {teamToRemove && (
+        <TeamRemoveModal
+          team={teamToRemove}
+          gameState={gameState}
+          onConfirm={handleConfirmRemoveTeam}
+          onCancel={() => setTeamToRemove(null)}
+        />
       )}
     </div>
   );
