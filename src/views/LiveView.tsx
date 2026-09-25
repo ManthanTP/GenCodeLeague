@@ -12,6 +12,8 @@ import {
   Medal,
   Crown,
   Clock,
+  AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
@@ -240,6 +242,24 @@ export default function LiveView() {
                     <h2 className="my-team-name">{myTeamStats.name}</h2>
                   </div>
                 </div>
+
+                {myTeamStats.budget <= 0 ? (
+                  <div className="team-budget-warning-banner">
+                    <AlertTriangle size={20} className="text-red-400 animate-bounce flex-shrink-0" />
+                    <div>
+                      <span className="font-extrabold text-red-300">OUT OF BUDGET:</span>{' '}
+                      <span className="text-slate-300">Your team has ₹0 budget remaining for this round.</span>
+                    </div>
+                  </div>
+                ) : myTeamStats.budget <= 2000000 ? (
+                  <div className="team-budget-low-banner">
+                    <AlertCircle size={20} className="text-orange-400 flex-shrink-0" />
+                    <div>
+                      <span className="font-extrabold text-orange-300">LOW BUDGET WARNING:</span>{' '}
+                      <span className="text-slate-300">Your team only has {formatCurrency(myTeamStats.budget)} remaining.</span>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="stat-pill">
                     <p className="stat-pill-label">
@@ -331,50 +351,30 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Last Successful Bid Banner */}
+          {/* Last Successful Bid Banner (Scores & Results completely hidden) */}
           {lastBidDetails && (
-            <div
-              className={`last-bid-card ${
-                lastBidDetails.status === 'correct'
-                  ? 'border-green-500/50'
-                  : 'border-red-500/50'
-              }`}
-            >
-              <p
-                className={`last-bid-tag ${
-                  lastBidDetails.status === 'correct' ? 'text-green-400' : 'text-red-400'
-                }`}
-              >
+            <div className="last-bid-card border border-cyan-500/40 bg-slate-900/90 shadow-lg">
+              <p className="last-bid-tag text-cyan-400">
                 <Hammer size={16} /> LAST SUCCESSFUL BID
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center items-center">
-                <div className="border-r border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center items-center">
+                <div className="border-b sm:border-b-0 sm:border-r border-slate-700 pb-2 sm:pb-0">
                   <p className="subtext-muted">Winning Team</p>
-                  <p className="val-medium text-white">{lastBidDetails.teamName}</p>
+                  <p className="val-medium text-white font-bold">{lastBidDetails.teamName}</p>
                 </div>
-                <div className="border-r border-slate-700">
+                <div className="border-b sm:border-b-0 sm:border-r border-slate-700 pb-2 sm:pb-0">
                   <p className="subtext-muted">Final Bid</p>
-                  <p className="val-medium text-yellow-300">{lastBidDetails.amount}</p>
-                </div>
-                <div className="border-r border-slate-700">
-                  <p className="subtext-muted">Question Ref</p>
-                  <p className="val-medium text-cyan-300">{lastBidDetails.questionRef}</p>
+                  <p className="val-medium text-yellow-300 font-mono">{lastBidDetails.amount}</p>
                 </div>
                 <div>
-                  <p className="subtext-muted">Result</p>
-                  <p
-                    className={`val-medium font-bold ${
-                      lastBidDetails.status === 'correct' ? 'text-green-400' : 'text-red-400'
-                    }`}
-                  >
-                    {lastBidDetails.resultText}
-                  </p>
+                  <p className="subtext-muted">Question Ref</p>
+                  <p className="val-medium text-cyan-300 font-mono">{lastBidDetails.questionRef}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Live Team Status Table */}
+          {/* Live Team Status Table with Budget Warnings */}
           <div className="mt-8">
             <h2 className="section-title-large">Live Team Status</h2>
             <div className="scoreboard-container">
@@ -389,6 +389,9 @@ export default function LiveView() {
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((team) => {
                       const isMyTeam = team.id === myTeamId;
+                      const isOutOfBudget = team.budget <= 0;
+                      const isLowBudget = team.budget > 0 && team.budget <= 2000000;
+
                       return (
                         <div
                           key={team.id}
@@ -401,6 +404,11 @@ export default function LiveView() {
                               {team.name}
                               {isMyTeam && <span className="badge-you">YOU</span>}
                             </span>
+                            {isOutOfBudget ? (
+                              <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                            ) : isLowBudget ? (
+                              <span className="badge-low-budget">⚠️ LOW</span>
+                            ) : null}
                           </div>
                           <div className="text-right">
                             <span className="font-semibold text-red-400 text-lg">
@@ -409,8 +417,8 @@ export default function LiveView() {
                           </div>
                           <div className="text-right">
                             <span
-                              className={`text-2xl font-black ${
-                                team.budget > 0 ? 'text-green-400' : 'text-red-500'
+                              className={`text-2xl font-black font-mono ${
+                                isOutOfBudget ? 'text-red-500' : 'text-green-400'
                               }`}
                             >
                               {formatCurrency(team.budget)}
@@ -428,59 +436,90 @@ export default function LiveView() {
             </div>
           </div>
 
-          {/* Completed Round Summaries */}
+          {/* Completed Round Summaries with Rich Detailing */}
           {pastRounds.length > 0 && (
             <div className="mt-12">
               <h2 className="section-title-muted">
                 <History size={24} /> Completed Round Summaries
               </h2>
               <div className="grid grid-cols-1 gap-6">
-                {pastRounds.map((round, rIdx) => (
-                  <div key={rIdx} className="round-summary-card">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-2xl font-bold text-indigo-400">{round.roundName}</h3>
-                      <span className="text-slate-500 text-sm">
-                        {new Date(round.timestamp).toLocaleTimeString()}
-                      </span>
+                {pastRounds.map((round, rIdx) => {
+                  const roundTotalSpent = round.results.reduce((acc, r) => acc + (r.totalSpent || 0), 0);
+                  const roundTotalItems = round.results.reduce((acc, r) => acc + (r.itemsCount || 0), 0);
+
+                  return (
+                    <div key={rIdx} className="round-summary-card">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-slate-700/60">
+                        <div>
+                          <h3 className="text-2xl font-black text-indigo-400">{round.roundName}</h3>
+                          <span className="text-slate-400 text-xs font-mono">
+                            Recorded at {new Date(round.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="badge-preview">
+                            Total Spent: {formatCurrency(roundTotalSpent)}
+                          </span>
+                          <span className="badge-items-sm">
+                            {roundTotalItems} Items Auctioned
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-lg border border-slate-800">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-900 border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                            <tr>
+                              <th className="p-3">Team</th>
+                              <th className="p-3 text-center">Items Won</th>
+                              <th className="p-3 text-right">Total Spent</th>
+                              <th className="p-3 text-right">Remaining Budget</th>
+                              <th className="p-3 text-center">Round Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800">
+                            {[...round.results]
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .map((res, i) => {
+                                const isExhausted = (res.remainingBudget || 0) <= 0;
+                                return (
+                                  <tr
+                                    key={i}
+                                    className={`hover:bg-slate-800/40 ${
+                                      res.id === myTeamId ? 'bg-indigo-900/30' : ''
+                                    }`}
+                                  >
+                                    <td className="p-3 font-bold text-white">
+                                      {res.name}
+                                      {res.id === myTeamId && (
+                                        <span className="badge-you-inline">YOU</span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="badge-items-sm">{res.itemsCount || 0}</span>
+                                    </td>
+                                    <td className="p-3 text-right text-red-400 font-semibold font-mono">
+                                      {formatCurrency(res.totalSpent)}
+                                    </td>
+                                    <td className="p-3 text-right text-green-400 font-bold font-mono">
+                                      {formatCurrency(res.remainingBudget)}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      {isExhausted ? (
+                                        <span className="status-badge-exhausted">Exhausted</span>
+                                      ) : (
+                                        <span className="status-badge-active">Active</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b border-slate-700 text-slate-400 text-sm">
-                            <th className="p-3">Team</th>
-                            <th className="p-3 text-right">Total Spent</th>
-                            <th className="p-3 text-right">Remaining Budget</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...round.results]
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((res, i) => (
-                              <tr
-                                key={i}
-                                className={`border-b border-slate-800 ${
-                                  res.id === myTeamId ? 'bg-indigo-900/30' : ''
-                                }`}
-                              >
-                                <td className="p-3 font-bold text-white">
-                                  {res.name}
-                                  {res.id === myTeamId && (
-                                    <span className="badge-you-inline">YOU</span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-right text-red-400">
-                                  {formatCurrency(res.totalSpent)}
-                                </td>
-                                <td className="p-3 text-right text-green-400 font-bold">
-                                  {formatCurrency(res.remainingBudget)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

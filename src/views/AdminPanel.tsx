@@ -28,6 +28,7 @@ import {
   Medal,
   Eye,
   EyeOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -71,6 +72,12 @@ export default function AdminPanel() {
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+
+  // 4 Confirmation Dialog States (Point 7)
+  const [isConfirmingSold, setIsConfirmingSold] = useState(false);
+  const [isConfirmingUndo, setIsConfirmingUndo] = useState(false);
+  const [editingTeamNames, setEditingTeamNames] = useState<Record<string, string>>({});
+  const [teamPendingEdit, setTeamPendingEdit] = useState<{ id: string; oldName: string; newName: string } | null>(null);
 
   // Setup form states
   const [budgetInput, setBudgetInput] = useState<string>('50000000');
@@ -183,6 +190,82 @@ export default function AdminPanel() {
     [teamsWithStats]
   );
 
+  const pastRounds = useMemo<PastRoundSnapshot[]>(() => {
+    if (!eventState?.banner_message) return [];
+    try {
+      const parsed = JSON.parse(eventState.banner_message);
+      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed?.pastRounds)) return parsed.pastRounds;
+      return [];
+    } catch {
+      return [];
+    }
+  }, [eventState?.banner_message]);
+
+  const currentRoundIndex = eventState?.current_round_index ?? 0;
+
+  // Stats for the current active round
+  const currentRoundStats = useMemo(() => {
+    return teams.map((team) => {
+      const roundItems = items.filter(
+        (it) => it.team_id === team.id && it.round_index === currentRoundIndex
+      );
+      const roundScore = roundItems.filter((it) => it.is_correct).length;
+      const roundSpent = roundItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      return {
+        ...team,
+        roundScore,
+        roundItemsCount: roundItems.length,
+        roundSpent,
+        remainingBudget: team.budget,
+      };
+    }).sort((a, b) => {
+      if (b.roundScore !== a.roundScore) return b.roundScore - a.roundScore;
+      if (b.roundItemsCount !== a.roundItemsCount) return b.roundItemsCount - a.roundItemsCount;
+      return b.remainingBudget - a.remainingBudget;
+    });
+  }, [teams, items, currentRoundIndex]);
+
+  // Overall Stats across ALL rounds combined (Point 5: matching winner 2025 2.png)
+  const overallStats = useMemo(() => {
+    const standardBudget = edition?.starting_budget || parseInt(budgetInput) || 50000000;
+    const roundsCount = Math.max(1, currentRoundIndex + 1);
+
+    return teams.map((team) => {
+      const allTeamItems = items.filter((it) => it.team_id === team.id);
+      const totalScore = team.score || 0;
+      const totalItems = allTeamItems.length;
+      const totalSpent = allTeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const totalAllocated = roundsCount * standardBudget;
+      const totalRemaining = Math.max(0, totalAllocated - totalSpent);
+
+      return {
+        ...team,
+        totalScore,
+        totalItems,
+        totalSpent,
+        totalRemaining,
+      };
+    }).sort((a, b) => {
+      // 1. Highest total score
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      // 2. Highest total items
+      if (b.totalItems !== a.totalItems) return b.totalItems - a.totalItems;
+      // 3. Highest total remaining budget
+      return b.totalRemaining - a.totalRemaining;
+    });
+  }, [teams, items, edition?.starting_budget, budgetInput, currentRoundIndex]);
+
+  const selectedWinningTeam = useMemo(
+    () => teams.find((t) => t.id === selectedTeamId),
+    [teams, selectedTeamId]
+  );
+  const lastItem = items[0] || null;
+  const lastItemTeam = useMemo(
+    () => (lastItem ? teams.find((t) => t.id === lastItem.team_id) : null),
+    [teams, lastItem]
+  );
+
   const previewUpdateTimeout = useRef<any>(null);
 
   const broadcastBidPreview = (teamId: string | null, amount: number, questionRef: string) => {
@@ -277,6 +360,28 @@ export default function AdminPanel() {
     setTeams(updated);
     broadcastTeamsChange(updated);
     supabase.from('teams').update({ name: newName }).eq('id', teamId).then();
+  };
+
+  const handleConfirmTeamRename = async () => {
+    if (!teamPendingEdit) return;
+    const { id, newName, oldName } = teamPendingEdit;
+    if (!newName.trim()) {
+      showNotification('Team name cannot be empty.', 'error');
+      setTeamPendingEdit(null);
+      return;
+    }
+    const updated = teams.map((t) => (t.id === id ? { ...t, name: newName.trim() } : t));
+    setTeams(updated);
+    broadcastTeamsChange(updated);
+    supabase.from('teams').update({ name: newName.trim() }).eq('id', id).then();
+    showNotification(`Team renamed to "${newName.trim()}"!`, 'success');
+    addHistory('Team Renamed', `Renamed "${oldName}" to "${newName.trim()}".`);
+    setEditingTeamNames((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    setTeamPendingEdit(null);
   };
 
   const handleConfirmRemoveTeam = async () => {
