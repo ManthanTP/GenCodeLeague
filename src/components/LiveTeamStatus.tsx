@@ -14,9 +14,15 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
 
   return (
     <div className="mt-10 max-w-4xl w-full mx-auto">
-      <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide text-center mb-6">
-        Live Team Status
-      </h2>
+      <div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
+        <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide text-center">
+          Live Team Status
+        </h2>
+        <span className="gcl-tech-tag gcl-tech-tag-emerald">
+          <span className="gcl-tag-dot bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"></span>
+          REAL-TIME
+        </span>
+      </div>
 
       <div className="gcl-table-container">
         {/* Header row */}

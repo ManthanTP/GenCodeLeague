@@ -1556,8 +1556,9 @@ export default function AdminPanel() {
                 <Hammer size={22} /> Final Bid & Answer Evaluation
               </h2>
               {selectedTeamId && (
-                <span className="text-xs text-blue-300 font-mono bg-blue-950/80 px-3 py-1 rounded-full border border-blue-800">
-                  Selected: <strong>{teams.find(t => t.id === selectedTeamId)?.name}</strong>
+                <span className="gcl-tech-tag gcl-tech-tag-cyan">
+                  <span className="gcl-tag-dot bg-cyan-400"></span>
+                  SELECTED: <strong>{teams.find(t => t.id === selectedTeamId)?.name}</strong>
                 </span>
               )}
             </div>
@@ -1663,25 +1664,29 @@ export default function AdminPanel() {
 
               {/* Right: Answer Result Evaluation (Vibrant, Wide & Modern Design) */}
               <div className="flex flex-col justify-between">
-                <label className="input-label flex items-center justify-between mb-2">
-                  <span>Answer Evaluation</span>
-                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
-                    isAnswerCorrect
-                      ? 'bg-green-500/20 text-green-300 border border-green-500/40'
-                      : 'bg-red-500/20 text-red-300 border border-red-500/40'
-                  }`}>
-                    {isAnswerCorrect ? 'Award: +1 Point' : 'Award: 0 Points'}
-                  </span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="input-label mb-0">Answer Evaluation</label>
+                  {isAnswerCorrect ? (
+                    <span className="gcl-tech-tag gcl-tech-tag-emerald">
+                      <span className="gcl-tag-dot bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"></span>
+                      AWARD: +1 POINT
+                    </span>
+                  ) : (
+                    <span className="gcl-tech-tag gcl-tech-tag-red">
+                      <span className="gcl-tag-dot bg-red-400 shadow-[0_0_6px_#f87171]"></span>
+                      AWARD: 0 POINTS
+                    </span>
+                  )}
+                </div>
 
-                <div className="p-4 rounded-xl border border-blue-500/20 bg-slate-900/90 shadow-inner flex flex-col justify-between flex-1 gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <div className="answer-eval-box">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center shrink-0">
                       <HelpCircle className="text-amber-400" size={18} />
                     </div>
                     <div>
                       <p className="text-white font-bold text-sm">Did the team answer correctly?</p>
-                      <p className="text-slate-400 text-xs">
+                      <p className="text-slate-400 text-xs mt-0.5">
                         Correct adds +1 to team score; Incorrect gives 0 score.
                       </p>
                     </div>
@@ -1698,18 +1703,18 @@ export default function AdminPanel() {
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        !isAnswerCorrect ? 'bg-red-500 text-white' : 'bg-red-950/60 text-red-400 border border-red-800/60'
+                        !isAnswerCorrect ? 'bg-red-500 text-white' : 'bg-red-950/60 text-red-400 border border-red-800'
                       }`}>
                         <XCircle size={18} />
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 text-left">
                         <span className={`block font-black text-sm uppercase tracking-wide ${
                           !isAnswerCorrect ? 'text-white' : 'text-slate-300'
                         }`}>
                           Incorrect (0)
                         </span>
-                        <span className={`block text-[11px] font-mono ${
-                          !isAnswerCorrect ? 'text-red-200' : 'text-slate-500'
+                        <span className={`block text-xs font-mono mt-0.5 ${
+                          !isAnswerCorrect ? 'text-red-200' : 'text-slate-400'
                         }`}>
                           0 Points Added
                         </span>
@@ -1729,18 +1734,18 @@ export default function AdminPanel() {
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        isAnswerCorrect ? 'bg-green-500 text-white' : 'bg-green-950/60 text-green-400 border border-green-800/60'
+                        isAnswerCorrect ? 'bg-green-500 text-white' : 'bg-green-950/60 text-green-400 border border-green-800'
                       }`}>
                         <Check size={18} strokeWidth={3} />
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 text-left">
                         <span className={`block font-black text-sm uppercase tracking-wide ${
                           isAnswerCorrect ? 'text-white' : 'text-slate-300'
                         }`}>
                           Correct (+1)
                         </span>
-                        <span className={`block text-[11px] font-mono ${
-                          isAnswerCorrect ? 'text-green-200' : 'text-slate-500'
+                        <span className={`block text-xs font-mono mt-0.5 ${
+                          isAnswerCorrect ? 'text-green-200' : 'text-slate-400'
                         }`}>
                           +1 Point to Team
                         </span>
@@ -1876,17 +1881,24 @@ export default function AdminPanel() {
           <div className="space-y-8 mt-8">
             {/* 1. CURRENT ROUND SCORE */}
             <div className="scoreboard-card-current">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <Trophy size={24} className="text-cyan-400" />
-                  <h2 className="text-2xl font-bold text-white">Current Round Score</h2>
-                  <span className="inline-flex items-center px-3 py-0.5 bg-cyan-950/90 border border-cyan-500/60 rounded-full text-cyan-300 text-xs font-bold font-mono">
-                    Round {roundIdx + 1}
-                  </span>
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-3.5 flex-wrap">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shrink-0">
+                    <Trophy size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Current Round Score</h2>
+                      <div className="gcl-tech-tag gcl-tech-tag-cyan">
+                        <span className="gcl-tag-dot bg-cyan-400 shadow-[0_0_6px_#38bdf8] animate-pulse"></span>
+                        ROUND {roundIdx + 1}
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-400">
-                  Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
-                </p>
               </div>
 
               <div className="gcl-table-container">
@@ -1936,17 +1948,24 @@ export default function AdminPanel() {
 
             {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
             <div className="scoreboard-card-overall">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <Crown size={24} className="text-yellow-400" />
-                  <h2 className="text-2xl font-bold text-white">Overall Scoreboard (All Rounds Combined)</h2>
-                  <span className="inline-flex items-center px-3 py-0.5 bg-amber-950/90 border border-yellow-500/60 rounded-full text-yellow-300 text-xs font-bold font-mono">
-                    {Math.max(1, currentRoundIndex + 1)} Rounds
-                  </span>
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-3.5 flex-wrap">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 shadow-sm shrink-0">
+                    <Crown size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Overall Scoreboard</h2>
+                      <div className="gcl-tech-tag gcl-tech-tag-amber">
+                        <span className="gcl-tag-dot bg-yellow-400 shadow-[0_0_6px_#facc15]"></span>
+                        ALL ROUNDS CUMULATIVE
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Ranking Priority: Total Score → Total Items → Total Remaining Budget
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-400">
-                  Ranking Priority: Total Score → Total Items → Total Remaining Budget
-                </p>
               </div>
 
               <div className="gcl-table-container">
@@ -2006,14 +2025,23 @@ export default function AdminPanel() {
 
             {/* 3. PREVIOUS ROUND SCOREBOARD */}
             <div className="scoreboard-card-previous">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <HistoryIcon size={24} className="text-indigo-400" />
-                  <h2 className="text-2xl font-bold text-white">Previous Round Scoreboard</h2>
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-3.5 flex-wrap">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
+                    <HistoryIcon size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Previous Round Scoreboard</h2>
+                      <div className="gcl-tech-tag gcl-tech-tag-indigo">
+                        ARCHIVED DATA
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Archived final snapshot of completed rounds
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-400">
-                  Archived final snapshot of completed rounds
-                </p>
               </div>
 
               {pastRounds.length === 0 ? (
@@ -2027,12 +2055,15 @@ export default function AdminPanel() {
                 <div className="space-y-6">
                   {pastRounds.map((snap) => (
                     <div key={snap.roundIndex} className="space-y-3">
-                      <div className="flex justify-between items-center px-1">
-                        <h3 className="font-bold text-indigo-300 text-base uppercase tracking-wide">
-                          {snap.roundName || `Round ${snap.roundIndex + 1}`} Final Results
-                        </h3>
+                      <div className="flex justify-between items-center px-1 flex-wrap gap-2 mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="gcl-tech-tag gcl-tech-tag-indigo">
+                            {snap.roundName || `ROUND ${snap.roundIndex + 1}`}
+                          </span>
+                          <span className="text-slate-200 font-bold text-sm tracking-wide">FINAL SNAPSHOT</span>
+                        </div>
                         {snap.timestamp && (
-                          <span className="text-slate-500 text-xs font-mono">
+                          <span className="text-slate-400 text-xs font-mono bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
                             Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
@@ -2078,17 +2109,24 @@ export default function AdminPanel() {
 
           {/* 4. TRANSACTION LOG (Positioned at the very end of Active view as requested) */}
           <div className="admin-card transaction-log-card shadow-2xl mt-8">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-700/60 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <HistoryIcon size={24} className="text-purple-400" />
-                <h2 className="text-2xl font-bold text-white">Transaction Log</h2>
-                <span className="text-xs font-mono text-purple-300 bg-purple-950/80 px-3 py-0.5 rounded-full border border-purple-800">
-                  {localHistory.length} events
-                </span>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-700/60 flex-wrap gap-3">
+              <div className="flex items-center gap-3.5 flex-wrap">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm shrink-0">
+                  <HistoryIcon size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight">Transaction Log</h2>
+                    <div className="gcl-tech-tag gcl-tech-tag-purple">
+                      <span className="gcl-tag-dot bg-purple-400 shadow-[0_0_6px_#c084fc]"></span>
+                      {localHistory.length} EVENTS RECORDED
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Real-time audit log of all sold items, corrections, and budget updates
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400">
-                Real-time audit log of all sold items, corrections, and budget updates
-              </p>
             </div>
 
             <div className="space-y-2 transaction-log-scroll max-h-[380px] overflow-y-auto pr-1">

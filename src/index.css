@@ -2718,10 +2718,20 @@ h1, h2, h3, h4, h5, h6 {
 .rounded-3xl { border-radius: 1.5rem; }
 .rounded-full { border-radius: 9999px; }
 
-.border { border-width: 1px; border-style: solid; }
+.border { border-width: 1px; border-style: solid; border-color: #334155; }
 .border-2 { border-width: 2px; border-style: solid; }
 .border-yellow-500 { border-color: #eab308; }
 .border-yellow-600 { border-color: #ca8a04; }
+.border-blue-500\/20, .border-blue-500 { border-color: rgba(59, 130, 246, 0.25); }
+.border-amber-500\/30, .border-amber-500 { border-color: rgba(245, 158, 11, 0.35); }
+.border-cyan-500\/30, .border-cyan-500 { border-color: rgba(6, 182, 212, 0.35); }
+.border-indigo-500\/30, .border-indigo-500 { border-color: rgba(99, 102, 241, 0.35); }
+.border-purple-500\/30, .border-purple-500 { border-color: rgba(168, 85, 247, 0.35); }
+.border-emerald-500\/30, .border-emerald-500 { border-color: rgba(16, 185, 129, 0.35); }
+.border-red-500\/40, .border-red-500 { border-color: rgba(239, 68, 68, 0.4); }
+.border-red-800\/60, .border-red-800 { border-color: rgba(153, 27, 27, 0.6); }
+.border-green-500\/40, .border-green-500 { border-color: rgba(34, 197, 94, 0.4); }
+.border-green-800\/60, .border-green-800 { border-color: rgba(22, 101, 52, 0.6); }
 
 .bg-slate-900 { background-color: #0f172a; }
 .bg-slate-950 { background-color: #020617; }
@@ -3242,30 +3252,113 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- ATTRACTIVE ADMIN SCOREBOARD CARDS & TABLE BORDERS --- */
 .scoreboard-card-current {
-  background: #0f172a;
-  border: 2px solid #38bdf8;
-  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #0e172e 0%, #0a0f1d 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-top: 2px solid #38bdf8;
+  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.08);
   margin-bottom: 2rem;
 }
 
 .scoreboard-card-overall {
-  background: #0f172a;
-  border: 2px solid #eab308;
-  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #131720 0%, #0d1017 100%);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-top: 2px solid #eab308;
+  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(234, 179, 8, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(234, 179, 8, 0.08);
   margin-bottom: 2rem;
 }
 
 .scoreboard-card-previous {
-  background: #0f172a;
-  border: 2px solid #818cf8;
-  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #10152b 0%, #0b0e1e 100%);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-top: 2px solid #818cf8;
+  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(129, 140, 248, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(129, 140, 248, 0.08);
   margin-bottom: 2rem;
+}
+
+/* --- GCL MODERN TECHNICAL BADGES / TAGS (REPLACES CHEAP OVAL PILLS) --- */
+.gcl-tech-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.375rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.gcl-tech-tag-cyan {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.45);
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.15);
+}
+
+.gcl-tech-tag-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #facc15;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+}
+
+.gcl-tech-tag-indigo {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  color: #818cf8;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+}
+
+.gcl-tech-tag-purple {
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.15);
+}
+
+.gcl-tech-tag-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.gcl-tech-tag-red {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+}
+
+.gcl-tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Dedicated Answer Evaluation Box without stark white borders */
+.answer-eval-box {
+  padding: 1.15rem;
+  border-radius: 0.75rem;
+  background: #090f20;
+  border: 1px solid #1e293b;
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  gap: 0.85rem;
 }
 
 .table-attractive {
