@@ -1428,16 +1428,19 @@ body {
 }
 
 .team-select-btn {
-  padding: 0.75rem 0.5rem;
+  padding: 0.85rem 0.75rem;
   border-radius: 0.75rem;
-  border: none;
+  border: 1px solid #334155;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 72px;
   transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
 }
 
 .team-btn-default {
@@ -1710,7 +1713,8 @@ body {
 }
 
 .transaction-log-card {
-  max-height: 520px;
+  height: 750px;
+  max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1718,7 +1722,6 @@ body {
 
 .transaction-log-scroll {
   overflow-y: auto;
-  max-height: 400px;
   padding-right: 0.5rem;
   flex: 1;
 }
@@ -2348,13 +2351,14 @@ body {
 
 /* --- TRANSACTION LOG SCROLL & FIXED CONTAINER --- */
 .transaction-log-card {
-  max-height: 520px;
+  height: 680px;
+  max-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
 }
 
 .transaction-log-scroll {
-  max-height: 400px;
+  flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
