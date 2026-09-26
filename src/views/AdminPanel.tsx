@@ -41,7 +41,7 @@ import Notification, { type NotificationState } from '../components/Notification
 import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
-import { DEFAULT_ROUNDS_DATA, BASE_PRICE, MIN_INCREMENT } from '../data/roundsData';
+import { DEFAULT_ROUNDS_DATA, BASE_PRICE, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
 import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, GameState } from '../types/database';
 
 export default function AdminPanel() {
@@ -865,10 +865,20 @@ export default function AdminPanel() {
   };
 
   const handleTeamSelection = (id: string) => {
-    setSelectedTeamId(id);
     const rIdx = eventState?.current_round_index ?? 0;
+    const roundBase = getRoundBasePrice(rIdx);
+    const amount = parseFloat(bidAmount) || roundBase;
+    const team = teams.find((t) => t.id === id);
+    if (team && team.budget < amount) {
+      showNotification(
+        `Cannot select ${team.name}! Budget (${formatCurrency(team.budget)}) is less than the current bid (${formatCurrency(amount)}).`,
+        'error'
+      );
+      return;
+    }
+    setSelectedTeamId(id);
     const qIdx = eventState?.current_question_index ?? 0;
-    broadcastBidPreview(id, parseFloat(bidAmount) || 0, `R${rIdx + 1} - Q${qIdx + 1}`);
+    broadcastBidPreview(id, amount, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
   const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -882,10 +892,13 @@ export default function AdminPanel() {
   };
 
   const handleQuickAdd = (val: number) => {
-    const cur = parseFloat(bidAmount.replace(/[^0-9.]/g, '')) || 0;
-    const next = Math.max(0, cur + val);
-    setBidAmount(String(next));
     const rIdx = eventState?.current_round_index ?? 0;
+    const roundBase = getRoundBasePrice(rIdx);
+    const parsed = parseFloat(bidAmount.replace(/[^0-9.]/g, ''));
+    // If empty or less than round base price, start at roundBase!
+    const cur = isNaN(parsed) || parsed < roundBase ? roundBase : parsed;
+    const next = Math.max(roundBase, cur + val);
+    setBidAmount(String(next));
     const qIdx = eventState?.current_question_index ?? 0;
     broadcastBidPreview(selectedTeamId, next, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
@@ -910,9 +923,11 @@ export default function AdminPanel() {
       return;
     }
 
-    const amount = parseFloat(bidAmount);
-    if (isNaN(amount) || amount < BASE_PRICE) {
-      showNotification(`Bid amount must be at least ${formatCurrency(BASE_PRICE)}.`, 'error');
+    const rIdx = eventState?.current_round_index ?? 0;
+    const roundBase = getRoundBasePrice(rIdx);
+    const amount = parseFloat(bidAmount) || roundBase;
+    if (isNaN(amount) || amount < roundBase) {
+      showNotification(`Bid amount must be at least ${formatCurrency(roundBase)}.`, 'error');
       return;
     }
 
@@ -921,7 +936,7 @@ export default function AdminPanel() {
 
     if (winningTeam.budget < amount) {
       showNotification(
-        `Insufficient funds! ${winningTeam.name} only has ${formatCurrency(winningTeam.budget)}.`,
+        `Insufficient funds! ${winningTeam.name} only has ${formatCurrency(winningTeam.budget)}, but the bid is ${formatCurrency(amount)}.`,
         'error'
       );
       return;
@@ -932,11 +947,17 @@ export default function AdminPanel() {
 
   const handleExecuteBidSubmit = async () => {
     if (!eventState?.id || !edition?.id) return;
-    const amount = parseFloat(bidAmount);
+    const rIdx = eventState.current_round_index ?? 0;
+    const roundBase = getRoundBasePrice(rIdx);
+    const amount = parseFloat(bidAmount) || roundBase;
     const winningTeam = teams.find((t) => t.id === selectedTeamId);
     if (!winningTeam) return;
 
-    const rIdx = eventState.current_round_index ?? 0;
+    if (winningTeam.budget < amount) {
+      showNotification(`Cannot execute bid: ${winningTeam.name} only has ${formatCurrency(winningTeam.budget)}, but the bid is ${formatCurrency(amount)}!`, 'error');
+      return;
+    }
+
     const qIdx = eventState.current_question_index ?? 0;
     const currentRoundData = DEFAULT_ROUNDS_DATA[rIdx] || { name: `Round ${rIdx + 1}`, questions: [] };
     const qRef = `R${rIdx + 1} - Q${qIdx + 1}`;
@@ -1230,6 +1251,7 @@ export default function AdminPanel() {
   const isRoundEnd = roundIdx >= DEFAULT_ROUNDS_DATA.length;
   const lastCompletedRound = pastRounds.length > 0 ? pastRounds[pastRounds.length - 1] : null;
   const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
+  const roundBasePrice = getRoundBasePrice(roundIdx);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans">
@@ -1572,21 +1594,31 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {teams.map((t) => {
                   const isSelected = selectedTeamId === t.id;
+                  const currentBidVal = parseFloat(bidAmount) || roundBasePrice;
                   const isExhausted = t.budget <= 0;
-                  const isLow = !isExhausted && t.budget <= 5000000;
+                  const cannotAfford = t.budget < currentBidVal;
+                  const isLocked = isExhausted || cannotAfford;
+                  const isLow = !isExhausted && !cannotAfford && t.budget <= 5000000;
                   return (
                     <button
                       key={t.id}
                       type="button"
+                      disabled={isLocked}
                       onClick={() => handleTeamSelection(t.id)}
                       className={`team-select-btn ${
                         isSelected ? 'team-btn-selected' : 'team-btn-default'
-                      } ${isExhausted ? 'border-red-500/80 bg-red-950/20' : ''}`}
+                      } ${
+                        isLocked
+                          ? 'opacity-40 cursor-not-allowed border-red-500/30 bg-slate-900/60'
+                          : ''
+                      }`}
                     >
                       <div className="flex flex-col w-full text-left">
                         <span className="font-bold text-sm truncate w-full text-white">{t.name}</span>
                         {isExhausted ? (
-                          <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">⚠️ NO BUDGET</span>
+                          <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">⚠️ OUT OF BUDGET</span>
+                        ) : cannotAfford ? (
+                          <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">⚠️ INSUFFICIENT ({formatCurrency(t.budget)})</span>
                         ) : isLow ? (
                           <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-0.5">⚠️ {formatCurrency(t.budget)}</span>
                         ) : (
@@ -1609,7 +1641,7 @@ export default function AdminPanel() {
               <div className="flex flex-col justify-between">
                 <div>
                   <label className="input-label mb-2 block">
-                    Bid Amount (Base: {formatCurrency(BASE_PRICE)})
+                    Bid Amount (Round {roundIdx + 1} Base: {formatCurrency(roundBasePrice)})
                   </label>
                   <div className="space-y-2.5">
                     <input
@@ -1617,23 +1649,23 @@ export default function AdminPanel() {
                       inputMode="numeric"
                       value={bidAmount}
                       onChange={handleBidAmountChange}
-                      placeholder={String(BASE_PRICE)}
+                      placeholder={String(roundBasePrice)}
                       className="gcl-input font-mono text-xl"
                     />
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         type="button"
-                        onClick={() => handleQuickSet(BASE_PRICE)}
+                        onClick={() => handleQuickSet(roundBasePrice)}
                         className="quick-btn-base"
                       >
-                        {formatCurrency(BASE_PRICE)}
+                        Base ({formatCurrency(roundBasePrice)})
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(MIN_INCREMENT)}
                         className="quick-btn-inc"
                       >
-                        +{formatCurrency(MIN_INCREMENT)}
+                        + 10 L
                       </button>
                       <button
                         type="button"
@@ -1759,21 +1791,50 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {/* SOLD Action Button */}
-            <button
-              type="submit"
-              disabled={!selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE}
-              className={`btn-sold-action ${
-                !selectedTeamId || !currentItem.trim() || parseFloat(bidAmount) < BASE_PRICE
-                  ? 'btn-sold-disabled'
-                  : 'btn-sold-ready'
-              }`}
-            >
-              <CheckCircle2 size={22} fill="currentColor" />
-              {isAnswerCorrect
-                ? 'SOLD! (Correct Answer +1 Score)'
-                : 'SOLD! (Incorrect Answer +0 Score)'}
-            </button>
+            {/* SOLD Action Button with Insufficient Budget Protection */}
+            {(() => {
+              const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+              const currentBidVal = parseFloat(bidAmount) || roundBasePrice;
+              const cannotAfford = selectedTeam ? selectedTeam.budget < currentBidVal : false;
+
+              return (
+                <div className="space-y-3">
+                  {cannotAfford && selectedTeam && (
+                    <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-lg text-red-300 text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle size={16} className="text-red-400 shrink-0" />
+                      <span>
+                        Cannot execute bid: <strong>{selectedTeam.name}</strong> only has {formatCurrency(selectedTeam.budget)}, which is less than the current bid of {formatCurrency(currentBidVal)}.
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={
+                      !selectedTeamId ||
+                      !currentItem.trim() ||
+                      parseFloat(bidAmount || '0') < roundBasePrice ||
+                      cannotAfford
+                    }
+                    className={`btn-sold-action ${
+                      !selectedTeamId ||
+                      !currentItem.trim() ||
+                      parseFloat(bidAmount || '0') < roundBasePrice ||
+                      cannotAfford
+                        ? 'btn-sold-disabled'
+                        : 'btn-sold-ready'
+                    }`}
+                  >
+                    <CheckCircle2 size={22} fill="currentColor" />
+                    {cannotAfford
+                      ? 'INSUFFICIENT BUDGET TO BID'
+                      : isAnswerCorrect
+                      ? 'SOLD! (Correct Answer +1 Score)'
+                      : 'SOLD! (Incorrect Answer +0 Score)'}
+                  </button>
+                </div>
+              );
+            })()}
           </form>
 
           {/* 4. Action & Corrections Bar: Full Width below Final Bid */}
@@ -1881,20 +1942,18 @@ export default function AdminPanel() {
           <div className="space-y-8 mt-8">
             {/* 1. CURRENT ROUND SCORE */}
             <div className="scoreboard-card-current">
-              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
-                <div className="flex items-center gap-3.5 flex-wrap">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shrink-0">
-                    <Trophy size={20} />
-                  </div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-4">
+                  <Trophy size={28} className="text-cyan-400 shrink-0" />
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Current Round Score</h2>
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Current Round Score</h2>
                       <div className="gcl-tech-tag gcl-tech-tag-cyan">
                         <span className="gcl-tag-dot bg-cyan-400 shadow-[0_0_6px_#38bdf8] animate-pulse"></span>
                         ROUND {roundIdx + 1}
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-1 m-0">
                       Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
                     </p>
                   </div>
@@ -1948,20 +2007,18 @@ export default function AdminPanel() {
 
             {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
             <div className="scoreboard-card-overall">
-              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
-                <div className="flex items-center gap-3.5 flex-wrap">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 shadow-sm shrink-0">
-                    <Crown size={20} />
-                  </div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-4">
+                  <Crown size={28} className="text-yellow-400 shrink-0" />
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Overall Scoreboard</h2>
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Overall Scoreboard</h2>
                       <div className="gcl-tech-tag gcl-tech-tag-amber">
                         <span className="gcl-tag-dot bg-yellow-400 shadow-[0_0_6px_#facc15]"></span>
                         ALL ROUNDS CUMULATIVE
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-1 m-0">
                       Ranking Priority: Total Score → Total Items → Total Remaining Budget
                     </p>
                   </div>
@@ -2025,19 +2082,17 @@ export default function AdminPanel() {
 
             {/* 3. PREVIOUS ROUND SCOREBOARD */}
             <div className="scoreboard-card-previous">
-              <div className="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-slate-800/80">
-                <div className="flex items-center gap-3.5 flex-wrap">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
-                    <HistoryIcon size={20} />
-                  </div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-4">
+                  <HistoryIcon size={28} className="text-indigo-400 shrink-0" />
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-extrabold text-white tracking-tight">Previous Round Scoreboard</h2>
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Previous Round Scoreboard</h2>
                       <div className="gcl-tech-tag gcl-tech-tag-indigo">
                         ARCHIVED DATA
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-1 m-0">
                       Archived final snapshot of completed rounds
                     </p>
                   </div>
@@ -2109,20 +2164,18 @@ export default function AdminPanel() {
 
           {/* 4. TRANSACTION LOG (Positioned at the very end of Active view as requested) */}
           <div className="admin-card transaction-log-card shadow-2xl mt-8">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-700/60 flex-wrap gap-3">
-              <div className="flex items-center gap-3.5 flex-wrap">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm shrink-0">
-                  <HistoryIcon size={20} />
-                </div>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/60 flex-wrap gap-3">
+              <div className="flex items-center gap-4">
+                <HistoryIcon size={28} className="text-purple-400 shrink-0" />
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-2xl font-extrabold text-white tracking-tight">Transaction Log</h2>
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Transaction Log</h2>
                     <div className="gcl-tech-tag gcl-tech-tag-purple">
                       <span className="gcl-tag-dot bg-purple-400 shadow-[0_0_6px_#c084fc]"></span>
                       {localHistory.length} EVENTS RECORDED
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400 mt-1 m-0">
                     Real-time audit log of all sold items, corrections, and budget updates
                   </p>
                 </div>

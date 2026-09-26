@@ -92,3 +92,16 @@ export const DEFAULT_ROUNDS_DATA: RoundData[] = [
 export const BASE_PRICE = 2000000; // 20 Lakhs
 export const MIN_INCREMENT = 1000000; // 10 Lakhs
 export const ADMIN_MASTER_PASSWORD = 'GCLauction@0321';
+
+export const getRoundBasePrice = (roundIndex: number): number => {
+  switch (roundIndex) {
+    case 0:
+      return 2000000; // Round 1: 20 Lakhs
+    case 1:
+      return 3000000; // Round 2: 30 Lakhs
+    case 2:
+      return 5000000; // Round 3: 50 Lakhs
+    default:
+      return 5000000; // Tie Breaker: 50 Lakhs
+  }
+};

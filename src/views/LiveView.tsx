@@ -455,8 +455,8 @@ export default function LiveView() {
             <div className="max-w-4xl w-full mx-auto px-2">
               <div className="gcl-table-container">
                 <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
-                  <History className="text-yellow-400" size={24} />{' '}
-                  {pastRounds[pastRounds.length - 1].roundName} Summary
+                  <History className="text-yellow-400 shrink-0" size={24} />
+                  <span>{pastRounds[pastRounds.length - 1].roundName} Summary</span>
                 </h2>
 
                 <div className="grid-live-status-header">
@@ -575,6 +575,12 @@ export default function LiveView() {
 
           {/* Grand Champion Final Scoreboard (All Rounds Combined - Matching winner 2025 2.png) */}
           <div className="max-w-5xl w-full mx-auto mt-12 px-2">
+            <div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
+              <Crown size={28} className="text-yellow-400 shrink-0" />
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide text-center">
+                Final Championship Standings
+              </h2>
+            </div>
             <div className="gcl-table-container">
               {/* Header row */}
               <div className="grid-overall-header">
