@@ -452,41 +452,49 @@ export default function LiveView() {
             </div>
           </div>
           {pastRounds.length > 0 && (
-            <div className="max-w-4xl w-full mx-auto px-2">
-              <div className="gcl-table-container">
-                <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
-                  <History className="text-yellow-400 shrink-0" size={24} />
-                  <span>{pastRounds[pastRounds.length - 1].roundName} Summary</span>
-                </h2>
+            <div className="max-w-4xl w-full mx-auto px-2 space-y-8">
+              {[...pastRounds].reverse().map((roundSnapshot) => (
+                <div key={roundSnapshot.roundIndex} className="gcl-table-container">
+                  <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
+                    <History className="text-yellow-400 shrink-0" size={24} />
+                    <span>{roundSnapshot.roundName} Summary</span>
+                  </h2>
 
-                <div className="grid-live-status-header">
-                  <div>TEAM</div>
-                  <div className="text-right">TOTAL SPENT</div>
-                  <div className="text-right">REM. BUDGET</div>
-                </div>
+                  <div className="grid-live-intermission-header">
+                    <div>TEAM</div>
+                    <div className="text-center">ITEMS WON</div>
+                    <div className="text-right">TOTAL SPENT</div>
+                    <div className="text-right">REM. BUDGET</div>
+                  </div>
 
-                <div className="space-y-1">
-                  {pastRounds[pastRounds.length - 1].results.map((res, i) => (
-                    <div
-                      key={res.id || i}
-                      className={`grid-live-status-row ${res.id === myTeamId ? 'grid-live-status-me' : ''}`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span className="font-bold text-white text-base md:text-lg truncate">
-                          {res.name}
-                        </span>
-                        {res.id === myTeamId && <span className="badge-you-inline">YOU</span>}
+                  <div className="space-y-1">
+                    {roundSnapshot.results.map((res, i) => (
+                      <div
+                        key={res.id || i}
+                        className={`grid-live-intermission-row ${res.id === myTeamId ? 'grid-live-status-me' : ''}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-bold text-white text-base md:text-lg truncate">
+                            {res.name}
+                          </span>
+                          {res.id === myTeamId && <span className="badge-you-inline">YOU</span>}
+                        </div>
+                        <div className="text-center font-mono">
+                          <span className="badge-items-sm">
+                            {res.itemsCount ?? 0} {res.itemsCount === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+                        <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
+                          {formatCurrency(res.totalSpent)}
+                        </div>
+                        <div className="text-right font-mono font-bold text-green-400 text-base md:text-lg">
+                          {formatCurrency(res.remainingBudget)}
+                        </div>
                       </div>
-                      <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
-                        {formatCurrency(res.totalSpent)}
-                      </div>
-                      <div className="text-right font-mono font-bold text-green-400 text-base md:text-lg">
-                        {formatCurrency(res.remainingBudget)}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
@@ -585,7 +593,7 @@ export default function LiveView() {
               {/* Header row - Strictly no scores in Live View */}
               <div className="grid-live-final-header">
                 <div>TEAM NAME</div>
-                <div className="text-center">TOTAL ITEMS</div>
+                <div className="text-center">ITEMS WON</div>
                 <div className="text-right">TOTAL SPENT</div>
                 <div className="text-right">TOTAL REM.</div>
               </div>
@@ -634,8 +642,10 @@ export default function LiveView() {
                         </div>
                       </div>
 
-                      <div className="text-center font-semibold text-slate-200 text-lg font-mono">
-                        {team.totalItems}
+                      <div className="text-center font-mono">
+                        <span className="badge-items-sm">
+                          {team.totalItems} {team.totalItems === 1 ? 'item' : 'items'}
+                        </span>
                       </div>
 
                       <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
