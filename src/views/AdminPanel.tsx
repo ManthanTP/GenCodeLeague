@@ -109,6 +109,9 @@ export default function AdminPanel() {
     firstRevealed: false,
   });
 
+  // Podium Management Table Filter Tab ('all' | 'overall' | roundIndex)
+  const [podiumTab, setPodiumTab] = useState<'all' | 'overall' | number>('all');
+
   // Debouncing refs for question typing to prevent websocket echo glitches
   const isTypingQuestionRef = useRef(false);
   const questionDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -290,6 +293,66 @@ export default function AdminPanel() {
       return b.totalRemaining - a.totalRemaining;
     });
   }, [teams, items, edition?.starting_budget, budgetInput, currentRoundIndex]);
+
+  // Detailed scored tables for ALL individual rounds (Round 1, Round 2, Round 3, Tie Breaker)
+  const allRoundScoreboards = useMemo(() => {
+    const standardBudget = edition?.starting_budget || parseInt(budgetInput) || 50000000;
+
+    // Determine all rounds to display: at least Round 1, Round 2, Round 3
+    const roundIndices = new Set<number>([0, 1, 2]);
+    items.forEach((it) => {
+      if (typeof it.round_index === 'number') roundIndices.add(it.round_index);
+    });
+    pastRounds.forEach((p) => {
+      if (typeof p.roundIndex === 'number') roundIndices.add(p.roundIndex);
+    });
+
+    const sortedIndices = Array.from(roundIndices).sort((a, b) => a - b);
+
+    return sortedIndices.map((rIdx) => {
+      const snap = pastRounds.find((p) => p.roundIndex === rIdx);
+      const roundName =
+        snap?.roundName ||
+        DEFAULT_ROUNDS_DATA[rIdx]?.name ||
+        (rIdx === 3 ? 'Round 4 (Tie Breaker)' : `Round ${rIdx + 1}`);
+
+      // Calculate each team's score and performance specifically for this round
+      const results = teams.map((team) => {
+        const roundItems = items.filter(
+          (it) => it.team_id === team.id && it.round_index === rIdx
+        );
+        const roundScore = roundItems.filter((it) => it.is_correct).length;
+        const itemsCount = roundItems.length;
+        const totalSpent = roundItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+        // If snapshot has recorded remainingBudget, check if available
+        const snapTeam = snap?.results?.find((r) => r.id === team.id);
+        const remainingBudget =
+          snapTeam && typeof snapTeam.remainingBudget === 'number'
+            ? snapTeam.remainingBudget
+            : Math.max(0, standardBudget - totalSpent);
+
+        return {
+          id: team.id,
+          name: team.name,
+          score: roundScore,
+          itemsCount,
+          totalSpent,
+          remainingBudget,
+        };
+      }).sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.itemsCount !== a.itemsCount) return b.itemsCount - a.itemsCount;
+        return b.remainingBudget - a.remainingBudget;
+      });
+
+      return {
+        roundIndex: rIdx,
+        roundName,
+        timestamp: snap?.timestamp,
+        results,
+      };
+    });
+  }, [teams, items, pastRounds, edition?.starting_budget, budgetInput]);
 
   const selectedWinningTeam = useMemo(
     () => teams.find((t) => t.id === selectedTeamId),
@@ -2531,57 +2594,152 @@ export default function AdminPanel() {
             </div>
           </div>
 
-          {/* Reference: Calculated Stats (All Rounds) */}
-          <div className="admin-card">
-            <h3 className="card-title text-indigo-400 mb-4">
-              Reference: Calculated Stats (All Rounds)
-            </h3>
-            <div className="overflow-x-auto rounded-xl border border-slate-800">
-              <table className="w-full text-left">
-                <thead className="bg-slate-900 border-b border-slate-700">
-                  <tr className="text-slate-400 text-xs uppercase tracking-wider">
-                    <th className="p-3">RANK (AUTO)</th>
-                    <th className="p-3">TEAM</th>
-                    <th className="p-3 text-center">TOTAL SCORE</th>
-                    <th className="p-3 text-center">TOTAL ITEMS</th>
-                    <th className="p-3 text-right">TOTAL REM.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {overallStats.map((team, idx) => (
-                    <tr key={team.id} className="hover:bg-slate-800/40">
-                      <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                      <td className="p-3 font-bold text-white">{team.name}</td>
-                      <td className="p-3 text-center font-bold text-yellow-400 font-mono text-lg">
-                        {team.totalScore}
-                      </td>
-                      <td className="p-3 text-center text-slate-300 font-mono">{team.totalItems}</td>
-                      <td className="p-3 text-right font-mono text-green-400 font-bold">
-                        {formatCurrency(team.totalRemaining)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* ALL ROUND SCORED TABLES & OVERALL SCOREBOARD (Admin Only Reference) */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <Trophy size={28} className="text-yellow-400 shrink-0" />
+                <div>
+                  <h3 className="text-2xl font-black text-white m-0">All Round Scored Tables (Admin Reference)</h3>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    Official scores per round and cumulative standings. Scores are strictly hidden on Live View.
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPodiumTab('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    podiumTab === 'all'
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All Tables
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPodiumTab('overall')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    podiumTab === 'overall'
+                      ? 'bg-yellow-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Overall Standings
+                </button>
+                {allRoundScoreboards.map((r) => (
+                  <button
+                    key={r.roundIndex}
+                    type="button"
+                    onClick={() => setPodiumTab(r.roundIndex)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      podiumTab === r.roundIndex
+                        ? 'bg-indigo-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {r.roundName}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
-              <button
-                type="button"
-                onClick={handleStartTieBreaker}
-                className="btn-force-tie w-full sm:w-auto"
-              >
-                <Flag size={18} /> Force Tie Breaker (R4)
-              </button>
+            {/* 1. Overall Scoreboard */}
+            {(podiumTab === 'all' || podiumTab === 'overall') && renderOverallScoreboard()}
 
-              <button
-                type="button"
-                onClick={() => setIsConfirmingReset(true)}
-                className="btn-end-reset w-full sm:w-auto"
-              >
-                <RefreshCw size={18} /> End Event & Reset
-              </button>
+            {/* 2. Individual Round Scored Tables */}
+            {allRoundScoreboards
+              .filter((r) => podiumTab === 'all' || podiumTab === r.roundIndex)
+              .map((round) => (
+                <div key={round.roundIndex} className="admin-card space-y-3">
+                  <div className="flex justify-between items-center px-1 flex-wrap gap-2 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="gcl-tech-tag gcl-tech-tag-indigo">
+                        {round.roundName.toUpperCase()}
+                      </span>
+                      <span className="text-slate-200 font-bold text-base tracking-wide">
+                        SCORED TABLE
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono">
+                        ({round.results.length} Teams)
+                      </span>
+                    </div>
+                    {round.timestamp && (
+                      <span className="text-slate-400 text-xs font-mono bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+                        Completed at {new Date(round.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="gcl-table-container">
+                    <div className="grid-admin-score-header">
+                      <div className="text-center">RANK</div>
+                      <div>TEAM</div>
+                      <div className="text-center text-yellow-400">ROUND SCORE</div>
+                      <div className="text-center">ITEMS WON</div>
+                      <div className="text-right">ROUND SPENT</div>
+                      <div className="text-right text-green-400">REMAINING BUDGET</div>
+                    </div>
+                    <div className="space-y-1">
+                      {round.results.map((res, idx) => (
+                        <div key={res.id || idx} className="grid-admin-score-row">
+                          <div className="text-center font-mono text-slate-400 font-bold">
+                            {idx + 1}
+                          </div>
+                          <div className="font-bold text-white truncate flex items-center gap-2">
+                            <span>{res.name}</span>
+                            {idx === 0 && (res.score || 0) > 0 && (
+                              <span className="text-[10px] font-bold text-yellow-400 uppercase bg-yellow-500/20 border border-yellow-500/30 px-1.5 py-0.5 rounded">
+                                Round Leader
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-center font-black text-yellow-400 text-xl font-mono">
+                            ★ {res.score || 0}
+                          </div>
+                          <div className="text-center font-semibold text-indigo-300 font-mono">
+                            {res.itemsCount || 0}
+                          </div>
+                          <div className="text-right font-mono text-red-400 font-semibold">
+                            {formatCurrency(res.totalSpent || 0)}
+                          </div>
+                          <div className="text-right font-mono font-bold text-green-400">
+                            {formatCurrency(res.remainingBudget || 0)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            {/* Actions: Force Tie Breaker & End Event */}
+            <div className="admin-card">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <button
+                  type="button"
+                  onClick={handleStartTieBreaker}
+                  className="btn-force-tie w-full sm:w-auto"
+                >
+                  <Flag size={18} /> Force Tie Breaker (R4)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingReset(true)}
+                  className="btn-end-reset w-full sm:w-auto"
+                >
+                  <RefreshCw size={18} /> End Event & Reset
+                </button>
+              </div>
             </div>
+
+            {/* Transaction Log at end */}
+            {renderTransactionLog()}
           </div>
         </div>
       )}
