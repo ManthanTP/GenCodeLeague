@@ -4029,6 +4029,40 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(59, 130, 246, 0.5);
 }
 
+/* 4-column grid for Live View Final Standings (Scores strictly hidden):
+   TEAM NAME | TOTAL ITEMS | TOTAL SPENT | TOTAL REM. */
+.grid-live-final-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 3fr) 1.2fr 1.5fr 1.5fr;
+  align-items: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 1.25rem 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.grid-live-final-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 3fr) 1.2fr 1.5fr 1.5fr;
+  align-items: center;
+  background: #0e172e;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.95rem 1.25rem;
+  margin-bottom: 0.65rem;
+  transition: all 0.15s ease;
+}
+
+.grid-live-final-row:hover {
+  background: #131f3d;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
 /* 6-column grid for Admin Current Round Score:
    RANK | TEAM NAME | ROUND SCORE | ITEMS WON | ROUND SPENT | REMAINING BUDGET */
 .grid-admin-score-header {

@@ -573,7 +573,7 @@ export default function LiveView() {
             );
           })()}
 
-          {/* Grand Champion Final Scoreboard (All Rounds Combined - Matching winner 2025 2.png) */}
+          {/* Grand Champion Final Standings (All Rounds Combined - Scores Strictly Hidden) */}
           <div className="max-w-5xl w-full mx-auto mt-12 px-2">
             <div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
               <Crown size={28} className="text-yellow-400 shrink-0" />
@@ -582,10 +582,9 @@ export default function LiveView() {
               </h2>
             </div>
             <div className="gcl-table-container">
-              {/* Header row */}
-              <div className="grid-overall-header">
+              {/* Header row - Strictly no scores in Live View */}
+              <div className="grid-live-final-header">
                 <div>TEAM NAME</div>
-                <div className="text-center text-yellow-400 font-black">TOTAL SCORE</div>
                 <div className="text-center">TOTAL ITEMS</div>
                 <div className="text-right">TOTAL SPENT</div>
                 <div className="text-right">TOTAL REM.</div>
@@ -594,14 +593,14 @@ export default function LiveView() {
               {/* Rows */}
               <div className="space-y-1">
                 {overallStats.map((team, idx) => {
-                  const isGrandChampion = idx === 0 && team.totalScore > 0;
+                  const isGrandChampion = idx === 0 && podiumState.firstRevealed;
                   const isOutOfBudget = team.totalRemaining <= 0;
                   const isMyTeam = team.id === myTeamId;
 
                   return (
                     <div
                       key={team.id}
-                      className={`grid-overall-row ${
+                      className={`grid-live-final-row ${
                         isGrandChampion
                           ? 'gcl-row-champion'
                           : isMyTeam
@@ -633,10 +632,6 @@ export default function LiveView() {
                             </span>
                           )}
                         </div>
-                      </div>
-
-                      <div className="text-center font-black text-yellow-400 text-2xl font-mono">
-                        {team.totalScore}
                       </div>
 
                       <div className="text-center font-semibold text-slate-200 text-lg font-mono">

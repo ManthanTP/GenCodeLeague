@@ -127,19 +127,54 @@ export default function AdminPanel() {
     }
   }, [eventState?.current_item_name]);
 
-  // Sync podium state from eventState.banner_message when available
+  // Sync podium state from eventState.banner_message when available (resets if cleared/null)
   useEffect(() => {
-    if (!eventState?.banner_message) return;
+    if (!eventState?.banner_message) {
+      setPodiumState({
+        thirdTeamId: null,
+        thirdRevealed: false,
+        secondTeamId: null,
+        secondRevealed: false,
+        firstTeamId: null,
+        firstRevealed: false,
+      });
+      return;
+    }
     try {
       const parsed = JSON.parse(eventState.banner_message);
       if (parsed && typeof parsed === 'object') {
         if (parsed.podium) {
-          setPodiumState((prev) => ({ ...prev, ...parsed.podium }));
+          setPodiumState({
+            thirdTeamId: parsed.podium.thirdTeamId || null,
+            thirdRevealed: Boolean(parsed.podium.thirdRevealed),
+            secondTeamId: parsed.podium.secondTeamId || null,
+            secondRevealed: Boolean(parsed.podium.secondRevealed),
+            firstTeamId: parsed.podium.firstTeamId || null,
+            firstRevealed: Boolean(parsed.podium.firstRevealed),
+          });
         } else if (parsed.firstRevealed !== undefined || parsed.thirdRevealed !== undefined) {
           setPodiumState((prev) => ({ ...prev, ...parsed }));
+        } else {
+          setPodiumState({
+            thirdTeamId: null,
+            thirdRevealed: false,
+            secondTeamId: null,
+            secondRevealed: false,
+            firstTeamId: null,
+            firstRevealed: false,
+          });
         }
       }
-    } catch {}
+    } catch {
+      setPodiumState({
+        thirdTeamId: null,
+        thirdRevealed: false,
+        secondTeamId: null,
+        secondRevealed: false,
+        firstTeamId: null,
+        firstRevealed: false,
+      });
+    }
   }, [eventState?.banner_message]);
 
   const showNotification = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -648,11 +683,11 @@ export default function AdminPanel() {
     );
     const initialPodium = {
       thirdTeamId: podiumState.thirdTeamId || sorted[2]?.id || null,
-      thirdRevealed: podiumState.thirdRevealed,
+      thirdRevealed: Boolean(podiumState.thirdRevealed),
       secondTeamId: podiumState.secondTeamId || sorted[1]?.id || null,
-      secondRevealed: podiumState.secondRevealed,
+      secondRevealed: Boolean(podiumState.secondRevealed),
       firstTeamId: podiumState.firstTeamId || sorted[0]?.id || null,
-      firstRevealed: podiumState.firstRevealed,
+      firstRevealed: Boolean(podiumState.firstRevealed),
     };
     setPodiumState(initialPodium);
 
@@ -707,6 +742,32 @@ export default function AdminPanel() {
       `${place.toUpperCase()} place ${updated[key] ? 'REVEALED' : 'HIDDEN'} on live screen!`,
       'success'
     );
+  };
+
+  const handleHideAllReveals = () => {
+    const updated = {
+      ...podiumState,
+      firstRevealed: false,
+      secondRevealed: false,
+      thirdRevealed: false,
+    };
+    setPodiumState(updated);
+    savePodiumState(updated);
+    showNotification('All podium reveals hidden on live screen!', 'success');
+  };
+
+  const handleResetPodium = () => {
+    const updated = {
+      thirdTeamId: null,
+      thirdRevealed: false,
+      secondTeamId: null,
+      secondRevealed: false,
+      firstTeamId: null,
+      firstRevealed: false,
+    };
+    setPodiumState(updated);
+    savePodiumState(updated);
+    showNotification('Podium assignments and reveals reset.', 'success');
   };
 
   const savePodiumState = (newPodium: typeof podiumState) => {
@@ -1191,13 +1252,25 @@ export default function AdminPanel() {
     setItems([]);
     broadcastItemsChange([]);
 
+    const resetPodium = {
+      thirdTeamId: null,
+      thirdRevealed: false,
+      secondTeamId: null,
+      secondRevealed: false,
+      firstTeamId: null,
+      firstRevealed: false,
+    };
+    setPodiumState(resetPodium);
+
+    const resetPayload = JSON.stringify({ pastRounds: [], podium: resetPodium });
+
     const resetUpdates: Partial<EventState> = {
       game_state: 'setup',
       current_round_index: 0,
       current_question_index: 0,
       current_item_name: '',
       current_bid_preview: null,
-      banner_message: null,
+      banner_message: resetPayload,
       timer_state: 'stopped',
       timer_duration_seconds: 180,
       timer_remaining_seconds: 180,
@@ -1214,7 +1287,10 @@ export default function AdminPanel() {
     setSelectedTeamId(null);
     setCurrentItem('');
     setLocalHistory([]);
-    showNotification('Auction reset to initial setup state.', 'success');
+    try {
+      localStorage.removeItem('gcl_transaction_history');
+    } catch {}
+    showNotification('Auction & winners fully reset to initial setup state.', 'success');
 
     for (const t of teams) {
       supabase.from('teams').update({ budget: standardBudget, score: 0 }).eq('id', t.id).then();
@@ -2430,6 +2506,28 @@ export default function AdminPanel() {
                   {podiumState.firstRevealed ? 'Hide Champion' : 'Reveal Champion'}
                 </button>
               </div>
+            </div>
+
+            {/* Quick Actions for Podium */}
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-5 mt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleHideAllReveals}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-sm rounded-lg border border-slate-700 transition flex items-center gap-2 shadow-sm"
+                title="Keep selected teams but hide all reveals on live screen"
+              >
+                <EyeOff size={16} className="text-amber-400" />
+                Hide All Reveals
+              </button>
+              <button
+                type="button"
+                onClick={handleResetPodium}
+                className="px-4 py-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-200 hover:text-white font-bold text-sm rounded-lg border border-red-800/60 transition flex items-center gap-2 shadow-sm"
+                title="Clear selected teams and hide all reveals on live screen"
+              >
+                <RotateCcw size={16} className="text-red-400" />
+                Reset Podium (Clear & Hide)
+              </button>
             </div>
           </div>
 
