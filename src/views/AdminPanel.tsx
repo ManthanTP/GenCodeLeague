@@ -1253,6 +1253,218 @@ export default function AdminPanel() {
   const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
   const roundBasePrice = getRoundBasePrice(roundIdx);
 
+  // --- REUSABLE SCOREBOARDS (RENDERED IN BOTH ACTIVE & INTERMISSION MODES) ---
+  const renderOverallScoreboard = () => (
+    <div className="scoreboard-card-overall">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-4">
+          <Crown size={28} className="text-yellow-400 shrink-0" />
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Overall Scoreboard</h2>
+              <div className="gcl-tech-tag gcl-tech-tag-amber">
+                <span className="gcl-tag-dot bg-yellow-400 shadow-[0_0_6px_#facc15]"></span>
+                ALL ROUNDS CUMULATIVE
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 m-0">
+              Ranking Priority: Total Score → Total Items → Total Remaining Budget
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="gcl-table-container">
+        <div className="grid-overall-header">
+          <div>TEAM NAME</div>
+          <div className="text-center text-yellow-400 font-black">TOTAL SCORE</div>
+          <div className="text-center">TOTAL ITEMS</div>
+          <div className="text-right">TOTAL SPENT</div>
+          <div className="text-right">TOTAL REM.</div>
+        </div>
+
+        <div className="space-y-1">
+          {overallStats.map((team, idx) => {
+            const isGrandChampion = idx === 0 && team.totalScore > 0;
+            const isOutOfBudget = team.totalRemaining <= 0;
+            return (
+              <div
+                key={team.id}
+                className={`grid-overall-row ${isGrandChampion ? 'gcl-row-champion' : ''}`}
+              >
+                <div className="flex items-center gap-3 min-w-0 pr-2">
+                  <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                    {idx + 1}.
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white text-base truncate">{team.name}</span>
+                      {isOutOfBudget && (
+                        <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                      )}
+                    </div>
+                    {isGrandChampion && (
+                      <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
+                        GRAND CHAMPION
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-center font-black text-yellow-400 text-2xl font-mono">
+                  {team.totalScore}
+                </div>
+                <div className="text-center font-bold text-slate-200 text-lg font-mono">
+                  {team.totalItems}
+                </div>
+                <div className="text-right font-mono text-red-400 font-bold text-base">
+                  {formatCurrency(team.totalSpent)}
+                </div>
+                <div className="text-right font-mono font-black text-green-400 text-lg">
+                  {formatCurrency(team.totalRemaining)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPreviousRoundScoreboard = () => (
+    <div className="scoreboard-card-previous">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-4">
+          <HistoryIcon size={28} className="text-indigo-400 shrink-0" />
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Previous Round Scoreboard</h2>
+              <div className="gcl-tech-tag gcl-tech-tag-indigo">
+                ARCHIVED DATA
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 m-0">
+              Archived final snapshot of completed rounds
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {pastRounds.length === 0 ? (
+        <div className="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700">
+          <p className="text-slate-400 font-medium">No previous round completed yet.</p>
+          <p className="text-slate-500 text-xs mt-1">
+            When Round 1 finishes and advances to the next stage, its completed scoreboard will be displayed here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {[...pastRounds].reverse().map((snap) => (
+            <div key={snap.roundIndex} className="space-y-3">
+              <div className="flex justify-between items-center px-1 flex-wrap gap-2 mb-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="gcl-tech-tag gcl-tech-tag-indigo">
+                    {snap.roundName || `ROUND ${snap.roundIndex + 1}`}
+                  </span>
+                  <span className="text-slate-200 font-bold text-sm tracking-wide">FINAL SNAPSHOT</span>
+                </div>
+                {snap.timestamp && (
+                  <span className="text-slate-400 text-xs font-mono bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+                    Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <div className="gcl-table-container">
+                <div className="grid-admin-score-header">
+                  <div className="text-center">RANK</div>
+                  <div>TEAM</div>
+                  <div className="text-center text-yellow-400">SCORE</div>
+                  <div className="text-center">ITEMS WON</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right text-green-400">REMAINING BUDGET</div>
+                </div>
+                <div className="space-y-1">
+                  {[...(snap.results || [])]
+                    .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
+                    .map((res, idx) => (
+                      <div key={res.id || idx} className="grid-admin-score-row">
+                        <div className="text-center font-mono text-slate-400 font-bold">{idx + 1}</div>
+                        <div className="font-bold text-white truncate">{res.name}</div>
+                        <div className="text-center font-bold text-yellow-400 text-lg font-mono">
+                          {res.score || 0}
+                        </div>
+                        <div className="text-center font-semibold text-indigo-300 font-mono">
+                          {res.itemsCount || 0}
+                        </div>
+                        <div className="text-right font-mono text-red-400 font-semibold">
+                          {formatCurrency(res.totalSpent || 0)}
+                        </div>
+                        <div className="text-right font-mono font-bold text-green-400">
+                          {formatCurrency(res.remainingBudget || 0)}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderTransactionLog = () => (
+    <div className="admin-card transaction-log-card shadow-2xl mt-8">
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/60 flex-wrap gap-3">
+        <div className="flex items-center gap-4">
+          <HistoryIcon size={28} className="text-purple-400 shrink-0" />
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Transaction Log</h2>
+              <div className="gcl-tech-tag gcl-tech-tag-purple">
+                <span className="gcl-tag-dot bg-purple-400 shadow-[0_0_6px_#c084fc]"></span>
+                {localHistory.length} EVENTS RECORDED
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 m-0">
+              Real-time audit log of all sold items, corrections, and budget updates
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2 transaction-log-scroll max-h-[380px] overflow-y-auto pr-1">
+        {localHistory.length === 0 ? (
+          <p className="text-slate-500 italic text-sm py-8 text-center">
+            No transactions recorded yet. Submit bids to see live logs!
+          </p>
+        ) : (
+          localHistory.map((item) => {
+            const isSold = item.action === 'SOLD';
+            const isUndo = item.action === 'UNDO';
+            return (
+              <div
+                key={item.id}
+                className={`log-item ${
+                  isSold
+                    ? 'log-sold'
+                    : isUndo
+                    ? 'log-undo'
+                    : 'log-default'
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="log-action">{item.action}</span>
+                  <span className="log-time font-mono text-xs">{item.time}</span>
+                </div>
+                <p className="log-details mt-1">{item.details}</p>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans">
       <Header
@@ -2005,297 +2217,112 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {/* 2. OVERALL SCOREBOARD (ALL ROUNDS COMBINED - Matching winner 2025 2.png) */}
-            <div className="scoreboard-card-overall">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-4">
-                  <Crown size={28} className="text-yellow-400 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Overall Scoreboard</h2>
-                      <div className="gcl-tech-tag gcl-tech-tag-amber">
-                        <span className="gcl-tag-dot bg-yellow-400 shadow-[0_0_6px_#facc15]"></span>
-                        ALL ROUNDS CUMULATIVE
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1 m-0">
-                      Ranking Priority: Total Score → Total Items → Total Remaining Budget
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gcl-table-container">
-                <div className="grid-overall-header">
-                  <div>TEAM NAME</div>
-                  <div className="text-center text-yellow-400 font-black">TOTAL SCORE</div>
-                  <div className="text-center">TOTAL ITEMS</div>
-                  <div className="text-right">TOTAL SPENT</div>
-                  <div className="text-right">TOTAL REM.</div>
-                </div>
-
-                <div className="space-y-1">
-                  {overallStats.map((team, idx) => {
-                    const isGrandChampion = idx === 0 && team.totalScore > 0;
-                    const isOutOfBudget = team.totalRemaining <= 0;
-                    return (
-                      <div
-                        key={team.id}
-                        className={`grid-overall-row ${isGrandChampion ? 'gcl-row-champion' : ''}`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0 pr-2">
-                          <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
-                            {idx + 1}.
-                          </span>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-white text-base truncate">{team.name}</span>
-                              {isOutOfBudget && (
-                                <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                              )}
-                            </div>
-                            {isGrandChampion && (
-                              <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
-                                GRAND CHAMPION
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-center font-black text-yellow-400 text-2xl font-mono">
-                          {team.totalScore}
-                        </div>
-                        <div className="text-center font-bold text-slate-200 text-lg font-mono">
-                          {team.totalItems}
-                        </div>
-                        <div className="text-right font-mono text-red-400 font-bold text-base">
-                          {formatCurrency(team.totalSpent)}
-                        </div>
-                        <div className="text-right font-mono font-black text-green-400 text-lg">
-                          {formatCurrency(team.totalRemaining)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            {/* 2. OVERALL SCOREBOARD */}
+            {renderOverallScoreboard()}
 
             {/* 3. PREVIOUS ROUND SCOREBOARD */}
-            <div className="scoreboard-card-previous">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-4">
-                  <HistoryIcon size={28} className="text-indigo-400 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Previous Round Scoreboard</h2>
-                      <div className="gcl-tech-tag gcl-tech-tag-indigo">
-                        ARCHIVED DATA
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1 m-0">
-                      Archived final snapshot of completed rounds
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {renderPreviousRoundScoreboard()}
 
-              {pastRounds.length === 0 ? (
-                <div className="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700">
-                  <p className="text-slate-400 font-medium">No previous round completed yet.</p>
-                  <p className="text-slate-500 text-xs mt-1">
-                    When Round 1 finishes and advances to the next stage, its completed scoreboard will be displayed here.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {pastRounds.map((snap) => (
-                    <div key={snap.roundIndex} className="space-y-3">
-                      <div className="flex justify-between items-center px-1 flex-wrap gap-2 mb-2">
-                        <div className="flex items-center gap-2.5">
-                          <span className="gcl-tech-tag gcl-tech-tag-indigo">
-                            {snap.roundName || `ROUND ${snap.roundIndex + 1}`}
-                          </span>
-                          <span className="text-slate-200 font-bold text-sm tracking-wide">FINAL SNAPSHOT</span>
-                        </div>
-                        {snap.timestamp && (
-                          <span className="text-slate-400 text-xs font-mono bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
-                            Finished at {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                      <div className="gcl-table-container">
-                        <div className="grid-admin-score-header">
-                          <div className="text-center">RANK</div>
-                          <div>TEAM</div>
-                          <div className="text-center text-yellow-400">SCORE</div>
-                          <div className="text-center">ITEMS WON</div>
-                          <div className="text-right">TOTAL SPENT</div>
-                          <div className="text-right text-green-400">REMAINING BUDGET</div>
-                        </div>
-                        <div className="space-y-1">
-                          {[...(snap.results || [])]
-                            .sort((a, b) => (b.score || 0) - (a.score || 0) || b.remainingBudget - a.remainingBudget)
-                            .map((res, idx) => (
-                              <div key={res.id || idx} className="grid-admin-score-row">
-                                <div className="text-center font-mono text-slate-400 font-bold">{idx + 1}</div>
-                                <div className="font-bold text-white truncate">{res.name}</div>
-                                <div className="text-center font-bold text-yellow-400 text-lg font-mono">
-                                  {res.score || 0}
-                                </div>
-                                <div className="text-center font-semibold text-indigo-300 font-mono">
-                                  {res.itemsCount || 0}
-                                </div>
-                                <div className="text-right font-mono text-red-400 font-semibold">
-                                  {formatCurrency(res.totalSpent || 0)}
-                                </div>
-                                <div className="text-right font-mono font-bold text-green-400">
-                                  {formatCurrency(res.remainingBudget || 0)}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 4. TRANSACTION LOG (Positioned at the very end of Active view as requested) */}
-          <div className="admin-card transaction-log-card shadow-2xl mt-8">
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/60 flex-wrap gap-3">
-              <div className="flex items-center gap-4">
-                <HistoryIcon size={28} className="text-purple-400 shrink-0" />
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Transaction Log</h2>
-                    <div className="gcl-tech-tag gcl-tech-tag-purple">
-                      <span className="gcl-tag-dot bg-purple-400 shadow-[0_0_6px_#c084fc]"></span>
-                      {localHistory.length} EVENTS RECORDED
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1 m-0">
-                    Real-time audit log of all sold items, corrections, and budget updates
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 transaction-log-scroll max-h-[380px] overflow-y-auto pr-1">
-              {localHistory.length === 0 ? (
-                <p className="text-slate-500 italic text-sm py-8 text-center">
-                  No transactions recorded yet. Submit bids to see live logs!
-                </p>
-              ) : (
-                localHistory.map((item) => {
-                  const isSold = item.action === 'SOLD';
-                  const isUndo = item.action === 'UNDO';
-                  return (
-                    <div
-                      key={item.id}
-                      className={`log-item ${
-                        isSold
-                          ? 'log-sold'
-                          : isUndo
-                          ? 'log-undo'
-                          : 'log-default'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <span className="log-action">{item.action}</span>
-                        <span className="log-time font-mono text-xs">{item.time}</span>
-                      </div>
-                      <p className="log-details mt-1">{item.details}</p>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            {/* 4. TRANSACTION LOG */}
+            {renderTransactionLog()}
           </div>
         </div>
       )}
 
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
-        <div className="admin-intermission-container space-y-8 max-w-4xl mx-auto">
-          <div className="admin-card text-center p-8 space-y-6">
-            <div className="flex flex-col items-center text-cyan-400">
-              <Loader2 size={60} className="animate-spin mb-4" />
-              <h2 className="text-3xl font-extrabold text-white">Intermission in Progress</h2>
-              <p className="text-base text-slate-400 mt-2 max-w-xl">
-                {isAfterRound3 ? (
-                  <>
-                    Round 3 results are currently displayed on the live screen.
-                    <br />
-                    All standard rounds completed. Ready to start Tie Breaker or announce winners.
-                  </>
-                ) : (
-                  <>
-                    {lastCompletedRound?.roundName || `Round ${roundIdx}`} results are currently displayed on the live screen.
-                    <br />
-                    Teams will receive their reset round budgets. Ready to start {currentRoundData.name}.
-                  </>
-                )}
-              </p>
-            </div>
-
-            {isAfterRound3 ? (
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
-                <button
-                  type="button"
-                  onClick={handleStartTieBreaker}
-                  className="btn-intermission-tie w-full sm:w-auto"
-                >
-                  <Play size={20} fill="currentColor" /> START Tie Breaker
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGoToWinnerReveal}
-                  className="btn-intermission-reveal w-full sm:w-auto"
-                >
-                  <Trophy size={20} /> SKIP & REVEAL WINNERS
-                </button>
+        <div className="admin-intermission-container space-y-8">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="admin-card text-center p-8 space-y-6">
+              <div className="flex flex-col items-center text-cyan-400">
+                <Loader2 size={60} className="animate-spin mb-4" />
+                <h2 className="text-3xl font-extrabold text-white">Intermission in Progress</h2>
+                <p className="text-base text-slate-400 mt-2 max-w-xl">
+                  {isAfterRound3 ? (
+                    <>
+                      Round 3 results are currently displayed on the live screen.
+                      <br />
+                      All standard rounds completed. Ready to start Tie Breaker or announce winners.
+                    </>
+                  ) : (
+                    <>
+                      {lastCompletedRound?.roundName || `Round ${roundIdx}`} results are currently displayed on the live screen.
+                      <br />
+                      Teams will receive their reset round budgets. Ready to start {currentRoundData.name}.
+                    </>
+                  )}
+                </p>
               </div>
-            ) : (
-              <div className="flex justify-center mt-6">
-                <button
-                  type="button"
-                  onClick={handleStartNextRound}
-                  className="btn-start-round"
-                >
-                  <Play size={24} fill="currentColor" /> START {currentRoundData.name}
-                </button>
-              </div>
-            )}
-          </div>
 
-          {/* Team Management (Intermission) matching reference screenshot */}
-          <div className="admin-card">
-            <h2 className="card-title text-cyan-400 mb-1 flex items-center gap-2">
-              <Users size={20} /> Team Management (Intermission)
-            </h2>
-            <p className="text-slate-400 text-sm mb-4">Updates made here are live.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {teams.map((team, idx) => (
-                <div key={team.id} className="team-manage-item">
-                  <span className="font-mono text-slate-500 text-sm w-5">{idx + 1}.</span>
-                  <input
-                    type="text"
-                    value={team.name}
-                    onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                    className="gcl-input-inline"
-                  />
+              {isAfterRound3 ? (
+                <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
                   <button
-                    onClick={() => setTeamToRemove(team)}
-                    disabled={teams.length <= 1}
-                    className="btn-remove-circle"
+                    type="button"
+                    onClick={handleStartTieBreaker}
+                    className="btn-intermission-tie w-full sm:w-auto"
                   >
-                    <Minus size={14} />
+                    <Play size={20} fill="currentColor" /> START Tie Breaker
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGoToWinnerReveal}
+                    className="btn-intermission-reveal w-full sm:w-auto"
+                  >
+                    <Trophy size={20} /> SKIP & REVEAL WINNERS
                   </button>
                 </div>
-              ))}
+              ) : (
+                <div className="flex justify-center mt-6">
+                  <button
+                    type="button"
+                    onClick={handleStartNextRound}
+                    className="btn-start-round"
+                  >
+                    <Play size={24} fill="currentColor" /> START {currentRoundData.name}
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Team Management (Intermission) matching reference screenshot */}
+            <div className="admin-card">
+              <h2 className="card-title text-cyan-400 mb-1 flex items-center gap-2">
+                <Users size={20} /> Team Management (Intermission)
+              </h2>
+              <p className="text-slate-400 text-sm mb-4">Updates made here are live.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {teams.map((team, idx) => (
+                  <div key={team.id} className="team-manage-item">
+                    <span className="font-mono text-slate-500 text-sm w-5">{idx + 1}.</span>
+                    <input
+                      type="text"
+                      value={team.name}
+                      onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                      className="gcl-input-inline"
+                    />
+                    <button
+                      onClick={() => setTeamToRemove(team)}
+                      disabled={teams.length <= 1}
+                      className="btn-remove-circle"
+                    >
+                      <Minus size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* FULL WIDTH: Intermission Scoreboards & Standings Section */}
+          <div className="space-y-8 mt-8">
+            {/* 1. PREVIOUS ROUND SCOREBOARD */}
+            {renderPreviousRoundScoreboard()}
+
+            {/* 2. OVERALL SCOREBOARD */}
+            {renderOverallScoreboard()}
+
+            {/* 3. TRANSACTION LOG */}
+            {renderTransactionLog()}
           </div>
         </div>
       )}
