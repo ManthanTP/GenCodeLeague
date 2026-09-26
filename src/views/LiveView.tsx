@@ -97,7 +97,7 @@ export default function LiveView() {
 
   const currentRoundIndex = eventState?.current_round_index ?? 0;
 
-  // Current Round Stats for LiveView
+  // Current Round Stats for LiveView (Sorted A to Z)
   const currentRoundStats = useMemo(() => {
     return teams.map((team) => {
       const roundTeamItems = items.filter(
@@ -113,14 +113,10 @@ export default function LiveView() {
         roundSpent,
         remainingBudget: team.budget,
       };
-    }).sort((a, b) => {
-      if (b.roundScore !== a.roundScore) return b.roundScore - a.roundScore;
-      if (b.roundItemsCount !== a.roundItemsCount) return b.roundItemsCount - a.roundItemsCount;
-      return b.remainingBudget - a.remainingBudget;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [teams, items, currentRoundIndex]);
 
-  // Overall Stats across ALL rounds combined (Point 5: matching winner 2025 2.png)
+  // Overall Stats across ALL rounds combined (Sorted strictly A to Z, not rank)
   const overallStats = useMemo(() => {
     const standardBudget = edition?.starting_budget || 50000000;
     const roundsCount = Math.max(1, currentRoundIndex + 1);
@@ -140,15 +136,15 @@ export default function LiveView() {
         totalSpent,
         totalRemaining,
       };
-    }).sort((a, b) => {
-      // 1. Highest total score
-      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-      // 2. Highest total items
-      if (b.totalItems !== a.totalItems) return b.totalItems - a.totalItems;
-      // 3. Highest total remaining budget
-      return b.totalRemaining - a.totalRemaining;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [teams, items, edition?.starting_budget, currentRoundIndex]);
+
+  // Sorted teams for dropdown selects (A to Z)
+  const sortedTeamsDropdown = useMemo(() => {
+    return [...teams].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+  }, [teams]);
 
   // Last successful bid derived from team_items (Result: Correct/Incorrect hidden from live view)
   const lastBidDetails = useMemo(() => {
@@ -255,7 +251,7 @@ export default function LiveView() {
                 className="gcl-select"
               >
                 <option value="">-- I am just a viewer --</option>
-                {teams.map((t) => (
+                {sortedTeamsDropdown.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
@@ -277,7 +273,7 @@ export default function LiveView() {
               className="gcl-select-compact"
             >
               <option value="">Viewing as Guest (Select Team)</option>
-              {teams.map((t) => (
+              {sortedTeamsDropdown.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -468,7 +464,9 @@ export default function LiveView() {
                   </div>
 
                   <div className="space-y-1">
-                    {roundSnapshot.results.map((res, i) => (
+                    {[...roundSnapshot.results]
+                      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                      .map((res, i) => (
                       <div
                         key={res.id || i}
                         className={`grid-live-intermission-row ${res.id === myTeamId ? 'grid-live-status-me' : ''}`}
@@ -600,8 +598,8 @@ export default function LiveView() {
 
               {/* Rows */}
               <div className="space-y-1">
-                {overallStats.map((team, idx) => {
-                  const isGrandChampion = idx === 0 && podiumState.firstRevealed;
+                {overallStats.map((team) => {
+                  const isGrandChampion = team.id === podiumState.firstTeamId && podiumState.firstRevealed;
                   const isOutOfBudget = team.totalRemaining <= 0;
                   const isMyTeam = team.id === myTeamId;
 
@@ -616,30 +614,22 @@ export default function LiveView() {
                           : ''
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0 pr-2">
-                        <span
-                          className={`font-mono font-bold text-lg ${
-                            isGrandChampion ? 'text-yellow-400' : 'text-blue-400'
-                          }`}
-                        >
-                          {idx + 1}.
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        {isGrandChampion && (
+                          <Crown size={20} className="text-yellow-400 shrink-0 animate-bounce" />
+                        )}
+                        <span className="font-bold text-white text-base md:text-lg truncate">
+                          {team.name}
                         </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-white text-base md:text-lg truncate">
-                              {team.name}
-                            </span>
-                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                            {isOutOfBudget && (
-                              <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                            )}
-                          </div>
-                          {isGrandChampion && (
-                            <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
-                              GRAND CHAMPION
-                            </span>
-                          )}
-                        </div>
+                        {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                        {isOutOfBudget && (
+                          <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                        )}
+                        {isGrandChampion && (
+                          <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 rounded-full ml-1">
+                            GRAND CHAMPION
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-center font-mono">

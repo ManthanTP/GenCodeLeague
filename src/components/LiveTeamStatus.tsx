@@ -9,8 +9,10 @@ interface LiveTeamStatusProps {
 }
 
 export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: LiveTeamStatusProps) {
-  // Sort teams by sort_order or name
-  const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
+  // Sort teams strictly alphabetically A to Z (not rank)
+  const sortedTeams = [...teams].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  );
 
   return (
     <div className="mt-10 max-w-4xl w-full mx-auto">
