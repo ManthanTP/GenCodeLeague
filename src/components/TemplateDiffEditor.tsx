@@ -200,7 +200,7 @@ export default function TemplateDiffEditor({
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <span
-                    className="w-3.5 h-3.5 rounded-full shadow-[0_0_8px]"
+                    className="w-3.5 h-3.5 rounded-full shadow-md"
                     style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
                   />
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
@@ -404,7 +404,7 @@ export default function TemplateDiffEditor({
               <div className="space-y-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-glow-emerald" />
                     <span className="font-bold text-white text-sm">
                       Version {currentActiveTemplate.version} (Current Active)
                     </span>
@@ -436,10 +436,10 @@ export default function TemplateDiffEditor({
               </div>
 
               {/* Right Pane: Version N+1 (Draft) */}
-              <div className="space-y-3 p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/40 shadow-[0_0_20px_rgba(0,240,255,0.1)]">
+              <div className="space-y-3 p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/40 shadow-glow-cyan">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-glow-cyan" />
                     <span className="font-bold text-white text-sm">
                       Version {nextVersionNumber} (Draft Preview)
                     </span>
@@ -490,7 +490,7 @@ export default function TemplateDiffEditor({
                   type="button"
                   onClick={handlePublishNewVersion}
                   disabled={isPublishing}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-xs shadow-[0_0_20px_rgba(0,240,255,0.4)] flex items-center gap-2 transition-all disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-xs shadow-glow-cyan flex items-center gap-2 transition-all disabled:opacity-50"
                 >
                   {isPublishing ? (
                     'Publishing...'

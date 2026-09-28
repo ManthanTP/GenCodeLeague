@@ -363,7 +363,7 @@ export default function AdminCertificateManager({
       {/* Top Banner & Fast Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-cyan-500/30 backdrop-blur-md shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-glow-cyan">
             <Award size={26} />
           </div>
           <div>
@@ -382,7 +382,7 @@ export default function AdminCertificateManager({
         {onNavigateBulk && (
           <button
             onClick={onNavigateBulk}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-sm border border-indigo-400/30 flex items-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all shrink-0"
+            className="px-5 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-sm border border-indigo-400/30 flex items-center gap-2 shadow-glow-blue transition-all shrink-0"
           >
             <Layers size={18} /> Bulk Generation (CSV) →
           </button>
@@ -396,7 +396,7 @@ export default function AdminCertificateManager({
           onClick={() => setManagerSubTab('issue')}
           className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
             managerSubTab === 'issue'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-glow-cyan'
               : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -407,7 +407,7 @@ export default function AdminCertificateManager({
           onClick={() => setManagerSubTab('templates')}
           className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
             managerSubTab === 'templates'
-              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-glow-purple'
               : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -536,7 +536,7 @@ export default function AdminCertificateManager({
               <button
                 type="submit"
                 disabled={generating || !recipientName.trim()}
-                className="btn-login-submit w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold shadow-[0_0_25px_rgba(0,240,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="btn-login-submit w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {generating ? (
                   <>

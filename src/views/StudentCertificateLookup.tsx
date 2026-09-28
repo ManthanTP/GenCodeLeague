@@ -231,7 +231,7 @@ export default function StudentCertificateLookup() {
             <button
               type="submit"
               disabled={loading || !searchName.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-[0_0_20px_rgba(0,240,255,0.3)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0"
             >
               <Search size={16} />
               {loading ? 'Searching...' : 'Search'}
@@ -355,7 +355,7 @@ export default function StudentCertificateLookup() {
                           <button
                             onClick={() => handleDownload(cert)}
                             disabled={downloadingId === cert.certificate_id}
-                            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
                           >
                             <Download size={13} />
                             {downloadingId === cert.certificate_id ? 'Downloading...' : 'Download'}
@@ -433,7 +433,7 @@ export default function StudentCertificateLookup() {
                 </button>
                 <button
                   onClick={() => handleDownload(previewCert)}
-                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan"
                 >
                   <Download size={14} /> Download PDF
                 </button>

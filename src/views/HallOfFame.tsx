@@ -104,7 +104,7 @@ export default function HallOfFame() {
 
         {/* Hero Section */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-mono font-bold tracking-wider shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-mono font-bold tracking-wider shadow-glow-gold">
             <Crown size={15} /> GCL HISTORICAL ARCHIVES
           </div>
           <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight uppercase">
@@ -270,8 +270,8 @@ export default function HallOfFame() {
                   {/* 3D Cyber Podium Trio */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Champion (1st Place) */}
-                    <div className="order-1 md:order-2 p-5 rounded-2xl bg-gradient-to-b from-yellow-950/40 via-slate-900/80 to-slate-950 border-2 border-yellow-500/60 shadow-[0_0_30px_rgba(234,179,8,0.2)] flex flex-col items-center text-center relative">
-                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 border-2 border-yellow-400 flex items-center justify-center text-yellow-400 mb-2 shadow-[0_0_15px_#facc15]">
+                    <div className="order-1 md:order-2 p-5 rounded-2xl bg-gradient-to-b from-yellow-950/40 via-slate-900/80 to-slate-950 border-2 border-yellow-500/60 shadow-glow-gold flex flex-col items-center text-center relative">
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 border-2 border-yellow-400 flex items-center justify-center text-yellow-400 mb-2 shadow-glow-gold">
                         <Crown size={26} />
                       </div>
                       <span className="text-[10px] font-black tracking-widest text-yellow-400 uppercase font-mono">

@@ -62,45 +62,41 @@ export default function Header({
                 <span>LIVE</span>
               </div>
 
-              <nav className="hidden lg:flex items-center gap-3 text-xs font-mono text-slate-400">
+              <nav className="hidden xl:flex items-center gap-1.5 ml-2">
                 <button
                   type="button"
                   onClick={() => navigate('/hall-of-fame')}
-                  className="hover:text-yellow-400 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-yellow-400 hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/30 transition-all flex items-center gap-1.5"
                 >
-                  Hall of Fame
+                  <span className="text-yellow-400">★</span> Hall of Fame
                 </button>
-                <span className="text-slate-700">•</span>
                 <button
                   type="button"
                   onClick={() => navigate('/my-certificates')}
-                  className="hover:text-cyan-400 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
                 >
-                  Certificates
+                  <span className="text-cyan-400">◈</span> Certificates
                 </button>
-                <span className="text-slate-700">•</span>
                 <button
                   type="button"
                   onClick={() => navigate('/gallery')}
-                  className="hover:text-cyan-400 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
                 >
-                  Gallery
+                  <span className="text-cyan-400">▣</span> Gallery
                 </button>
-                <span className="text-slate-700">•</span>
                 <button
                   type="button"
                   onClick={() => navigate('/announcements')}
-                  className="hover:text-cyan-400 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
                 >
-                  Announcements
+                  <span className="text-cyan-400">▲</span> Updates
                 </button>
-                <span className="text-slate-700">•</span>
                 <button
                   type="button"
                   onClick={() => navigate('/faq')}
-                  className="hover:text-cyan-400 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
                 >
-                  FAQ
+                  <span className="text-cyan-400">?</span> FAQ
                 </button>
               </nav>
             </div>

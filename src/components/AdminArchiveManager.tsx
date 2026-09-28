@@ -478,7 +478,7 @@ export default function AdminArchiveManager({
       {/* Archive Header */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-yellow-500/30 backdrop-blur-md shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-400/40 flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+          <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-400/40 flex items-center justify-center text-yellow-400 shadow-glow-gold">
             <Archive size={26} />
           </div>
           <div>
@@ -610,7 +610,7 @@ export default function AdminArchiveManager({
             type="button"
             onClick={handleFinalizeEdition}
             disabled={isFinalizing || !championId || !runnerUpId || !thirdPlaceId}
-            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-extrabold text-sm shadow-[0_0_20px_rgba(234,179,8,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-extrabold text-sm shadow-glow-gold disabled:opacity-40 transition-all flex items-center justify-center gap-2"
           >
             {isFinalizing ? 'Finalizing Archive...' : 'Finalize & Lock Edition'}
           </button>
@@ -717,7 +717,7 @@ export default function AdminArchiveManager({
             <button
               type="submit"
               disabled={savingSponsor || !sponsorName.trim()}
-              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)] disabled:opacity-50"
+              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs transition-all shadow-glow-cyan disabled:opacity-50"
             >
               {savingSponsor ? 'Adding...' : '+ Add Sponsor'}
             </button>
@@ -822,7 +822,7 @@ export default function AdminArchiveManager({
           </div>
 
           <div>
-            <label className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all">
+            <label className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-glow-cyan transition-all">
               <Upload size={14} />
               {uploadingPhoto ? 'Uploading Photo...' : 'Select & Upload Photo'}
               <input
@@ -853,7 +853,7 @@ export default function AdminArchiveManager({
             type="button"
             onClick={handleExportEdition}
             disabled={exporting || !selectedEditionId}
-            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold text-xs shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {exporting ? 'Packing JSON Bundle...' : 'Download Complete Edition Snapshot (JSON)'}
           </button>
@@ -906,7 +906,7 @@ export default function AdminArchiveManager({
                 type="button"
                 onClick={handleExecuteImport}
                 disabled={isImporting}
-                className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2"
               >
                 {isImporting ? 'Executing Import...' : 'Confirm & Create New Edition'}
               </button>

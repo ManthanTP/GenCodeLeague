@@ -21,7 +21,7 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
           Live Team Status
         </h2>
         <span className="gcl-tech-tag gcl-tech-tag-emerald">
-          <span className="gcl-tag-dot bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"></span>
+          <span className="gcl-tag-dot bg-emerald-400 shadow-glow-emerald animate-pulse"></span>
           REAL-TIME
         </span>
       </div>

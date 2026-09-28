@@ -157,7 +157,7 @@ export default function EditionDetail() {
               </Link>
               <Link
                 to={`/my-certificates?edition=${edition?.id}`}
-                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
               >
                 <FileText size={15} /> Issued Certificates
               </Link>
@@ -179,8 +179,8 @@ export default function EditionDetail() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Champion */}
-              <div className="order-1 md:order-2 p-6 rounded-3xl bg-gradient-to-b from-yellow-950/40 via-slate-900/90 to-slate-950 border-2 border-yellow-500/70 shadow-[0_0_40px_rgba(234,179,8,0.25)] flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-yellow-500/20 border-2 border-yellow-400 flex items-center justify-center text-yellow-400 mb-3 shadow-[0_0_20px_#facc15]">
+              <div className="order-1 md:order-2 p-6 rounded-3xl bg-gradient-to-b from-yellow-950/40 via-slate-900/90 to-slate-950 border-2 border-yellow-500/70 shadow-glow-gold flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-yellow-500/20 border-2 border-yellow-400 flex items-center justify-center text-yellow-400 mb-3 shadow-glow-gold">
                   <Crown size={32} />
                 </div>
                 <span className="text-xs font-black tracking-widest text-yellow-400 uppercase font-mono">

@@ -248,7 +248,7 @@ export default function VerifyCertificate() {
             {cert.status === 'valid' ? (
               <div className="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 backdrop-blur-md shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4 text-center sm:text-left">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-400 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                  <div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-400 flex items-center justify-center shrink-0 shadow-glow-emerald">
                     <ShieldCheck size={32} className="text-emerald-400" />
                   </div>
                   <div>
@@ -278,7 +278,7 @@ export default function VerifyCertificate() {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
                   >
                     <Download size={16} />
                     {downloading ? 'Downloading...' : 'Download PDF'}

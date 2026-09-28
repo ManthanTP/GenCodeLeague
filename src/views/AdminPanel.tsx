@@ -1407,7 +1407,7 @@ export default function AdminPanel() {
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Overall Scoreboard</h2>
               <div className="gcl-tech-tag gcl-tech-tag-amber">
-                <span className="gcl-tag-dot bg-yellow-400 shadow-[0_0_6px_#facc15]"></span>
+                <span className="gcl-tag-dot bg-yellow-400 shadow-glow-gold"></span>
                 ALL ROUNDS CUMULATIVE
               </div>
             </div>
@@ -1565,7 +1565,7 @@ export default function AdminPanel() {
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Transaction Log</h2>
               <div className="gcl-tech-tag gcl-tech-tag-purple">
-                <span className="gcl-tag-dot bg-purple-400 shadow-[0_0_6px_#c084fc]"></span>
+                <span className="gcl-tag-dot bg-purple-400 shadow-glow-purple"></span>
                 {localHistory.length} EVENTS RECORDED
               </div>
             </div>
@@ -1641,7 +1641,7 @@ export default function AdminPanel() {
             onClick={() => setAdminActiveTab('auction')}
             className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
               adminActiveTab === 'auction'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-glow-blue'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -1652,7 +1652,7 @@ export default function AdminPanel() {
             onClick={() => setAdminActiveTab('certificates')}
             className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
               adminActiveTab === 'certificates'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-[0_0_15px_rgba(0,240,255,0.5)]'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-glow-cyan'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -2133,12 +2133,12 @@ export default function AdminPanel() {
                   <label className="input-label mb-0">Answer Evaluation</label>
                   {isAnswerCorrect ? (
                     <span className="gcl-tech-tag gcl-tech-tag-emerald">
-                      <span className="gcl-tag-dot bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"></span>
+                      <span className="gcl-tag-dot bg-emerald-400 shadow-glow-emerald animate-pulse"></span>
                       AWARD: +1 POINT
                     </span>
                   ) : (
                     <span className="gcl-tech-tag gcl-tech-tag-red">
-                      <span className="gcl-tag-dot bg-red-400 shadow-[0_0_6px_#f87171]"></span>
+                      <span className="gcl-tag-dot bg-red-400 shadow-glow-red"></span>
                       AWARD: 0 POINTS
                     </span>
                   )}
@@ -2185,7 +2185,7 @@ export default function AdminPanel() {
                         </span>
                       </div>
                       {!isAnswerCorrect && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_#ef4444] shrink-0"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-glow-red shrink-0"></span>
                       )}
                     </button>
 
@@ -2216,7 +2216,7 @@ export default function AdminPanel() {
                         </span>
                       </div>
                       {isAnswerCorrect && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_#22c55e] shrink-0"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-glow-emerald shrink-0"></span>
                       )}
                     </button>
                   </div>
@@ -2382,7 +2382,7 @@ export default function AdminPanel() {
                     <div className="flex items-center gap-3 flex-wrap">
                       <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Current Round Score</h2>
                       <div className="gcl-tech-tag gcl-tech-tag-cyan">
-                        <span className="gcl-tag-dot bg-cyan-400 shadow-[0_0_6px_#38bdf8] animate-pulse"></span>
+                        <span className="gcl-tag-dot bg-cyan-400 shadow-glow-cyan animate-pulse"></span>
                         ROUND {roundIdx + 1}
                       </div>
                     </div>

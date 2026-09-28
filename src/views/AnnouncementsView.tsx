@@ -120,7 +120,7 @@ export default function AnnouncementsView() {
           {isMasterAuthed && (
             <button
               onClick={() => setIsCreating(true)}
-              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
             >
               <Plus size={15} /> Post Announcement
             </button>
@@ -161,7 +161,7 @@ export default function AnnouncementsView() {
                 key={ann.id}
                 className={`p-6 rounded-2xl border backdrop-blur-md transition-all shadow-xl space-y-3 ${
                   ann.is_pinned
-                    ? 'bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-cyan-500/50 shadow-[0_0_25px_rgba(0,240,255,0.1)]'
+                    ? 'bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-cyan-500/50 shadow-glow-cyan'
                     : 'bg-slate-900/60 border-slate-800'
                 }`}
               >
