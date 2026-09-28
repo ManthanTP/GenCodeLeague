@@ -5,11 +5,13 @@ import AdminPanel from './views/AdminPanel';
 import AdminLogin from './views/AdminLogin';
 import TeamConsole from './views/TeamConsole';
 import TeamLogin from './views/TeamLogin';
+import VerifyCertificate from './views/VerifyCertificate';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<LiveView />} />
+      <Route path="/verify/:certificateId" element={<VerifyCertificate />} />
       <Route path="/123456789/GCL-0321/admin/login" element={<AdminLogin />} />
       <Route path="/123456789/GCL-0321/admin" element={<AdminPanel />} />
       <Route path="/team" element={<TeamConsole />} />

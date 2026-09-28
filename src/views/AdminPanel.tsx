@@ -29,7 +29,9 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Award,
 } from 'lucide-react';
+import AdminCertificateManager from '../components/AdminCertificateManager';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEventState, broadcastStateChange } from '../hooks/useEventState';
@@ -69,6 +71,7 @@ export default function AdminPanel() {
   }, [authLoading, isAdmin, navigate]);
 
   // UI States
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates'>('auction');
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
@@ -1628,8 +1631,51 @@ export default function AdminPanel() {
         />
       )}
 
-      {/* 1. SETUP STATE */}
-      {gameState === 'setup' && (
+      {/* Admin Tab Switcher */}
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setAdminActiveTab('auction')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+              adminActiveTab === 'auction'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Hammer size={16} /> LIVE AUCTION CONSOLE
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminActiveTab('certificates')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+              adminActiveTab === 'certificates'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-[0_0_15px_rgba(0,240,255,0.5)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Award size={16} /> CERTIFICATE HUB
+          </button>
+        </div>
+      </div>
+
+      {/* CERTIFICATES TAB */}
+      {adminActiveTab === 'certificates' && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <AdminCertificateManager
+            currentEdition={edition}
+            teams={teams}
+            onShowToast={showNotification}
+            onNavigateBulk={() => navigate('/123456789/GCL-0321/admin/certificates/bulk')}
+          />
+        </div>
+      )}
+
+      {/* LIVE AUCTION CONSOLE */}
+      {adminActiveTab === 'auction' && (
+        <>
+          {/* 1. SETUP STATE */}
+          {gameState === 'setup' && (
         <div className="admin-setup-container">
           <div className="admin-card">
             <div className="flex items-center gap-3 mb-6 text-blue-400">
@@ -2742,6 +2788,8 @@ export default function AdminPanel() {
             {renderTransactionLog()}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* --- CONFIRMATION MODALS (Point 7) --- */}

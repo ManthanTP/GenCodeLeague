@@ -240,3 +240,101 @@ CREATE POLICY "Admin all round_questions" ON round_questions FOR ALL USING (
 CREATE POLICY "Admin all team_members" ON team_members FOR ALL USING (
   true
 );
+
+-- ==========================================
+-- PHASE 1: GCL Certificates & Audit Log
+-- ==========================================
+
+-- 11. Certificate Templates
+CREATE TABLE IF NOT EXISTS certificate_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certificate_type TEXT NOT NULL,
+  version INT NOT NULL DEFAULT 1,
+  design_config JSONB NOT NULL DEFAULT '{
+    "title": "Certificate of Participation",
+    "subtitle": "has actively participated in GenCode League",
+    "primary_color": "#00f0ff",
+    "secondary_color": "#7000ff",
+    "background_style": "dark_cyber",
+    "border_style": "neon_glow",
+    "signature_title_1": "Faculty Coordinator",
+    "signature_name_1": "GenCode League",
+    "signature_title_2": "Convenor",
+    "signature_name_2": "Department of CSE"
+  }'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  CONSTRAINT uq_certificate_template_type_version UNIQUE (certificate_type, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cert_templates_type_active 
+  ON certificate_templates (certificate_type, is_active);
+
+-- 12. Certificates
+CREATE TABLE IF NOT EXISTS certificates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certificate_id TEXT NOT NULL UNIQUE,
+  edition_id UUID NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  recipient_name TEXT NOT NULL,
+  certificate_type TEXT NOT NULL,
+  template_id UUID NOT NULL REFERENCES certificate_templates(id) ON DELETE RESTRICT,
+  template_version INT NOT NULL DEFAULT 1,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  status TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', 'revoked')),
+  revoked_reason TEXT DEFAULT NULL,
+  pdf_url TEXT DEFAULT NULL,
+  verify_view_count INT NOT NULL DEFAULT 0,
+  CONSTRAINT chk_revoked_reason_required 
+    CHECK (status != 'revoked' OR (revoked_reason IS NOT NULL AND length(trim(revoked_reason)) > 0))
+);
+
+CREATE INDEX IF NOT EXISTS idx_certificates_cert_id ON certificates (certificate_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_edition_id ON certificates (edition_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_recipient_name ON certificates (lower(recipient_name));
+CREATE INDEX IF NOT EXISTS idx_certificates_team_id ON certificates (team_id);
+
+-- 13. Audit Log
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id TEXT DEFAULT 'admin',
+  action TEXT NOT NULL,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log (action);
+
+-- Counter function for public verification page
+CREATE OR REPLACE FUNCTION increment_certificate_view_count(target_certificate_id TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE certificates
+  SET verify_view_count = verify_view_count + 1
+  WHERE certificate_id = target_certificate_id;
+END;
+$$;
+
+-- RLS for Certificates & Audit Log
+ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read certificate_templates" ON certificate_templates;
+DROP POLICY IF EXISTS "Admin all certificate_templates" ON certificate_templates;
+DROP POLICY IF EXISTS "Public read certificates" ON certificates;
+DROP POLICY IF EXISTS "Admin all certificates" ON certificates;
+DROP POLICY IF EXISTS "Admin read audit_log" ON audit_log;
+DROP POLICY IF EXISTS "Admin insert audit_log" ON audit_log;
+
+CREATE POLICY "Public read certificate_templates" ON certificate_templates FOR SELECT USING (true);
+CREATE POLICY "Admin all certificate_templates" ON certificate_templates FOR ALL USING (true);
+CREATE POLICY "Public read certificates" ON certificates FOR SELECT USING (true);
+CREATE POLICY "Admin all certificates" ON certificates FOR ALL USING (true);
+CREATE POLICY "Admin read audit_log" ON audit_log FOR SELECT USING (true);
+CREATE POLICY "Admin insert audit_log" ON audit_log FOR INSERT WITH CHECK (true);
+
