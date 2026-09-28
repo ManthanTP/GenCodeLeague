@@ -16,9 +16,11 @@ import {
   ShieldAlert,
   ChevronRight,
   Layers,
+  Palette,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import CertificatePreview from './CertificatePreview';
+import TemplateDiffEditor from './TemplateDiffEditor';
 import {
   generateCertificateId,
   getEditionCode,
@@ -60,6 +62,9 @@ export default function AdminCertificateManager({
   onShowToast,
   onNavigateBulk,
 }: AdminCertificateManagerProps) {
+  // Navigation subtab state
+  const [managerSubTab, setManagerSubTab] = useState<'issue' | 'templates'>('issue');
+
   // Form states
   const [editions, setEditions] = useState<Edition[]>([]);
   const [selectedEditionId, setSelectedEditionId] = useState<string>(
@@ -384,6 +389,39 @@ export default function AdminCertificateManager({
         )}
       </div>
 
+      {/* Subtab Navigation Switcher */}
+      <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl backdrop-blur-md w-fit">
+        <button
+          type="button"
+          onClick={() => setManagerSubTab('issue')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+            managerSubTab === 'issue'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Award size={15} /> ISSUE & REGISTRY
+        </button>
+        <button
+          type="button"
+          onClick={() => setManagerSubTab('templates')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+            managerSubTab === 'templates'
+              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Palette size={15} /> TEMPLATE STUDIO & DIFF
+        </button>
+      </div>
+
+      {managerSubTab === 'templates' ? (
+        <TemplateDiffEditor
+          onShowToast={onShowToast}
+          onTemplatesUpdated={loadTemplates}
+        />
+      ) : (
+        <>
       {/* Main Single Certificate Generation Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* Left Form: Form Inputs */}
@@ -784,6 +822,8 @@ export default function AdminCertificateManager({
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Revocation Confirmation Modal */}
       {certToRevoke && (
