@@ -85,6 +85,7 @@ export default function AdminCertificateManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [previewScale, setPreviewScale] = useState<number>(0.56);
 
   // Revoke Modal State
   const [certToRevoke, setCertToRevoke] = useState<Certificate | null>(null);
@@ -425,22 +426,27 @@ export default function AdminCertificateManager({
       {/* Main Single Certificate Generation Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* Left Form: Form Inputs */}
-        <div className="xl:col-span-5 bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
-          <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-800 text-cyan-400 font-bold text-lg">
-            <Plus size={20} />
-            <span>Issue Single Certificate</span>
+        <div className="xl:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-7 backdrop-blur-xl shadow-2xl space-y-5">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2.5 text-cyan-400 font-black text-base">
+              <Plus size={20} />
+              <span>Issue Single Certificate</span>
+            </div>
+            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded-full border border-cyan-800">
+              CRYPTOGRAPHIC v1.0
+            </span>
           </div>
 
           <form onSubmit={handleGenerateCertificate} className="space-y-4">
             {/* Edition Selection */}
             <div>
-              <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
+              <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
                 Target Edition
               </label>
               <select
                 value={selectedEditionId}
                 onChange={(e) => setSelectedEditionId(e.target.value)}
-                className="gcl-input w-full"
+                className="gcl-input w-full font-mono text-xs"
                 required
               >
                 {editions.map((ed) => (
@@ -453,7 +459,7 @@ export default function AdminCertificateManager({
 
             {/* Recipient Full Name */}
             <div>
-              <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
+              <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
                 Recipient Full Name *
               </label>
               <input
@@ -461,58 +467,59 @@ export default function AdminCertificateManager({
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
                 placeholder="e.g. Alex Rivera"
-                className="gcl-input w-full font-medium"
+                className="gcl-input w-full font-bold text-sm tracking-wide text-white"
                 required
               />
             </div>
 
-            {/* Team Affiliation (Optional) */}
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
-                Team Affiliation (Optional)
-              </label>
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="gcl-input w-full"
-              >
-                <option value="">None / Individual Participant</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* 2-Column Subgrid: Team Affiliation + Certificate Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
+                  Team Affiliation
+                </label>
+                <select
+                  value={selectedTeamId}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  className="gcl-input w-full text-xs"
+                >
+                  <option value="">None / Solo</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Certificate Type */}
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
-                Certificate Type
-              </label>
-              <select
-                value={certificateType}
-                onChange={(e) =>
-                  setCertificateType(e.target.value as CertificateType)
-                }
-                className="gcl-input w-full capitalize"
-              >
-                {CERTIFICATE_TYPES.map((ct) => (
-                  <option key={ct.type} value={ct.type}>
-                    {ct.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
+                  Certificate Type
+                </label>
+                <select
+                  value={certificateType}
+                  onChange={(e) =>
+                    setCertificateType(e.target.value as CertificateType)
+                  }
+                  className="gcl-input w-full capitalize text-xs"
+                >
+                  {CERTIFICATE_TYPES.map((ct) => (
+                    <option key={ct.type} value={ct.type}>
+                      {ct.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Template Version Selection */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">
+                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">
                   Design Template
                 </label>
                 {activeTemplate?.is_active && (
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded">
+                  <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded">
                     Active / Published
                   </span>
                 )}
@@ -532,11 +539,11 @@ export default function AdminCertificateManager({
             </div>
 
             {/* Generation Submit Button */}
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={generating || !recipientName.trim()}
-                className="btn-login-submit w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500 hover:from-cyan-300 hover:to-teal-400 text-black font-black text-sm shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 {generating ? (
                   <>
@@ -555,18 +562,18 @@ export default function AdminCertificateManager({
 
           {/* Success banner if certificate was just generated */}
           {generatedCert && (
-            <div className="mt-6 p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 shadow-lg space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+            <div className="mt-4 p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 shadow-xl space-y-3">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
                 <ShieldCheck size={18} />
                 <span>Certificate Successfully Issued!</span>
               </div>
-              <div className="font-mono text-xs text-white bg-slate-950 p-2 rounded border border-slate-800 break-all">
+              <div className="font-mono text-xs text-white bg-slate-950 p-2.5 rounded-xl border border-slate-800 break-all select-all">
                 ID: {generatedCert.certificate_id}
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={() => handleCopyVerifyUrl(generatedCert.certificate_id)}
-                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 text-slate-200 cursor-pointer"
                 >
                   <Copy size={13} /> Copy Link
                 </button>
@@ -574,7 +581,7 @@ export default function AdminCertificateManager({
                   href={`/verify/${generatedCert.certificate_id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-1.5 rounded bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 border border-cyan-500/40"
+                  className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 border border-cyan-500/40"
                 >
                   <ExternalLink size={13} /> Public Verify
                 </a>
@@ -584,23 +591,58 @@ export default function AdminCertificateManager({
         </div>
 
         {/* Right Form: Live Interactive Preview */}
-        <div className="xl:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl flex flex-col items-center">
-          <div className="w-full flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
+        <div className="xl:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl flex flex-col items-center">
+          <div className="w-full flex items-center justify-between mb-4 pb-3 border-b border-slate-800 flex-wrap gap-2">
             <div className="flex items-center gap-2 text-white font-bold text-sm">
               <Eye size={18} className="text-cyan-400" />
-              <span>Real-Time Certificate Render</span>
+              <span>Real-Time Certificate Hologram</span>
             </div>
-            <span className="text-xs text-slate-400 font-mono">
-              Live Preview (Landscape A4)
-            </span>
+
+            {/* Scale Presets */}
+            <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[10px] font-mono">
+              <button
+                type="button"
+                onClick={() => setPreviewScale(0.46)}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  previewScale === 0.46
+                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewScale(0.56)}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  previewScale === 0.56
+                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Fit (Default)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewScale(0.68)}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  previewScale === 0.68
+                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Large
+              </button>
+            </div>
           </div>
 
-          {/* Scaled Preview Wrapper */}
+          {/* Scaled Preview Wrapper with Cyber Glow Box */}
           <div className="w-full overflow-hidden flex justify-center py-2">
             <div
+              className="rounded-xl overflow-hidden shadow-2xl border border-slate-800 bg-[#070b14]"
               style={{
-                width: 1000 * 0.58,
-                height: 707 * 0.58,
+                width: 1000 * previewScale,
+                height: 707 * previewScale,
                 position: 'relative',
               }}
             >
@@ -618,8 +660,21 @@ export default function AdminCertificateManager({
                 templateVersion={activeTemplate?.version || 1}
                 editionName={activeEdition?.name || 'GenCode League 2026'}
                 teamName={activeTeam?.name}
-                scale={0.58}
+                scale={previewScale}
               />
+            </div>
+          </div>
+
+          {/* Live Specs Ribbon */}
+          <div className="mt-4 pt-3 border-t border-slate-800/80 w-full flex items-center justify-between text-[11px] font-mono text-slate-400 flex-wrap gap-2 px-2">
+            <div>
+              Target: <strong className="text-white">{recipientName || 'Sample Recipient'}</strong>
+            </div>
+            <div>
+              Type: <strong className="text-cyan-400 uppercase">{certificateType.replace('_', ' ')}</strong>
+            </div>
+            <div>
+              Template: <strong className="text-slate-200">v{activeTemplate?.version || 1}</strong>
             </div>
           </div>
         </div>

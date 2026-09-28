@@ -62,7 +62,7 @@ export default function Header({
                 <span>LIVE</span>
               </div>
 
-              <nav className="hidden xl:flex items-center gap-1.5 ml-2">
+              <nav className="hidden md:flex items-center gap-1.5 ml-2">
                 <button
                   type="button"
                   onClick={() => navigate('/hall-of-fame')}

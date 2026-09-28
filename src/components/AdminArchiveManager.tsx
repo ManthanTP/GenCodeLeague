@@ -90,6 +90,9 @@ export default function AdminArchiveManager({
   const [faqSortOrder, setFaqSortOrder] = useState('0');
   const [savingFaq, setSavingFaq] = useState(false);
 
+  // Subtab navigation state
+  const [archiveSubTab, setArchiveSubTab] = useState<'podium' | 'sponsors' | 'gallery' | 'faqs' | 'backup'>('podium');
+
   // Active Edition Object
   const activeEdition = useMemo(() => {
     return editions.find((e) => e.id === selectedEditionId) || currentEdition || null;
@@ -307,6 +310,19 @@ export default function AdminArchiveManager({
       setUploadingPhoto(false);
     }
   };
+
+  // Delete Gallery Photo
+  const handleDeletePhoto = async (id: string) => {
+    if (!window.confirm('Delete this event photo from the gallery?')) return;
+    try {
+      await supabase.from('gallery_photos').delete().eq('id', id);
+      onShowToast('Photo deleted from gallery', 'success');
+      loadEditionAssets();
+    } catch {
+      onShowToast('Failed to delete photo', 'error');
+    }
+  };
+
 
   // Load FAQ Entries
   const loadFaqs = async () => {
@@ -568,178 +584,443 @@ export default function AdminArchiveManager({
         </div>
       </div>
 
-      {/* ARCHIVE LOCK STATUS BANNER */}
-      {activeEdition?.is_archived && (
-        <div className="p-5 rounded-2xl bg-yellow-950/30 border border-yellow-500/50 backdrop-blur-md flex items-center gap-4 shadow-xl">
-          <div className="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-500 flex items-center justify-center text-yellow-400 shrink-0">
-            <Lock size={24} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-yellow-400 uppercase tracking-widest">
-                IMMUTABLE ARCHIVE RECORD
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                Archived: {new Date(activeEdition.archived_at || '').toLocaleDateString()}
-              </span>
+      {/* Subtab Navigation Strip */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl backdrop-blur-xl w-fit flex-wrap shadow-xl">
+        <button
+          type="button"
+          onClick={() => setArchiveSubTab('podium')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            archiveSubTab === 'podium'
+              ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-glow-gold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Crown size={15} /> 1. PODIUM & FINALIZE
+        </button>
+        <button
+          type="button"
+          onClick={() => setArchiveSubTab('sponsors')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            archiveSubTab === 'sponsors'
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-black shadow-glow-cyan'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Sparkles size={15} /> 2. SPONSORS ({sponsors.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setArchiveSubTab('gallery')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            archiveSubTab === 'gallery'
+              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-glow-purple'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Image size={15} /> 3. EVENT GALLERY ({galleryPhotos.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setArchiveSubTab('faqs')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            archiveSubTab === 'faqs'
+              ? 'bg-gradient-to-r from-emerald-400 to-teal-600 text-black shadow-glow-emerald'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <HelpCircle size={15} /> 4. FAQ HUB ({faqs.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setArchiveSubTab('backup')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            archiveSubTab === 'backup'
+              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-glow-blue'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Download size={15} /> 5. BACKUP & EXPORT
+        </button>
+      </div>
+
+      {/* 1. PODIUM & FINALIZE SUBTAB */}
+      {archiveSubTab === 'podium' && (
+        <div className="space-y-6">
+          {/* ARCHIVE LOCK STATUS BANNER */}
+          {activeEdition?.is_archived ? (
+            <div className="p-6 rounded-3xl bg-yellow-950/30 border border-yellow-500/50 backdrop-blur-md flex items-center gap-5 shadow-2xl">
+              <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 border border-yellow-500 flex items-center justify-center text-yellow-400 shrink-0 shadow-glow-gold">
+                <Lock size={28} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-yellow-400 uppercase tracking-widest px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30">
+                    IMMUTABLE ARCHIVE RECORD
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Archived: {new Date(activeEdition.archived_at || '').toLocaleDateString()}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-white mt-1">
+                  "{activeEdition.name}" is Permanently Finalized and Read-Only
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Live bidding, team budgets, and question evaluations are permanently locked. Standings and podium results are published publicly in the Hall of Fame.
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-white mt-0.5">
-              "{activeEdition.name}" is Finalized and Read-Only
-            </h3>
-            <p className="text-xs text-slate-400">
-              Live bidding, team budgets, and question evaluations are locked. Standings are permanently published in the Hall of Fame.
-            </p>
-          </div>
+          ) : (
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                    <Crown size={22} className="text-yellow-400" />
+                    Finalize Edition & Record Podium
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Select the official 1st, 2nd, and 3rd place teams. Finalizing will lock this edition into the permanent historical archives.
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-amber-400 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full">
+                  ⚠️ Irreversible Action
+                </span>
+              </div>
+
+              {/* 3 Metallic Pedestal Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1st Place - Gold Pedestal */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-yellow-950/30 via-slate-900/90 to-slate-950 border-2 border-yellow-500/60 shadow-glow-gold relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500 text-black text-[10px] font-black font-mono tracking-widest uppercase rounded-bl-xl">
+                    1ST PLACE
+                  </div>
+                  <div>
+                    <div className="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-400 flex items-center justify-center text-yellow-400 mb-4 shadow-glow-gold">
+                      <Crown size={26} />
+                    </div>
+                    <h3 className="text-sm font-black text-yellow-400 uppercase tracking-widest mb-1">
+                      Grand Champion
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mb-4">
+                      Overall tournament victor & trophy recipient
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-yellow-400 uppercase font-black tracking-wider block mb-1.5">
+                      Select Winning Team *
+                    </label>
+                    <select
+                      value={championId}
+                      onChange={(e) => setChampionId(e.target.value)}
+                      className="gcl-input w-full font-bold text-xs"
+                      required
+                    >
+                      <option value="">Select Champion...</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (★ {t.score} pts)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2nd Place - Silver Pedestal */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950 border-2 border-slate-400/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-slate-300 text-black text-[10px] font-black font-mono tracking-widest uppercase rounded-bl-xl">
+                    2ND PLACE
+                  </div>
+                  <div>
+                    <div className="w-12 h-12 rounded-xl bg-slate-400/20 border border-slate-300 flex items-center justify-center text-slate-200 mb-4">
+                      <Medal size={26} />
+                    </div>
+                    <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest mb-1">
+                      Runner-Up
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mb-4">
+                      Second place podium finisher
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-300 uppercase font-black tracking-wider block mb-1.5">
+                      Select Runner-Up Team *
+                    </label>
+                    <select
+                      value={runnerUpId}
+                      onChange={(e) => setRunnerUpId(e.target.value)}
+                      className="gcl-input w-full font-bold text-xs"
+                      required
+                    >
+                      <option value="">Select Runner-Up...</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (★ {t.score} pts)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3rd Place - Bronze Pedestal */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-amber-950/20 via-slate-900/90 to-slate-950 border-2 border-amber-700/50 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-amber-600 text-black text-[10px] font-black font-mono tracking-widest uppercase rounded-bl-xl">
+                    3RD PLACE
+                  </div>
+                  <div>
+                    <div className="w-12 h-12 rounded-xl bg-amber-700/20 border border-amber-600 flex items-center justify-center text-amber-500 mb-4">
+                      <Award size={26} />
+                    </div>
+                    <h3 className="text-sm font-black text-amber-400 uppercase tracking-widest mb-1">
+                      Third Place
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mb-4">
+                      Bronze podium medal finisher
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-amber-400 uppercase font-black tracking-wider block mb-1.5">
+                      Select 3rd Place Team *
+                    </label>
+                    <select
+                      value={thirdPlaceId}
+                      onChange={(e) => setThirdPlaceId(e.target.value)}
+                      className="gcl-input w-full font-bold text-xs"
+                      required
+                    >
+                      <option value="">Select 3rd Place...</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (★ {t.score} pts)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleFinalizeEdition}
+                  disabled={isFinalizing || !championId || !runnerUpId || !thirdPlaceId}
+                  className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 hover:from-yellow-300 hover:to-amber-400 text-black font-black text-sm shadow-glow-gold disabled:opacity-40 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                >
+                  <Lock size={18} />
+                  {isFinalizing ? 'Finalizing Archive...' : 'Finalize & Lock Into Permanent Archives'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 1. EDITION FINALIZE & PODIUM FORM */}
-      {!activeEdition?.is_archived && (
-        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-800 text-yellow-400 font-bold text-lg">
-            <Crown size={22} />
-            <span>Finalize Edition & Record Podium</span>
-          </div>
-
-          <p className="text-xs text-slate-400">
-            Select the definitive 1st, 2nd, and 3rd place teams. Finalizing will lock this edition into the permanent historical archives.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
-              <label className="text-xs text-yellow-400 uppercase font-black tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <Crown size={14} /> Grand Champion (1st) *
-              </label>
-              <select
-                value={championId}
-                onChange={(e) => setChampionId(e.target.value)}
-                className="gcl-input w-full font-bold"
-                required
-              >
-                <option value="">Select Champion...</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} (★ {t.score} pts)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-300 uppercase font-bold tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <Medal size={14} /> Runner-Up (2nd) *
-              </label>
-              <select
-                value={runnerUpId}
-                onChange={(e) => setRunnerUpId(e.target.value)}
-                className="gcl-input w-full font-semibold"
-                required
-              >
-                <option value="">Select Runner-Up...</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} (★ {t.score} pts)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs text-amber-500 uppercase font-bold tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <Award size={14} /> Third Place (3rd) *
-              </label>
-              <select
-                value={thirdPlaceId}
-                onChange={(e) => setThirdPlaceId(e.target.value)}
-                className="gcl-input w-full font-semibold"
-                required
-              >
-                <option value="">Select 3rd Place...</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} (★ {t.score} pts)
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleFinalizeEdition}
-            disabled={isFinalizing || !championId || !runnerUpId || !thirdPlaceId}
-            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-extrabold text-sm shadow-glow-gold disabled:opacity-40 transition-all flex items-center justify-center gap-2"
-          >
-            {isFinalizing ? 'Finalizing Archive...' : 'Finalize & Lock Edition'}
-          </button>
-        </div>
-      )}
-
-      {/* 2. SPONSOR & PARTNER LOGOS MANAGER */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Add Sponsor Form */}
-        <div className="lg:col-span-5 bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkles size={18} className="text-cyan-400" />
-              Sponsors & Partners
-            </h3>
-            <span className="text-xs font-mono text-slate-400">
-              {sponsors.length} active
-            </span>
-          </div>
-
-          {/* Toggle: Show sponsors on certificates */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-            <div>
-              <span className="text-xs font-bold text-white block">
-                Show Sponsors on Certificates
-              </span>
-              <span className="text-[10px] text-slate-400">
-                Off by default. Applies to certificates for this edition only.
+      {/* 2. SPONSORS SUBTAB */}
+      {archiveSubTab === 'sponsors' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: Add Sponsor Form */}
+          <div className="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Sparkles size={18} className="text-cyan-400" />
+                Add Sponsor / Partner
+              </h3>
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                {sponsors.length} registered
               </span>
             </div>
-            <button
-              type="button"
-              onClick={handleToggleSponsorsOnCerts}
-              className="text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
-              {showSponsorsOnCerts ? (
-                <ToggleRight size={28} className="text-cyan-400" />
-              ) : (
-                <ToggleLeft size={28} className="text-slate-600" />
-              )}
-            </button>
-          </div>
 
-          <form onSubmit={handleAddSponsor} className="space-y-3 pt-2">
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                Sponsor Name *
-              </label>
-              <input
-                type="text"
-                value={sponsorName}
-                onChange={(e) => setSponsorName(e.target.value)}
-                placeholder="e.g. Acme Tech Labs"
-                className="gcl-input w-full py-2 text-xs"
-                required
-              />
+            {/* Toggle: Show sponsors on certificates */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 shadow-inner">
+              <div>
+                <span className="text-xs font-bold text-white block">
+                  Show Sponsors on Certificates
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Off by default. Applies to certificates for this edition only.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleSponsorsOnCerts}
+                className="text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+              >
+                {showSponsorsOnCerts ? (
+                  <ToggleRight size={32} className="text-cyan-400" />
+                ) : (
+                  <ToggleLeft size={32} className="text-slate-600" />
+                )}
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleAddSponsor} className="space-y-4 pt-2">
               <div>
                 <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                  Tier
+                  Sponsor Name *
+                </label>
+                <input
+                  type="text"
+                  value={sponsorName}
+                  onChange={(e) => setSponsorName(e.target.value)}
+                  placeholder="e.g. Acme Tech Labs"
+                  className="gcl-input w-full py-2 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                    Tier
+                  </label>
+                  <select
+                    value={sponsorTier}
+                    onChange={(e) => setSponsorTier(e.target.value)}
+                    className="gcl-input w-full py-2 text-xs"
+                  >
+                    {SPONSOR_TIERS.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tier}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                    Website URL
+                  </label>
+                  <input
+                    type="url"
+                    value={sponsorWebsite}
+                    onChange={(e) => setSponsorWebsite(e.target.value)}
+                    placeholder="https://..."
+                    className="gcl-input w-full py-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                  Logo URL (Direct Image Link)
+                </label>
+                <input
+                  type="text"
+                  value={sponsorLogoUrl}
+                  onChange={(e) => setSponsorLogoUrl(e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                  className="gcl-input w-full py-2 text-xs"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingSponsor || !sponsorName.trim()}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-black font-black text-xs transition-all shadow-glow-cyan disabled:opacity-50 cursor-pointer"
+              >
+                {savingSponsor ? 'Adding Sponsor...' : '+ Register Sponsor'}
+              </button>
+            </form>
+          </div>
+
+          {/* Right: Existing Sponsors List */}
+          <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center justify-between pb-3 border-b border-slate-800">
+              <span>Edition Sponsors & Partners</span>
+              <span className="text-xs font-mono text-slate-400">{sponsors.length} Total</span>
+            </h3>
+
+            {sponsors.length === 0 ? (
+              <div className="p-12 text-center bg-slate-950/40 rounded-2xl border border-dashed border-slate-800">
+                <Sparkles size={32} className="text-slate-600 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 font-medium">No sponsors registered for this edition yet.</p>
+                <p className="text-[10px] text-slate-500 mt-1">Add brand logos using the form on the left.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {sponsors.map((sp) => (
+                  <div
+                    key={sp.id}
+                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between gap-3 shadow-md hover:border-slate-700 transition-all"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {sp.logo_url ? (
+                        <img
+                          src={sp.logo_url}
+                          alt={sp.name}
+                          className="w-10 h-10 object-contain rounded-lg bg-slate-900 border border-slate-800 p-1"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+                          <Sparkles size={16} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-white text-xs truncate">
+                          {sp.name}
+                        </h4>
+                        <span className="text-[10px] font-mono text-cyan-400 font-semibold">
+                          {sp.tier}
+                        </span>
+                        {sp.website_url && (
+                          <a
+                            href={sp.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[9px] text-slate-500 hover:text-slate-300 block truncate"
+                          >
+                            {sp.website_url.replace(/^https?:\/\//, '')}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSponsor(sp.id, sp.name)}
+                      className="p-2 rounded-lg hover:bg-red-950/60 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                      title="Remove Sponsor"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. EVENT GALLERY SUBTAB */}
+      {archiveSubTab === 'gallery' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: Upload Photo Form */}
+          <div className="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Image size={18} className="text-purple-400" />
+                Upload Photo to Gallery
+              </h3>
+              <span className="text-xs font-mono text-purple-400 bg-purple-950 px-2 py-0.5 rounded border border-purple-800">
+                {galleryPhotos.length} photos
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                  Event Segment
                 </label>
                 <select
-                  value={sponsorTier}
-                  onChange={(e) => setSponsorTier(e.target.value)}
+                  value={photoSegment}
+                  onChange={(e) => setPhotoSegment(e.target.value)}
                   className="gcl-input w-full py-2 text-xs"
                 >
-                  {SPONSOR_TIERS.map((tier) => (
-                    <option key={tier} value={tier}>
-                      {tier}
+                  {SEGMENTS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
                     </option>
                   ))}
                 </select>
@@ -747,330 +1028,288 @@ export default function AdminArchiveManager({
 
               <div>
                 <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                  Website URL
+                  Caption (Optional)
                 </label>
                 <input
-                  type="url"
-                  value={sponsorWebsite}
-                  onChange={(e) => setSponsorWebsite(e.target.value)}
-                  placeholder="https://..."
+                  type="text"
+                  value={photoCaption}
+                  onChange={(e) => setPhotoCaption(e.target.value)}
+                  placeholder="e.g. Heated bidding duel in Round 2"
                   className="gcl-input w-full py-2 text-xs"
                 />
               </div>
+
+              <div>
+                <label className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 cursor-pointer shadow-glow-purple transition-all">
+                  <Upload size={16} />
+                  {uploadingPhoto ? 'Uploading to Supabase...' : 'Select & Upload Photo File'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
+          </div>
 
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                Logo URL (Direct Image Link)
-              </label>
-              <input
-                type="text"
-                value={sponsorLogoUrl}
-                onChange={(e) => setSponsorLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-                className="gcl-input w-full py-2 text-xs"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={savingSponsor || !sponsorName.trim()}
-              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs transition-all shadow-glow-cyan disabled:opacity-50"
-            >
-              {savingSponsor ? 'Adding...' : '+ Add Sponsor'}
-            </button>
-          </form>
-        </div>
-
-        {/* Right: Existing Sponsors List */}
-        <div className="lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-            Registered Edition Sponsors ({sponsors.length})
-          </h3>
-
-          {sponsors.length === 0 ? (
-            <p className="text-xs text-slate-500 italic py-8 text-center">
-              No sponsors added to this edition yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {sponsors.map((sp) => (
-                <div
-                  key={sp.id}
-                  className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {sp.logo_url && (
-                      <img
-                        src={sp.logo_url}
-                        alt={sp.name}
-                        className="w-8 h-8 object-contain rounded bg-slate-900 p-1"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-white text-xs truncate">
-                        {sp.name}
-                      </h4>
-                      <span className="text-[10px] font-mono text-cyan-400">
-                        {sp.tier}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSponsor(sp.id, sp.name)}
-                    className="p-1 rounded hover:bg-red-950 text-red-400 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 3. EVENT GALLERY PHOTO UPLOADER */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Image size={20} className="text-cyan-400" />
-              Upload Event Photos to Gallery
+          {/* Right: Gallery Grid */}
+          <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center justify-between pb-3 border-b border-slate-800">
+              <span>Event Photo Records</span>
+              <span className="text-xs font-mono text-slate-400">{galleryPhotos.length} Total</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Tag photos with tournament segments for public display at /gallery.
-            </p>
-          </div>
-          <span className="text-xs font-mono text-slate-400">
-            {galleryPhotos.length} photo(s)
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-          <div>
-            <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-              Event Segment
-            </label>
-            <select
-              value={photoSegment}
-              onChange={(e) => setPhotoSegment(e.target.value)}
-              className="gcl-input w-full py-2 text-xs"
-            >
-              {SEGMENTS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-              Caption (Optional)
-            </label>
-            <input
-              type="text"
-              value={photoCaption}
-              onChange={(e) => setPhotoCaption(e.target.value)}
-              placeholder="e.g. Heated bidding duel in Round 2"
-              className="gcl-input w-full py-2 text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-glow-cyan transition-all">
-              <Upload size={14} />
-              {uploadingPhoto ? 'Uploading Photo...' : 'Select & Upload Photo'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                disabled={uploadingPhoto}
-                className="hidden"
-              />
-            </label>
+            {galleryPhotos.length === 0 ? (
+              <div className="p-12 text-center bg-slate-950/40 rounded-2xl border border-dashed border-slate-800">
+                <Image size={32} className="text-slate-600 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 font-medium">No photos uploaded for this edition yet.</p>
+                <p className="text-[10px] text-slate-500 mt-1">Upload event photos on the left to show in /gallery.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {galleryPhotos.map((gp) => (
+                  <div
+                    key={gp.id}
+                    className="relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video shadow-md"
+                  >
+                    <img
+                      src={gp.image_url}
+                      alt={gp.caption || 'Event photo'}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent flex flex-col justify-end p-2 opacity-90">
+                      <span className="text-[9px] font-mono text-cyan-300 font-semibold truncate">
+                        {gp.segment}
+                      </span>
+                      {gp.caption && (
+                        <p className="text-[10px] text-slate-200 truncate">
+                          {gp.caption}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(gp.id)}
+                      className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/70 hover:bg-red-950 text-slate-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                      title="Delete Photo"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 4. FULL EDITION DATA EXPORT & IMPORT */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        {/* Export Panel */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-            <Download size={18} className="text-emerald-400" />
-            Export Edition Data (JSON)
-          </h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Download a portable, complete snapshot of "{activeEdition?.name}" including teams, scores, items, sponsors, and certificate metadata.
-          </p>
-
-          <button
-            type="button"
-            onClick={handleExportEdition}
-            disabled={exporting || !selectedEditionId}
-            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {exporting ? 'Packing JSON Bundle...' : 'Download Complete Edition Snapshot (JSON)'}
-          </button>
-        </div>
-
-        {/* Import Panel */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-            <Upload size={18} className="text-cyan-400" />
-            Import Edition Data (JSON)
-          </h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Upload an exported JSON bundle. A preview will appear before any database insertion. Always creates a brand new edition.
-          </p>
-
-          <div>
-            <textarea
-              value={importJsonText}
-              onChange={(e) => handleParseImportJson(e.target.value)}
-              placeholder="Paste exported GCL edition JSON here..."
-              rows={3}
-              className="gcl-input w-full font-mono text-xs resize-none"
-            />
-          </div>
-
-          {importPreview && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/40 space-y-3">
-              <span className="text-[10px] font-mono text-cyan-400 uppercase font-bold block">
-                ✓ Valid GCL Bundle Preview
+      {/* 4. FAQ HUB SUBTAB */}
+      {archiveSubTab === 'faqs' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: Add FAQ Form */}
+          <div className="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <HelpCircle size={18} className="text-emerald-400" />
+                Add FAQ Entry
+              </h3>
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                {faqs.length} entries
               </span>
-              <div className="text-xs text-slate-300 space-y-1">
-                <div>Original Edition: <strong className="text-white">{importPreview.edition.name}</strong></div>
-                <div>Teams Detected: <strong className="text-cyan-300">{importPreview.teams.length}</strong></div>
-                <div>Items Recorded: <strong className="text-purple-300">{importPreview.team_items?.length || 0}</strong></div>
+            </div>
+
+            <form onSubmit={handleAddFaq} className="space-y-4">
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                  Question *
+                </label>
+                <input
+                  type="text"
+                  value={faqQuestion}
+                  onChange={(e) => setFaqQuestion(e.target.value)}
+                  placeholder="e.g. How does team bidding work?"
+                  className="gcl-input w-full text-xs font-medium"
+                  required
+                />
               </div>
 
               <div>
                 <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-                  Name for New Edition
+                  Sort Order
                 </label>
                 <input
-                  type="text"
-                  value={overrideEditionName}
-                  onChange={(e) => setOverrideEditionName(e.target.value)}
-                  className="gcl-input w-full py-1 text-xs"
+                  type="number"
+                  value={faqSortOrder}
+                  onChange={(e) => setFaqSortOrder(e.target.value)}
+                  className="gcl-input w-full text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                  Answer *
+                </label>
+                <textarea
+                  rows={4}
+                  value={faqAnswer}
+                  onChange={(e) => setFaqAnswer(e.target.value)}
+                  placeholder="Provide a detailed, clear explanation for participants..."
+                  className="gcl-input w-full text-xs resize-none"
+                  required
                 />
               </div>
 
               <button
-                type="button"
-                onClick={handleExecuteImport}
-                disabled={isImporting}
-                className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2"
+                type="submit"
+                disabled={savingFaq || !faqQuestion.trim() || !faqAnswer.trim()}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-600 hover:from-emerald-300 hover:to-teal-500 text-black font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
-                {isImporting ? 'Executing Import...' : 'Confirm & Create New Edition'}
+                <Plus size={16} /> {savingFaq ? 'Adding Question...' : 'Add FAQ Question'}
               </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 5. FAQ KNOWLEDGEBASE MANAGER */}
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md shadow-xl space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
-              <HelpCircle size={22} />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wide">
-                FAQ Knowledgebase Manager
-              </h2>
-              <p className="text-xs text-slate-400">
-                Manage the public Q&A questions displayed at <span className="font-mono text-cyan-400">/faq</span>.
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-mono text-slate-400">{faqs.length} Question(s)</span>
-        </div>
-
-        {/* Add FAQ Form */}
-        <form onSubmit={handleAddFaq} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="sm:col-span-3">
-              <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-                Question
-              </label>
-              <input
-                type="text"
-                value={faqQuestion}
-                onChange={(e) => setFaqQuestion(e.target.value)}
-                placeholder="e.g. How does team registration work?"
-                className="gcl-input w-full text-xs font-medium"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-                Sort Order
-              </label>
-              <input
-                type="number"
-                value={faqSortOrder}
-                onChange={(e) => setFaqSortOrder(e.target.value)}
-                className="gcl-input w-full text-xs font-mono"
-              />
-            </div>
+            </form>
           </div>
 
-          <div>
-            <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-              Answer
-            </label>
-            <textarea
-              rows={3}
-              value={faqAnswer}
-              onChange={(e) => setFaqAnswer(e.target.value)}
-              placeholder="Provide a detailed, clear explanation for participants..."
-              className="gcl-input w-full text-xs"
-            />
-          </div>
+          {/* Right: FAQ List */}
+          <div className="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center justify-between pb-3 border-b border-slate-800">
+              <span>Published FAQ Knowledgebase</span>
+              <span className="text-xs font-mono text-slate-400">Public at /faq</span>
+            </h3>
 
-          <button
-            type="submit"
-            disabled={savingFaq || !faqQuestion.trim() || !faqAnswer.trim()}
-            className="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs shadow-glow-cyan transition-all flex items-center gap-1.5 disabled:opacity-50"
-          >
-            <Plus size={15} /> {savingFaq ? 'Adding Question...' : 'Add FAQ Question'}
-          </button>
-        </form>
-
-        {/* Current FAQ List */}
-        <div className="space-y-3">
-          {faqs.map((f) => (
-            <div
-              key={f.id}
-              className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/80 flex items-start justify-between gap-4 hover:border-slate-700 transition-all"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                    Order #{f.sort_order}
-                  </span>
-                  <h4 className="text-sm font-bold text-white">{f.question}</h4>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">{f.answer}</p>
+            {faqs.length === 0 ? (
+              <div className="p-12 text-center bg-slate-950/40 rounded-2xl border border-dashed border-slate-800">
+                <HelpCircle size={32} className="text-slate-600 mx-auto mb-2" />
+                <p className="text-xs text-slate-400 font-medium">No FAQ questions published yet.</p>
+                <p className="text-[10px] text-slate-500 mt-1">Create common questions on the left.</p>
               </div>
+            ) : (
+              <div className="space-y-3">
+                {faqs.map((f) => (
+                  <div
+                    key={f.id}
+                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-start justify-between gap-4 hover:border-slate-700 transition-all shadow-md"
+                  >
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                          #{f.sort_order}
+                        </span>
+                        <h4 className="text-xs font-bold text-white truncate">{f.question}</h4>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">{f.answer}</p>
+                    </div>
 
-              <button
-                type="button"
-                onClick={() => handleDeleteFaq(f.id, f.question)}
-                className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/30 transition-colors shrink-0"
-                title="Delete FAQ"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFaq(f.id, f.question)}
+                      className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/30 transition-colors shrink-0 cursor-pointer"
+                      title="Delete FAQ"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* 5. BACKUP & EXPORT SUBTAB */}
+      {archiveSubTab === 'backup' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Export Panel */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
+              <Download size={18} className="text-emerald-400" />
+              Export Edition Data (JSON Bundle)
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Download a complete, offline snapshot of <strong className="text-white">"{activeEdition?.name}"</strong>. Includes:
+            </p>
+
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-1.5">
+              <div className="text-emerald-400">✓ Edition metadata & round settings</div>
+              <div className="text-emerald-400">✓ Registered teams & budgets</div>
+              <div className="text-emerald-400">✓ Team rosters & member details</div>
+              <div className="text-emerald-400">✓ Sold items & final bid ledger</div>
+              <div className="text-emerald-400">✓ Cryptographic certificate records</div>
+              <div className="text-emerald-400">✓ Sponsor branding & tier configurations</div>
+              <div className="text-emerald-400">✓ Event gallery photo metadata</div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportEdition}
+              disabled={exporting || !selectedEditionId}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-black font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Download size={16} />
+              {exporting ? 'Packing JSON Bundle...' : 'Download Complete Archive Bundle (.json)'}
+            </button>
+          </div>
+
+          {/* Import Panel */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
+              <Upload size={18} className="text-cyan-400" />
+              Import Edition Snapshot (JSON)
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Upload or paste a previously exported GCL JSON archive. An integrity preview will be performed before creation.
+            </p>
+
+            <div>
+              <textarea
+                value={importJsonText}
+                onChange={(e) => handleParseImportJson(e.target.value)}
+                placeholder="Paste exported GCL edition JSON bundle here..."
+                rows={4}
+                className="gcl-input w-full font-mono text-xs resize-none"
+              />
+            </div>
+
+            {importPreview && (
+              <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/40 space-y-3 shadow-lg">
+                <span className="text-[10px] font-mono text-cyan-400 uppercase font-black block">
+                  ✓ Valid GCL Edition Structure Detected
+                </span>
+                <div className="text-xs text-slate-300 space-y-1">
+                  <div>Original Edition: <strong className="text-white">{importPreview.edition.name}</strong></div>
+                  <div>Teams Included: <strong className="text-cyan-300">{importPreview.teams.length}</strong></div>
+                  <div>Bids / Items: <strong className="text-purple-300">{importPreview.team_items?.length || 0}</strong></div>
+                  <div>Certificates: <strong className="text-yellow-300">{importPreview.certificates?.length || 0}</strong></div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                    Name for New Edition
+                  </label>
+                  <input
+                    type="text"
+                    value={overrideEditionName}
+                    onChange={(e) => setOverrideEditionName(e.target.value)}
+                    className="gcl-input w-full py-1 text-xs"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExecuteImport}
+                  disabled={isImporting}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-black font-black text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Upload size={16} />
+                  {isImporting ? 'Executing Database Import...' : 'Confirm & Restore as New Edition'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

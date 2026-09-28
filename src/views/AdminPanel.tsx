@@ -1652,42 +1652,80 @@ export default function AdminPanel() {
         />
       )}
 
-      {/* Admin Tab Switcher */}
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3 relative z-30">
-        <div className="flex items-center gap-2 p-1.5 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => handleTabChange('auction')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-              adminActiveTab === 'auction'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-glow-blue'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Hammer size={16} /> LIVE AUCTION CONSOLE
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange('certificates')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-              adminActiveTab === 'certificates'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-glow-cyan'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Award size={16} /> CERTIFICATE HUB
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange('archive')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-              adminActiveTab === 'archive'
-                ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-glow-gold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Archive size={16} /> ARCHIVE & HERITAGE
-          </button>
+      {/* Cyber Admin Command Bar */}
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 relative z-30">
+        <div className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
+          {/* Main 3 Module Tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => handleTabChange('auction')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
+                adminActiveTab === 'auction'
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-glow-blue border border-blue-400/40'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+              }`}
+            >
+              <Hammer size={16} className={adminActiveTab === 'auction' ? 'text-blue-200 animate-pulse' : 'text-slate-400'} />
+              <span>LIVE AUCTION CONSOLE</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'auction' ? 'bg-blue-900/80 text-blue-200 border border-blue-400/30' : 'bg-slate-800 text-slate-400'}`}>
+                LIVE
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('certificates')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
+                adminActiveTab === 'certificates'
+                  ? 'bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500 text-black shadow-glow-cyan border border-cyan-300/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+              }`}
+            >
+              <Award size={16} className={adminActiveTab === 'certificates' ? 'text-black' : 'text-slate-400'} />
+              <span>CERTIFICATE HUB</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'certificates' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' : 'bg-slate-800 text-slate-400'}`}>
+                LAYER A
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('archive')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
+                adminActiveTab === 'archive'
+                  ? 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-black shadow-glow-gold border border-yellow-300/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+              }`}
+            >
+              <Archive size={16} className={adminActiveTab === 'archive' ? 'text-black' : 'text-slate-400'} />
+              <span>ARCHIVE & HERITAGE</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'archive' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-400'}`}>
+                LAYER B
+              </span>
+            </button>
+          </div>
+
+          {/* Quick Context & Public Portal Links */}
+          <div className="hidden lg:flex items-center gap-2">
+            <span className="text-xs font-mono text-slate-400 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
+              Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate('/hall-of-fame')}
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-yellow-400 hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/30 transition-all flex items-center gap-1"
+            >
+              ★ Hall of Fame
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/my-certificates')}
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1"
+            >
+              ◈ Certificates
+            </button>
+          </div>
         </div>
       </div>
 
