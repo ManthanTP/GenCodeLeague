@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Settings,
   Trophy,
@@ -72,8 +72,27 @@ export default function AdminPanel() {
     }
   }, [authLoading, isAdmin, navigate]);
 
-  // UI States
-  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates' | 'archive'>('auction');
+  // UI States & URL Tab Sync
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const validTab: 'auction' | 'certificates' | 'archive' =
+    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction'
+      ? urlTab
+      : 'auction';
+
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates' | 'archive'>(validTab);
+
+  useEffect(() => {
+    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction')) {
+      setAdminActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (tab: 'auction' | 'certificates' | 'archive') => {
+    setAdminActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
@@ -1610,7 +1629,7 @@ export default function AdminPanel() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans">
+    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans relative" style={{ paddingTop: '84px' }}>
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -1634,37 +1653,37 @@ export default function AdminPanel() {
       )}
 
       {/* Admin Tab Switcher */}
-      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3 relative z-30">
+        <div className="flex items-center gap-2 p-1.5 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-md">
           <button
             type="button"
-            onClick={() => setAdminActiveTab('auction')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+            onClick={() => handleTabChange('auction')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
               adminActiveTab === 'auction'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-glow-blue'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Hammer size={16} /> LIVE AUCTION CONSOLE
           </button>
           <button
             type="button"
-            onClick={() => setAdminActiveTab('certificates')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+            onClick={() => handleTabChange('certificates')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
               adminActiveTab === 'certificates'
                 ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-glow-cyan'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Award size={16} /> CERTIFICATE HUB
           </button>
           <button
             type="button"
-            onClick={() => setAdminActiveTab('archive')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+            onClick={() => handleTabChange('archive')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
               adminActiveTab === 'archive'
-                ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-glow-gold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Archive size={16} /> ARCHIVE & HERITAGE
