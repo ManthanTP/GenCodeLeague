@@ -19,10 +19,11 @@ import {
   ToggleLeft,
   ToggleRight,
   ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { logAdminAction } from '../utils/certificateUtils';
-import type { Edition, Team, Sponsor, GalleryPhoto } from '../types/database';
+import type { Edition, Team, Sponsor, GalleryPhoto, FaqEntry } from '../types/database';
 
 interface AdminArchiveManagerProps {
   currentEdition: Edition | null;
@@ -81,6 +82,13 @@ export default function AdminArchiveManager({
   const [importPreview, setImportPreview] = useState<any | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [overrideEditionName, setOverrideEditionName] = useState('');
+
+  // FAQ Manager States
+  const [faqs, setFaqs] = useState<FaqEntry[]>([]);
+  const [faqQuestion, setFaqQuestion] = useState('');
+  const [faqAnswer, setFaqAnswer] = useState('');
+  const [faqSortOrder, setFaqSortOrder] = useState('0');
+  const [savingFaq, setSavingFaq] = useState(false);
 
   // Active Edition Object
   const activeEdition = useMemo(() => {
@@ -297,6 +305,56 @@ export default function AdminArchiveManager({
       onShowToast(err?.message || 'Failed to upload photo', 'error');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  // Load FAQ Entries
+  const loadFaqs = async () => {
+    const { data } = await supabase.from('faq_entries').select('*').order('sort_order', { ascending: true });
+    setFaqs(data || []);
+  };
+
+  useEffect(() => {
+    loadFaqs();
+  }, []);
+
+  const handleAddFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!faqQuestion.trim() || !faqAnswer.trim()) {
+      onShowToast('Please provide both question and answer', 'error');
+      return;
+    }
+    setSavingFaq(true);
+    try {
+      const { error } = await supabase.from('faq_entries').insert({
+        question: faqQuestion.trim(),
+        answer: faqAnswer.trim(),
+        sort_order: parseInt(faqSortOrder, 10) || 0,
+      });
+      if (error) throw error;
+      await logAdminAction('FAQ_CREATED', { question: faqQuestion.trim() });
+      onShowToast('FAQ entry added successfully!', 'success');
+      setFaqQuestion('');
+      setFaqAnswer('');
+      setFaqSortOrder('0');
+      loadFaqs();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to save FAQ entry', 'error');
+    } finally {
+      setSavingFaq(false);
+    }
+  };
+
+  const handleDeleteFaq = async (id: string, q: string) => {
+    if (!window.confirm(`Delete question: "${q}"?`)) return;
+    try {
+      const { error } = await supabase.from('faq_entries').delete().eq('id', id);
+      if (error) throw error;
+      await logAdminAction('FAQ_DELETED', { faq_id: id, question: q });
+      onShowToast('FAQ entry deleted', 'success');
+      loadFaqs();
+    } catch (err: any) {
+      onShowToast('Failed to delete FAQ entry', 'error');
     }
   };
 
@@ -912,6 +970,105 @@ export default function AdminArchiveManager({
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 5. FAQ KNOWLEDGEBASE MANAGER */}
+      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md shadow-xl space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+              <HelpCircle size={22} />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white uppercase tracking-wide">
+                FAQ Knowledgebase Manager
+              </h2>
+              <p className="text-xs text-slate-400">
+                Manage the public Q&A questions displayed at <span className="font-mono text-cyan-400">/faq</span>.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-slate-400">{faqs.length} Question(s)</span>
+        </div>
+
+        {/* Add FAQ Form */}
+        <form onSubmit={handleAddFaq} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="sm:col-span-3">
+              <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                Question
+              </label>
+              <input
+                type="text"
+                value={faqQuestion}
+                onChange={(e) => setFaqQuestion(e.target.value)}
+                placeholder="e.g. How does team registration work?"
+                className="gcl-input w-full text-xs font-medium"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                Sort Order
+              </label>
+              <input
+                type="number"
+                value={faqSortOrder}
+                onChange={(e) => setFaqSortOrder(e.target.value)}
+                className="gcl-input w-full text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+              Answer
+            </label>
+            <textarea
+              rows={3}
+              value={faqAnswer}
+              onChange={(e) => setFaqAnswer(e.target.value)}
+              placeholder="Provide a detailed, clear explanation for participants..."
+              className="gcl-input w-full text-xs"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={savingFaq || !faqQuestion.trim() || !faqAnswer.trim()}
+            className="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs shadow-glow-cyan transition-all flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Plus size={15} /> {savingFaq ? 'Adding Question...' : 'Add FAQ Question'}
+          </button>
+        </form>
+
+        {/* Current FAQ List */}
+        <div className="space-y-3">
+          {faqs.map((f) => (
+            <div
+              key={f.id}
+              className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/80 flex items-start justify-between gap-4 hover:border-slate-700 transition-all"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                    Order #{f.sort_order}
+                  </span>
+                  <h4 className="text-sm font-bold text-white">{f.question}</h4>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">{f.answer}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteFaq(f.id, f.question)}
+                className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/30 transition-colors shrink-0"
+                title="Delete FAQ"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
     </div>
