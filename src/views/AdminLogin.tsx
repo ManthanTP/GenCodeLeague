@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Unlock, ShieldCheck } from 'lucide-react';
+import { Lock, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
-import { ADMIN_MASTER_PASSWORD } from '../data/roundsData';
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('manthantp0321@gmail.com');
-  const [useEmailAuth, setUseEmailAuth] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
@@ -18,25 +16,6 @@ export default function AdminLogin() {
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handlePasswordGate = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Check master password
-    if (password === ADMIN_MASTER_PASSWORD) {
-      sessionStorage.setItem('gcl_admin_authenticated', 'true');
-      showToast('Admin access granted!', 'success');
-      setTimeout(() => navigate('/123456789/GCL-0321/admin'), 400);
-      return;
-    }
-
-    if (!useEmailAuth) {
-      setError('Incorrect admin password. (Try GCLauction@0321 or click Supabase Login)');
-      setPassword('');
-      showToast('Access denied.', 'error');
-    }
   };
 
   const handleSupabaseLogin = async (e: React.FormEvent) => {
@@ -51,24 +30,18 @@ export default function AdminLogin() {
       });
 
       if (signInError) {
-        // Fallback: check master password
-        if (password === ADMIN_MASTER_PASSWORD) {
-          sessionStorage.setItem('gcl_admin_authenticated', 'true');
-          showToast('Master admin authenticated!', 'success');
-          navigate('/123456789/GCL-0321/admin');
-          return;
-        }
         setError(signInError.message);
+        showToast(signInError.message, 'error');
         setLoading(false);
         return;
       }
 
-      // If user is manthantp0321@gmail.com or role is admin, grant access
       sessionStorage.setItem('gcl_admin_authenticated', 'true');
       showToast('Admin logged in successfully!', 'success');
       navigate('/123456789/GCL-0321/admin');
     } catch (err: any) {
       setError(err?.message || 'Login failed.');
+      showToast('Login failed.', 'error');
     } finally {
       setLoading(false);
     }
@@ -86,89 +59,51 @@ export default function AdminLogin() {
           </div>
           <h1 className="auth-title">Admin Access Required</h1>
           <p className="auth-subtitle">
-            Enter the admin password to access the auction control panel.
+            Enter your admin credentials to access the auction control panel.
           </p>
 
-          {!useEmailAuth ? (
-            <form onSubmit={handlePasswordGate} className="space-y-4">
-              <div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError('');
-                  }}
-                  placeholder="Enter Admin Password"
-                  className={`gcl-input w-full font-mono text-lg ${
-                    error ? 'border-red-500' : ''
-                  }`}
-                  autoFocus
-                />
-              </div>
+          <form onSubmit={handleSupabaseLogin} className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                placeholder="admin@example.com"
+                className="gcl-input w-full"
+                required
+                autoFocus
+              />
+            </div>
 
-              {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
+            <div>
+              <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Enter Password"
+                className={`gcl-input w-full ${error ? 'border-red-500' : ''}`}
+                required
+              />
+            </div>
 
-              <button type="submit" className="btn-login-submit">
-                <Unlock size={20} /> Log In to Admin Console
-              </button>
+            {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
 
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  onClick={() => setUseEmailAuth(true)}
-                  className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
-                >
-                  Or sign in with Supabase Email Credentials →
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleSupabaseLogin} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
-                  Admin Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="gcl-input w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter Password"
-                  className="gcl-input w-full"
-                  required
-                />
-              </div>
-
-              {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
-
-              <button type="submit" disabled={loading} className="btn-login-submit">
-                <ShieldCheck size={20} /> {loading ? 'Logging in...' : 'Sign In with Supabase'}
-              </button>
-
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  onClick={() => setUseEmailAuth(false)}
-                  className="text-xs text-slate-400 hover:text-cyan-400 transition-colors"
-                >
-                  ← Back to Quick Admin Password Gate
-                </button>
-              </div>
-            </form>
-          )}
+            <button type="submit" disabled={loading} className="btn-login-submit">
+              <ShieldCheck size={20} /> {loading ? 'Logging in...' : 'Sign In with Supabase'}
+            </button>
+          </form>
         </div>
       </div>
     </div>
