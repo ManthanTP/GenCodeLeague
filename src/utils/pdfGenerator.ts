@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
  */
 export async function generateCertificatePdfBlob(
   element: HTMLElement,
-  certificateId: string
+  _certificateId: string
 ): Promise<{ blob: Blob; doc: jsPDF }> {
   // Capture high-DPI canvas
   const canvas = await html2canvas(element, {

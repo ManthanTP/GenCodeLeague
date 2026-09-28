@@ -8,6 +8,12 @@ import TeamLogin from './views/TeamLogin';
 import VerifyCertificate from './views/VerifyCertificate';
 import StudentCertificateLookup from './views/StudentCertificateLookup';
 import BulkCertificates from './views/BulkCertificates';
+import HallOfFame from './views/HallOfFame';
+import EditionDetail from './views/EditionDetail';
+import TeamProfile from './views/TeamProfile';
+import GalleryView from './views/GalleryView';
+import AnnouncementsView from './views/AnnouncementsView';
+import FaqView from './views/FaqView';
 
 function App() {
   return (
@@ -15,6 +21,12 @@ function App() {
       <Route path="/" element={<LiveView />} />
       <Route path="/verify/:certificateId" element={<VerifyCertificate />} />
       <Route path="/my-certificates" element={<StudentCertificateLookup />} />
+      <Route path="/hall-of-fame" element={<HallOfFame />} />
+      <Route path="/editions/:editionId" element={<EditionDetail />} />
+      <Route path="/teams/:teamId" element={<TeamProfile />} />
+      <Route path="/gallery" element={<GalleryView />} />
+      <Route path="/announcements" element={<AnnouncementsView />} />
+      <Route path="/faq" element={<FaqView />} />
       <Route path="/123456789/GCL-0321/admin/login" element={<AdminLogin />} />
       <Route path="/123456789/GCL-0321/admin" element={<AdminPanel />} />
       <Route

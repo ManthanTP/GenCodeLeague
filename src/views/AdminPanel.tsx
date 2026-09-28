@@ -30,8 +30,10 @@ import {
   EyeOff,
   AlertTriangle,
   Award,
+  Archive,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
+import AdminArchiveManager from '../components/AdminArchiveManager';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEventState, broadcastStateChange } from '../hooks/useEventState';
@@ -43,7 +45,7 @@ import Notification, { type NotificationState } from '../components/Notification
 import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
-import { DEFAULT_ROUNDS_DATA, BASE_PRICE, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
+import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
 import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, GameState } from '../types/database';
 
 export default function AdminPanel() {
@@ -71,7 +73,7 @@ export default function AdminPanel() {
   }, [authLoading, isAdmin, navigate]);
 
   // UI States
-  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates'>('auction');
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates' | 'archive'>('auction');
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
@@ -1656,6 +1658,17 @@ export default function AdminPanel() {
           >
             <Award size={16} /> CERTIFICATE HUB
           </button>
+          <button
+            type="button"
+            onClick={() => setAdminActiveTab('archive')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
+              adminActiveTab === 'archive'
+                ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Archive size={16} /> ARCHIVE & HERITAGE
+          </button>
         </div>
       </div>
 
@@ -1667,6 +1680,29 @@ export default function AdminPanel() {
             teams={teams}
             onShowToast={showNotification}
             onNavigateBulk={() => navigate('/123456789/GCL-0321/admin/certificates/bulk')}
+          />
+        </div>
+      )}
+
+      {/* ARCHIVE TAB */}
+      {adminActiveTab === 'archive' && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <AdminArchiveManager
+            currentEdition={edition}
+            teams={teams}
+            onShowToast={showNotification}
+            onEditionUpdated={() => {
+              if (edition?.id) {
+                supabase
+                  .from('editions')
+                  .select('*')
+                  .eq('id', edition.id)
+                  .single()
+                  .then(({ data }) => {
+                    if (data) setEdition(data);
+                  });
+              }
+            }}
           />
         </div>
       )}

@@ -14,6 +14,8 @@ interface CertificatePreviewProps {
   issuedAt?: string;
   status?: 'valid' | 'revoked';
   scale?: number; // Scaling factor for preview sizing
+  showSponsors?: boolean;
+  sponsors?: { name: string; logo_url: string }[];
   onCanvasReady?: (canvasElement: HTMLElement) => void;
   className?: string;
 }
@@ -29,6 +31,8 @@ export default function CertificatePreview({
   issuedAt,
   status = 'valid',
   scale = 1,
+  showSponsors = false,
+  sponsors = [],
   className = '',
 }: CertificatePreviewProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
@@ -301,6 +305,23 @@ export default function CertificatePreview({
               </div>
             </div>
           </div>
+
+          {/* Optional Per-Edition Sponsor Strip */}
+          {showSponsors && sponsors && sponsors.length > 0 && (
+            <div className="flex items-center justify-center gap-6 mt-3 pt-2 border-t border-slate-800/60">
+              <span className="text-[9px] font-mono uppercase text-slate-500 tracking-widest">
+                Official Sponsors:
+              </span>
+              {sponsors.slice(0, 5).map((sp, idx) => (
+                <div key={idx} className="flex items-center gap-1.5 opacity-80">
+                  {sp.logo_url && (
+                    <img src={sp.logo_url} alt={sp.name} className="h-4 max-w-[60px] object-contain filter grayscale" />
+                  )}
+                  <span className="text-[9px] font-bold text-slate-400">{sp.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

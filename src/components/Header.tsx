@@ -48,7 +48,7 @@ export default function Header({
         </div>
 
         {/* Center: Context Info */}
-        <div className="gcl-header-center">
+        <div className="gcl-header-center flex items-center gap-4">
           {viewMode === 'admin' && (
             <div className="header-role-badge header-role-admin">
               <Shield size={14} />
@@ -56,9 +56,53 @@ export default function Header({
             </div>
           )}
           {viewMode === 'live' && (
-            <div className="header-role-badge header-role-live">
-              <Zap size={14} />
-              <span>LIVE</span>
+            <div className="flex items-center gap-3">
+              <div className="header-role-badge header-role-live">
+                <Zap size={14} />
+                <span>LIVE</span>
+              </div>
+
+              <nav className="hidden lg:flex items-center gap-3 text-xs font-mono text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => navigate('/hall-of-fame')}
+                  className="hover:text-yellow-400 transition-colors"
+                >
+                  Hall of Fame
+                </button>
+                <span className="text-slate-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/my-certificates')}
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  Certificates
+                </button>
+                <span className="text-slate-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/gallery')}
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  Gallery
+                </button>
+                <span className="text-slate-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/announcements')}
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  Announcements
+                </button>
+                <span className="text-slate-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/faq')}
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  FAQ
+                </button>
+              </nav>
             </div>
           )}
         </div>

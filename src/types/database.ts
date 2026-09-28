@@ -12,6 +12,12 @@ export interface Edition {
   base_price: number;
   min_increment: number;
   created_at: string;
+  is_archived?: boolean;
+  archived_at?: string | null;
+  champion_team_id?: string | null;
+  runner_up_team_id?: string | null;
+  third_place_team_id?: string | null;
+  show_sponsors_on_certificates?: boolean;
 }
 
 export interface BidPreview {
@@ -46,6 +52,7 @@ export interface Team {
   status: 'active' | 'eliminated';
   sort_order: number;
   created_at: string;
+  linked_team_id?: string | null;
 }
 
 export interface TeamItem {
@@ -97,13 +104,52 @@ export interface Profile {
 export interface TeamMember {
   id: string;
   team_id: string;
-  full_name: string;
+  full_name?: string;
+  name?: string;
+  is_captain?: boolean;
   usn: string | null;
   email: string | null;
   phone: string | null;
   college: string | null;
   department: string | null;
   semester: string | null;
-  role: 'leader' | 'member';
+  role?: string;
+  created_at: string;
+}
+
+export interface GalleryPhoto {
+  id: string;
+  edition_id: string;
+  segment: string;
+  image_url: string;
+  caption: string | null;
+  uploaded_at: string;
+  edition?: Edition;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  is_pinned: boolean;
+  published_at: string;
+  created_by: string;
+}
+
+export interface Sponsor {
+  id: string;
+  edition_id: string;
+  name: string;
+  logo_url: string;
+  tier: string | null;
+  website_url: string | null;
+  sort_order: number;
+}
+
+export interface FaqEntry {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
   created_at: string;
 }

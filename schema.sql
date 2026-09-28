@@ -187,8 +187,30 @@ DROP POLICY IF EXISTS "Team leader delete own team members" ON team_members;
 DROP POLICY IF EXISTS "Admin all team_members" ON team_members;
 
 -- ----------------------------------------------------
--- CREATE POLICIES
 -- ----------------------------------------------------
+-- CREATE POLICIES (Idempotent)
+-- ----------------------------------------------------
+
+-- Drop existing policies if re-running
+DROP POLICY IF EXISTS "Public read editions" ON editions;
+DROP POLICY IF EXISTS "Public read event_state" ON event_state;
+DROP POLICY IF EXISTS "Public read teams" ON teams;
+DROP POLICY IF EXISTS "Public read team_items" ON team_items;
+DROP POLICY IF EXISTS "Public read transaction_history" ON transaction_history;
+DROP POLICY IF EXISTS "Public read round_snapshots" ON round_snapshots;
+DROP POLICY IF EXISTS "Public read winner_reveals" ON winner_reveals;
+DROP POLICY IF EXISTS "Public read round_questions" ON round_questions;
+DROP POLICY IF EXISTS "Anyone can read profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Admin all editions" ON editions;
+DROP POLICY IF EXISTS "Admin all event_state" ON event_state;
+DROP POLICY IF EXISTS "Admin all teams" ON teams;
+DROP POLICY IF EXISTS "Admin all team_items" ON team_items;
+DROP POLICY IF EXISTS "Admin all transaction_history" ON transaction_history;
+DROP POLICY IF EXISTS "Admin all round_snapshots" ON round_snapshots;
+DROP POLICY IF EXISTS "Admin all winner_reveals" ON winner_reveals;
+DROP POLICY IF EXISTS "Admin all round_questions" ON round_questions;
+DROP POLICY IF EXISTS "Admin all team_members" ON team_members;
 
 -- Public read access
 CREATE POLICY "Public read editions" ON editions FOR SELECT USING (true);
@@ -337,4 +359,82 @@ CREATE POLICY "Public read certificates" ON certificates FOR SELECT USING (true)
 CREATE POLICY "Admin all certificates" ON certificates FOR ALL USING (true);
 CREATE POLICY "Admin read audit_log" ON audit_log FOR SELECT USING (true);
 CREATE POLICY "Admin insert audit_log" ON audit_log FOR INSERT WITH CHECK (true);
+
+-- ==========================================
+-- PHASE 3: GCL Archive, Sponsors, Gallery & FAQ
+-- ==========================================
+
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS linked_team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_teams_linked_team_id ON teams (linked_team_id);
+
+ALTER TABLE editions
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS champion_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS runner_up_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS third_place_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS show_sponsors_on_certificates BOOLEAN DEFAULT false;
+
+ALTER TABLE team_members 
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS is_captain BOOLEAN DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS gallery_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  edition_id UUID NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+  segment TEXT NOT NULL,
+  image_url TEXT NOT NULL,
+  caption TEXT,
+  uploaded_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  is_pinned BOOLEAN DEFAULT false,
+  published_at TIMESTAMPTZ DEFAULT now(),
+  created_by TEXT DEFAULT 'admin'
+);
+
+CREATE TABLE IF NOT EXISTS sponsors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  edition_id UUID NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  logo_url TEXT NOT NULL,
+  tier TEXT DEFAULT 'Partner',
+  website_url TEXT,
+  sort_order INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS faq_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE gallery_photos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE faq_entries ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read gallery_photos" ON gallery_photos;
+DROP POLICY IF EXISTS "Admin all gallery_photos" ON gallery_photos;
+DROP POLICY IF EXISTS "Public read announcements" ON announcements;
+DROP POLICY IF EXISTS "Admin all announcements" ON announcements;
+DROP POLICY IF EXISTS "Public read sponsors" ON sponsors;
+DROP POLICY IF EXISTS "Admin all sponsors" ON sponsors;
+DROP POLICY IF EXISTS "Public read faq_entries" ON faq_entries;
+DROP POLICY IF EXISTS "Admin all faq_entries" ON faq_entries;
+
+CREATE POLICY "Public read gallery_photos" ON gallery_photos FOR SELECT USING (true);
+CREATE POLICY "Admin all gallery_photos" ON gallery_photos FOR ALL USING (true);
+CREATE POLICY "Public read announcements" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Admin all announcements" ON announcements FOR ALL USING (true);
+CREATE POLICY "Public read sponsors" ON sponsors FOR SELECT USING (true);
+CREATE POLICY "Admin all sponsors" ON sponsors FOR ALL USING (true);
+CREATE POLICY "Public read faq_entries" ON faq_entries FOR SELECT USING (true);
+CREATE POLICY "Admin all faq_entries" ON faq_entries FOR ALL USING (true);
 
