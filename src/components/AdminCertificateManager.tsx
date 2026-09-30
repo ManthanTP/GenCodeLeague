@@ -26,12 +26,15 @@ import {
   generateCertificateId,
   getEditionCode,
   logAdminAction,
+  getCertificateTitle,
+  getCertificateSubtitle,
   CERTIFICATE_TYPE_LABELS,
   ALL_CERTIFICATE_TYPES,
   DEFAULT_CERTIFICATE_SETTINGS,
   fetchCertificateSettings,
   saveCertificateSettings,
 } from '../utils/certificateUtils';
+
 import { downloadOrRegenerateCertificate } from '../utils/pdfGenerator';
 import type {
   Certificate,
