@@ -28,3 +28,11 @@ old gcl/admin break button .jpeg
 /old gcl
 GENCODE_LEAGUE_FEATURES.txt
 GENCODE_LEAGUE_FEATURES.md
+
+# AI Agent & Scratch Files
+scratch/
+agent/
+.claude/
+.agents/
+.planning/
+skills-lock.json

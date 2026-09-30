@@ -13,6 +13,77 @@ const TYPE_CODES: Record<CertificateType, string> = {
 };
 
 /**
+ * Human-readable certificate type labels.
+ */
+export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
+  participation: 'Participation',
+  winner: 'Winner (Champion)',
+  runner_up: 'Runner Up (2nd Place)',
+  best_team: 'Best Team Dynamics',
+  judge: 'Honorary Judge',
+  volunteer: 'Volunteer',
+  organizer: 'Core Organizer',
+  mentor: 'Technical Mentor',
+};
+
+/**
+ * All valid certificate types.
+ */
+export const ALL_CERTIFICATE_TYPES: CertificateType[] = [
+  'participation',
+  'winner',
+  'runner_up',
+  'best_team',
+  'judge',
+  'volunteer',
+  'organizer',
+  'mentor',
+];
+
+/**
+ * Maps a certificate type to its display title on the certificate.
+ */
+export function getCertificateTitle(type: CertificateType): string {
+  switch (type) {
+    case 'winner':
+      return 'ACHIEVEMENT';
+    case 'runner_up':
+      return 'ACHIEVEMENT';
+    case 'best_team':
+      return 'ACHIEVEMENT';
+    default:
+      return 'PARTICIPATION';
+  }
+}
+
+/**
+ * Gets the subtitle text for the certificate body.
+ */
+export function getCertificateSubtitle(
+  type: CertificateType,
+  achievement?: string | null
+): string {
+  switch (type) {
+    case 'winner':
+      return achievement || 'has been awarded Champion of GenCode League';
+    case 'runner_up':
+      return achievement || 'has been awarded Runner Up of GenCode League';
+    case 'best_team':
+      return achievement || 'has been awarded Best Team Dynamics in GenCode League';
+    case 'judge':
+      return 'has served as Honorary Judge for GenCode League';
+    case 'volunteer':
+      return 'has served as Volunteer for GenCode League';
+    case 'organizer':
+      return 'has served as Core Organizer for GenCode League';
+    case 'mentor':
+      return 'has served as Technical Mentor for GenCode League';
+    default:
+      return 'has actively participated in GenCode League as a proud member of';
+  }
+}
+
+/**
  * Extracts a concise edition code (e.g., "GCL26" from year 2026 or "GCL 2026").
  */
 export function getEditionCode(year?: number | null, name?: string | null): string {

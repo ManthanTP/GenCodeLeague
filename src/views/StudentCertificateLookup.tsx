@@ -10,9 +10,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   ChevronLeft,
-  Calendar,
-  Users,
-  Filter,
   AlertCircle,
   ExternalLink,
 } from 'lucide-react';
@@ -20,7 +17,7 @@ import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import CertificatePreview from '../components/CertificatePreview';
-import { downloadCertificatePdf } from '../utils/pdfGenerator';
+import { downloadOrRegenerateCertificate } from '../utils/pdfGenerator';
 import type { Certificate } from '../types/certificates';
 import type { Edition } from '../types/database';
 
@@ -36,12 +33,12 @@ function checkSearchRateLimit(): boolean {
     timestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
 
     if (timestamps.length >= MAX_SEARCHES_PER_WINDOW) {
-      return false; // rate limited
+      return false;
     }
 
     timestamps.push(now);
     sessionStorage.setItem('gcl_lookup_rate_limit', JSON.stringify(timestamps));
-    return true; // allowed
+    return true;
   } catch {
     return true;
   }
@@ -104,8 +101,7 @@ export default function StudentCertificateLookup() {
         .select(`
           *,
           edition:editions(id, name, year),
-          team:teams(id, name),
-          template:certificate_templates(id, certificate_type, version, design_config)
+          team:teams(id, name)
         `)
         .ilike('recipient_name', `%${query}%`)
         .order('issued_at', { ascending: false });
@@ -136,28 +132,11 @@ export default function StudentCertificateLookup() {
   const handleDownload = async (cert: Certificate) => {
     setDownloadingId(cert.certificate_id);
     try {
-      if (cert.pdf_url) {
-        window.open(cert.pdf_url, '_blank');
-        showToast('Opening official certificate PDF...', 'success');
-      } else {
-        const element = document.getElementById(`offscreen-${cert.certificate_id}`);
-        if (element) {
-          await downloadCertificatePdf(element, cert.certificate_id);
-          showToast('Certificate downloaded successfully!', 'success');
-        } else {
-          showToast('Preparing download...', 'success');
-          setPreviewCert(cert);
-          setTimeout(async () => {
-            const el = document.getElementById(`certificate-${cert.certificate_id}`);
-            if (el) {
-              await downloadCertificatePdf(el, cert.certificate_id);
-              showToast('Certificate downloaded!', 'success');
-            }
-          }, 400);
-        }
-      }
-    } catch (err) {
-      showToast('Download failed. Please try again.', 'error');
+      showToast('Generating certificate PDF...', 'success');
+      await downloadOrRegenerateCertificate(cert);
+      showToast('Certificate downloaded successfully!', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Download failed. Please try again.', 'error');
     } finally {
       setDownloadingId(null);
     }
@@ -407,16 +386,10 @@ export default function StudentCertificateLookup() {
                     recipientName={previewCert.recipient_name}
                     certificateType={previewCert.certificate_type}
                     certificateId={previewCert.certificate_id}
-                    designConfig={
-                      previewCert.template?.design_config || {
-                        title: 'Certificate of ' + previewCert.certificate_type,
-                        primary_color: '#00f0ff',
-                        secondary_color: '#7000ff',
-                      }
-                    }
                     templateVersion={previewCert.template_version}
                     editionName={previewCert.edition?.name}
                     teamName={previewCert.team?.name}
+                    achievement={previewCert.achievement}
                     issuedAt={previewCert.issued_at}
                     status={previewCert.status}
                     scale={0.8}

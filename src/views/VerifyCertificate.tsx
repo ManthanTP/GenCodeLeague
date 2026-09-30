@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -11,14 +11,13 @@ import {
   Calendar,
   Award,
   Users,
-  ExternalLink,
   ChevronLeft,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import CertificatePreview from '../components/CertificatePreview';
-import { downloadCertificatePdf } from '../utils/pdfGenerator';
+import { downloadOrRegenerateCertificate } from '../utils/pdfGenerator';
 import type { Certificate } from '../types/certificates';
 
 // Simple client-side rate limiting tracker (max 15 lookups per minute)
@@ -55,8 +54,6 @@ export default function VerifyCertificate() {
   const [downloading, setDownloading] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
 
-  const previewRef = useRef<HTMLDivElement>(null);
-
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
@@ -82,14 +79,12 @@ export default function VerifyCertificate() {
       setNotFound(false);
 
       try {
-        // Query certificate along with edition, team, and template info
         const { data, error } = await supabase
           .from('certificates')
           .select(`
             *,
             edition:editions(id, name, year),
-            team:teams(id, name),
-            template:certificate_templates(id, certificate_type, version, design_config)
+            team:teams(id, name)
           `)
           .eq('certificate_id', certificateId.trim().toUpperCase())
           .maybeSingle();
@@ -107,11 +102,11 @@ export default function VerifyCertificate() {
           setLoading(false);
         }
 
-        // Safely and atomically increment verify_view_count
+        // Increment view count
         supabase.rpc('increment_certificate_view_count', {
           target_certificate_id: certificateId.trim().toUpperCase(),
         }).then();
-      } catch (err) {
+      } catch {
         if (!isCancelled) {
           setNotFound(true);
           setLoading(false);
@@ -139,30 +134,11 @@ export default function VerifyCertificate() {
     setDownloading(true);
 
     try {
-      if (cert.pdf_url) {
-        // If Supabase Storage PDF exists, open or trigger download
-        window.open(cert.pdf_url, '_blank');
-        showToast('Opening official certificate PDF...', 'success');
-      } else {
-        // Fallback: render hidden preview element and generate PDF
-        const element = document.getElementById(`certificate-${cert.certificate_id}`);
-        if (element) {
-          await downloadCertificatePdf(element, cert.certificate_id);
-          showToast('Certificate downloaded successfully!', 'success');
-        } else {
-          showToast('Generating certificate...', 'success');
-          setShowPreview(true);
-          setTimeout(async () => {
-            const el = document.getElementById(`certificate-${cert.certificate_id}`);
-            if (el) {
-              await downloadCertificatePdf(el, cert.certificate_id);
-              showToast('Certificate downloaded!', 'success');
-            }
-          }, 300);
-        }
-      }
-    } catch (err) {
-      showToast('Download failed. Please try again.', 'error');
+      showToast('Generating certificate PDF...', 'success');
+      await downloadOrRegenerateCertificate(cert);
+      showToast('Certificate downloaded successfully!', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Download failed. Please try again.', 'error');
     } finally {
       setDownloading(false);
     }
@@ -197,7 +173,7 @@ export default function VerifyCertificate() {
             <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <h2 className="text-lg font-bold tracking-wide">Validating Certificate Record...</h2>
             <p className="text-xs text-slate-400 font-mono mt-1">
-              Querying cryptographic ledger for #{certificateId}
+              Querying official records for #{certificateId}
             </p>
           </div>
         )}
@@ -345,6 +321,17 @@ export default function VerifyCertificate() {
                   </div>
                 </div>
 
+                {cert.achievement && (
+                  <div>
+                    <div className="text-xs uppercase font-mono tracking-wider text-slate-400">
+                      Achievement / Position
+                    </div>
+                    <div className="text-base font-semibold text-amber-400 mt-1">
+                      {cert.achievement}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <div className="text-xs uppercase font-mono tracking-wider text-slate-400">
                     Issued Date
@@ -392,16 +379,10 @@ export default function VerifyCertificate() {
                       recipientName={cert.recipient_name}
                       certificateType={cert.certificate_type}
                       certificateId={cert.certificate_id}
-                      designConfig={
-                        cert.template?.design_config || {
-                          title: 'Certificate of ' + cert.certificate_type,
-                          primary_color: '#00f0ff',
-                          secondary_color: '#7000ff',
-                        }
-                      }
                       templateVersion={cert.template_version}
                       editionName={cert.edition?.name}
                       teamName={cert.team?.name}
+                      achievement={cert.achievement}
                       issuedAt={cert.issued_at}
                       status={cert.status}
                     />
@@ -409,36 +390,6 @@ export default function VerifyCertificate() {
                 </div>
               )}
             </div>
-
-            {/* Hidden Offscreen Render for PDF Download */}
-            {!showPreview && (
-              <div
-                style={{
-                  position: 'fixed',
-                  left: '-9999px',
-                  top: '-9999px',
-                  pointerEvents: 'none',
-                }}
-              >
-                <CertificatePreview
-                  recipientName={cert.recipient_name}
-                  certificateType={cert.certificate_type}
-                  certificateId={cert.certificate_id}
-                  designConfig={
-                    cert.template?.design_config || {
-                      title: 'Certificate of ' + cert.certificate_type,
-                      primary_color: '#00f0ff',
-                      secondary_color: '#7000ff',
-                    }
-                  }
-                  templateVersion={cert.template_version}
-                  editionName={cert.edition?.name}
-                  teamName={cert.team?.name}
-                  issuedAt={cert.issued_at}
-                  status={cert.status}
-                />
-              </div>
-            )}
           </div>
         )}
       </main>

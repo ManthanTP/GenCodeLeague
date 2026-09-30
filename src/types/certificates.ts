@@ -8,30 +8,11 @@ export type CertificateType =
   | 'organizer'
   | 'mentor';
 
-export interface CertificateDesignConfig {
-  title: string;
-  subtitle?: string;
-  primary_color: string;
-  secondary_color: string;
-  accent_badge?: string;
-  background_style?: string;
-  border_style?: string;
-  signature_title_1?: string;
-  signature_name_1?: string;
-  signature_title_2?: string;
-  signature_name_2?: string;
-  custom_body_text?: string;
-}
-
-export interface CertificateTemplate {
-  id: string;
-  certificate_type: CertificateType;
-  version: number;
-  design_config: CertificateDesignConfig;
-  created_at: string;
-  is_active: boolean;
-}
-
+/**
+ * Simplified certificate record — stores ONLY metadata.
+ * No PDF URL, no design_config. The PDF is generated on-demand
+ * in the browser using the single global certificate template image.
+ */
 export interface Certificate {
   id: string;
   certificate_id: string;
@@ -39,12 +20,11 @@ export interface Certificate {
   team_id: string | null;
   recipient_name: string;
   certificate_type: CertificateType;
-  template_id: string;
+  achievement: string | null;
   template_version: number;
   issued_at: string;
   status: 'valid' | 'revoked';
   revoked_reason?: string | null;
-  pdf_url?: string | null;
   verify_view_count: number;
   edition?: {
     id: string;
@@ -55,7 +35,6 @@ export interface Certificate {
     id: string;
     name: string;
   } | null;
-  template?: CertificateTemplate;
 }
 
 export interface AuditLogEntry {

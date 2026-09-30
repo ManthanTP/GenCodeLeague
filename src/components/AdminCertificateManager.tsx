@@ -10,32 +10,21 @@ import {
   Check,
   ShieldCheck,
   AlertTriangle,
-  FileText,
   RefreshCw,
   ExternalLink,
   ShieldAlert,
-  ChevronRight,
-  Layers,
-  Palette,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import CertificatePreview from './CertificatePreview';
-import TemplateDiffEditor from './TemplateDiffEditor';
 import {
   generateCertificateId,
   getEditionCode,
   logAdminAction,
+  CERTIFICATE_TYPE_LABELS,
+  ALL_CERTIFICATE_TYPES,
 } from '../utils/certificateUtils';
-import {
-  generateCertificatePdfBlob,
-  uploadCertificatePdf,
-  downloadCertificatePdf,
-} from '../utils/pdfGenerator';
-import type {
-  Certificate,
-  CertificateTemplate,
-  CertificateType,
-} from '../types/certificates';
+import { downloadOrRegenerateCertificate } from '../utils/pdfGenerator';
+import type { Certificate, CertificateType } from '../types/certificates';
 import type { Edition, Team } from '../types/database';
 
 interface AdminCertificateManagerProps {
@@ -45,26 +34,12 @@ interface AdminCertificateManagerProps {
   onNavigateBulk?: () => void;
 }
 
-const CERTIFICATE_TYPES: { type: CertificateType; label: string }[] = [
-  { type: 'participation', label: 'Participation' },
-  { type: 'winner', label: 'Winner (Champion)' },
-  { type: 'runner_up', label: 'Runner Up (2nd Place)' },
-  { type: 'best_team', label: 'Best Team Dynamics' },
-  { type: 'judge', label: 'Honorary Judge' },
-  { type: 'volunteer', label: 'Volunteer' },
-  { type: 'organizer', label: 'Core Organizer' },
-  { type: 'mentor', label: 'Technical Mentor' },
-];
-
 export default function AdminCertificateManager({
   currentEdition,
   teams,
   onShowToast,
   onNavigateBulk,
 }: AdminCertificateManagerProps) {
-  // Navigation subtab state
-  const [managerSubTab, setManagerSubTab] = useState<'issue' | 'templates'>('issue');
-
   // Form states
   const [editions, setEditions] = useState<Edition[]>([]);
   const [selectedEditionId, setSelectedEditionId] = useState<string>(
@@ -74,18 +49,16 @@ export default function AdminCertificateManager({
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [certificateType, setCertificateType] =
     useState<CertificateType>('participation');
-  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [achievement, setAchievement] = useState('');
 
   // UI / Action states
   const [generating, setGenerating] = useState(false);
-  const [generatedCert, setGeneratedCert] = useState<Certificate | null>(null);
   const [certificatesList, setCertificatesList] = useState<Certificate[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [previewScale, setPreviewScale] = useState<number>(0.56);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Revoke Modal State
   const [certToRevoke, setCertToRevoke] = useState<Certificate | null>(null);
@@ -95,74 +68,36 @@ export default function AdminCertificateManager({
   // Detail / Preview Modal
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
 
-  // Hidden preview ref for offscreen PDF generation
-  const offscreenCertRef = useRef<HTMLDivElement>(null);
-
-  // Load all editions for dropdown
+  // Load editions
   useEffect(() => {
     supabase
       .from('editions')
       .select('*')
       .order('year', { ascending: false })
       .then(({ data }) => {
-        if (data) {
+        if (data && data.length > 0) {
           setEditions(data);
-          if (!selectedEditionId && data.length > 0) {
-            setSelectedEditionId(data[0].id);
+          if (!selectedEditionId) {
+            const initial =
+              currentEdition?.id ||
+              data.find((e: Edition) => e.is_current)?.id ||
+              data[0].id;
+            setSelectedEditionId(initial);
           }
         }
       });
-  }, []);
-
-  // Update selectedEditionId if currentEdition becomes available
-  useEffect(() => {
-    if (currentEdition?.id && !selectedEditionId) {
-      setSelectedEditionId(currentEdition.id);
-    }
   }, [currentEdition?.id]);
 
-  // Load templates
-  const loadTemplates = async () => {
-    const { data } = await supabase
-      .from('certificate_templates')
-      .select('*')
-      .order('version', { ascending: false });
-
-    if (data) {
-      setTemplates(data as CertificateTemplate[]);
-    }
-  };
-
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  // Available templates for selected certificate_type
-  const availableTemplates = useMemo(() => {
-    return templates.filter((t) => t.certificate_type === certificateType);
-  }, [templates, certificateType]);
-
-  // Default to active template whenever type or available templates change
-  useEffect(() => {
-    const activeTemplate =
-      availableTemplates.find((t) => t.is_active) || availableTemplates[0];
-    if (activeTemplate) {
-      setSelectedTemplateId(activeTemplate.id);
-    } else {
-      setSelectedTemplateId('');
-    }
-  }, [availableTemplates]);
-
-  // Selected template object
-  const activeTemplate = useMemo(() => {
+  // Selected edition object
+  const activeEdition = useMemo(() => {
     return (
-      templates.find((t) => t.id === selectedTemplateId) ||
-      availableTemplates[0] ||
+      editions.find((e) => e.id === selectedEditionId) ||
+      currentEdition ||
       null
     );
-  }, [templates, selectedTemplateId, availableTemplates]);
+  }, [editions, selectedEditionId, currentEdition]);
 
-  // Load issued certificates list
+  // Load issued certificates
   const loadCertificates = async () => {
     setLoadingList(true);
     try {
@@ -171,8 +106,7 @@ export default function AdminCertificateManager({
         .select(`
           *,
           edition:editions(id, name, year),
-          team:teams(id, name),
-          template:certificate_templates(id, certificate_type, version, design_config)
+          team:teams(id, name)
         `)
         .order('issued_at', { ascending: false });
 
@@ -193,113 +127,120 @@ export default function AdminCertificateManager({
     loadCertificates();
   }, [selectedEditionId]);
 
-  // Selected edition object
-  const activeEdition = useMemo(() => {
-    return (
-      editions.find((e) => e.id === selectedEditionId) ||
-      currentEdition ||
-      null
-    );
-  }, [editions, selectedEditionId, currentEdition]);
+  // Filter certificates by search and type
+  const filteredCerts = useMemo(() => {
+    let filtered = certificatesList;
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((c) => c.certificate_type === typeFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.recipient_name.toLowerCase().includes(q) ||
+          c.certificate_id.toLowerCase().includes(q) ||
+          (c.team?.name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  }, [certificatesList, typeFilter, searchQuery]);
 
-  // Preview Certificate ID
-  const previewCertId = useMemo(() => {
-    const edCode = getEditionCode(activeEdition?.year, activeEdition?.name);
-    return `${edCode}-${certificateType.toUpperCase().slice(0, 4)}-SAMPLE`;
-  }, [activeEdition, certificateType]);
+  // Whether achievement field should show
+  const showAchievementField = ['winner', 'runner_up', 'best_team'].includes(certificateType);
 
-  // Selected team object
-  const activeTeam = useMemo(() => {
-    return teams.find((t) => t.id === selectedTeamId) || null;
-  }, [teams, selectedTeamId]);
-
-  // Handle Single Certificate Generation
-  const handleGenerateCertificate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ─── Issue Certificate ───
+  const handleIssueCertificate = async () => {
     if (!recipientName.trim()) {
-      onShowToast('Please enter the recipient name', 'error');
+      onShowToast('Enter participant name.', 'error');
       return;
     }
     if (!selectedEditionId) {
-      onShowToast('Please select an event edition', 'error');
-      return;
-    }
-    if (!activeTemplate) {
-      onShowToast('No active template found for this certificate type', 'error');
+      onShowToast('Select an edition.', 'error');
       return;
     }
 
     setGenerating(true);
 
     try {
-      const edCode = getEditionCode(activeEdition?.year, activeEdition?.name);
-      const newCertId = generateCertificateId(edCode, certificateType);
+      const editionCode = getEditionCode(activeEdition?.year, activeEdition?.name);
+      const certId = generateCertificateId(editionCode, certificateType);
 
-      // Render offscreen PDF
-      const offscreenElement = document.getElementById('offscreen-render-cert');
-      let pdfUrl: string | null = null;
+      const teamId = selectedTeamId || null;
 
-      if (offscreenElement) {
-        const { blob } = await generateCertificatePdfBlob(
-          offscreenElement,
-          newCertId
-        );
-        pdfUrl = await uploadCertificatePdf(newCertId, blob);
-      }
+      const record = {
+        certificate_id: certId,
+        edition_id: selectedEditionId,
+        team_id: teamId,
+        recipient_name: recipientName.trim(),
+        certificate_type: certificateType,
+        achievement: showAchievementField ? achievement.trim() || null : null,
+        template_version: 1,
+        status: 'valid',
+        verify_view_count: 0,
+      };
 
-      // Insert certificate record into database
-      const { data: insertedCert, error: insertError } = await supabase
+      const { data, error } = await supabase
         .from('certificates')
-        .insert({
-          certificate_id: newCertId,
-          edition_id: selectedEditionId,
-          team_id: selectedTeamId || null,
-          recipient_name: recipientName.trim(),
-          certificate_type: certificateType,
-          template_id: activeTemplate.id,
-          template_version: activeTemplate.version,
-          status: 'valid',
-          pdf_url: pdfUrl,
-          verify_view_count: 0,
-        })
+        .insert(record)
         .select(`
           *,
           edition:editions(id, name, year),
-          team:teams(id, name),
-          template:certificate_templates(id, certificate_type, version, design_config)
+          team:teams(id, name)
         `)
         .single();
 
-      if (insertError) {
-        throw insertError;
-      }
+      if (error) throw error;
 
-      // Log into audit_log
-      await logAdminAction('SINGLE_CERTIFICATE_GENERATED', {
-        certificate_id: newCertId,
+      await logAdminAction('CERTIFICATE_ISSUED', {
+        certificate_id: certId,
         recipient_name: recipientName.trim(),
         certificate_type: certificateType,
         edition_id: selectedEditionId,
-        team_id: selectedTeamId || null,
-        template_version: activeTemplate.version,
       });
 
-      onShowToast(`Certificate ${newCertId} generated successfully!`, 'success');
-      setGeneratedCert(insertedCert as unknown as Certificate);
+      onShowToast(`Certificate ${certId} issued successfully!`, 'success');
+
+      // Reset form
       setRecipientName('');
+      setSelectedTeamId('');
+      setAchievement('');
+
+      // Refresh list
       loadCertificates();
     } catch (err: any) {
-      onShowToast(err?.message || 'Failed to generate certificate', 'error');
+      onShowToast(err?.message || 'Failed to issue certificate.', 'error');
     } finally {
       setGenerating(false);
     }
   };
 
-  // Revoke Handler
-  const handleConfirmRevoke = async () => {
-    if (!certToRevoke) return;
-    if (!revokedReason.trim()) {
-      onShowToast('Revocation reason is strictly required.', 'error');
+  // ─── Copy Verification URL ───
+  const handleCopyVerifyUrl = (certId: string) => {
+    const url = `${window.location.origin}/verify/${certId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(certId);
+    onShowToast('Verification URL copied!', 'success');
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  // ─── Download Certificate PDF ───
+  const handleDownload = async (cert: Certificate) => {
+    setDownloadingId(cert.certificate_id);
+    try {
+      onShowToast('Generating certificate PDF...', 'success');
+      await downloadOrRegenerateCertificate(cert);
+      onShowToast('Certificate downloaded successfully!', 'success');
+    } catch (err: any) {
+      onShowToast(err?.message || 'Download failed.', 'error');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // ─── Revoke Certificate ───
+  const handleRevoke = async () => {
+    if (!certToRevoke || !revokedReason.trim()) {
+      onShowToast('Provide a revocation reason.', 'error');
       return;
     }
 
@@ -317,413 +258,190 @@ export default function AdminCertificateManager({
 
       await logAdminAction('CERTIFICATE_REVOKED', {
         certificate_id: certToRevoke.certificate_id,
-        recipient_name: certToRevoke.recipient_name,
-        revoked_reason: revokedReason.trim(),
+        reason: revokedReason.trim(),
       });
 
       onShowToast(
-        `Certificate ${certToRevoke.certificate_id} has been revoked.`,
+        `Certificate ${certToRevoke.certificate_id} revoked.`,
         'success'
       );
+
       setCertToRevoke(null);
       setRevokedReason('');
       loadCertificates();
     } catch (err: any) {
-      onShowToast(err?.message || 'Failed to revoke certificate', 'error');
+      onShowToast(err?.message || 'Revocation failed.', 'error');
     } finally {
       setRevoking(false);
     }
   };
 
-  const handleCopyVerifyUrl = (certId: string) => {
-    const url = `${window.location.origin}/verify/${certId}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(certId);
-    onShowToast('Verification link copied to clipboard!', 'success');
-    setTimeout(() => setCopiedId(null), 2500);
-  };
-
-  // Filtered certificates list
-  const filteredCertificates = useMemo(() => {
-    return certificatesList.filter((c) => {
-      const matchesSearch =
-        c.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.certificate_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.team?.name &&
-          c.team.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      const matchesType =
-        typeFilter === 'all' || c.certificate_type === typeFilter;
-
-      return matchesSearch && matchesType;
-    });
-  }, [certificatesList, searchQuery, typeFilter]);
-
   return (
-    <div className="space-y-8">
-      {/* Top Banner & Fast Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-cyan-500/30 backdrop-blur-md shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-glow-cyan">
-            <Award size={26} />
+    <div className="space-y-6">
+      {/* ═══ Header ═══ */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+            <Award size={22} className="text-cyan-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              Certificate Command Center
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                LAYER A
-              </span>
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Generate, preview, issue, and audit cryptographically verifiable certificates.
+            <h2 className="text-xl font-black text-white">Certificate Manager</h2>
+            <p className="text-xs text-slate-400 font-mono">
+              Issue, manage & download official GCL certificates
             </p>
           </div>
         </div>
 
-        {onNavigateBulk && (
-          <button
-            onClick={onNavigateBulk}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-sm border border-indigo-400/30 flex items-center gap-2 shadow-glow-blue transition-all shrink-0"
+        <div className="flex items-center gap-3">
+          {/* Edition Selector */}
+          <select
+            value={selectedEditionId}
+            onChange={(e) => setSelectedEditionId(e.target.value)}
+            className="gcl-input text-xs font-mono py-2"
           >
-            <Layers size={18} /> Bulk Generation (CSV) →
-          </button>
-        )}
+            {editions.map((ed) => (
+              <option key={ed.id} value={ed.id}>
+                {ed.name} ({ed.year})
+              </option>
+            ))}
+          </select>
+
+          {onNavigateBulk && (
+            <button
+              onClick={onNavigateBulk}
+              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-400 flex items-center gap-1.5"
+            >
+              <Plus size={14} /> Bulk Issue
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Subtab Navigation Switcher */}
-      <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl backdrop-blur-md w-fit">
-        <button
-          type="button"
-          onClick={() => setManagerSubTab('issue')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
-            managerSubTab === 'issue'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-glow-cyan'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Award size={15} /> ISSUE & REGISTRY
-        </button>
-        <button
-          type="button"
-          onClick={() => setManagerSubTab('templates')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all ${
-            managerSubTab === 'templates'
-              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-glow-purple'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Palette size={15} /> TEMPLATE STUDIO & DIFF
-        </button>
-      </div>
+      {/* ═══ Issue New Certificate Form ═══ */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+          <Plus size={16} className="text-cyan-400" />
+          Issue New Certificate
+        </h3>
 
-      {managerSubTab === 'templates' ? (
-        <TemplateDiffEditor
-          onShowToast={onShowToast}
-          onTemplatesUpdated={loadTemplates}
-        />
-      ) : (
-        <>
-      {/* Main Single Certificate Generation Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* Left Form: Form Inputs */}
-        <div className="xl:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-7 backdrop-blur-xl shadow-2xl space-y-5">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-            <div className="flex items-center gap-2.5 text-cyan-400 font-black text-base">
-              <Plus size={20} />
-              <span>Issue Single Certificate</span>
-            </div>
-            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded-full border border-cyan-800">
-              CRYPTOGRAPHIC v1.0
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Participant Name */}
+          <div>
+            <label className="block text-xs font-mono text-slate-400 mb-1.5">
+              Participant Name *
+            </label>
+            <input
+              type="text"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              placeholder="e.g. Marcus Vance"
+              className="gcl-input w-full py-2.5 text-sm"
+            />
           </div>
 
-          <form onSubmit={handleGenerateCertificate} className="space-y-4">
-            {/* Edition Selection */}
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
-                Target Edition
-              </label>
-              <select
-                value={selectedEditionId}
-                onChange={(e) => setSelectedEditionId(e.target.value)}
-                className="gcl-input w-full font-mono text-xs"
-                required
-              >
-                {editions.map((ed) => (
-                  <option key={ed.id} value={ed.id}>
-                    {ed.name} ({ed.year}) {ed.is_current ? '— [CURRENT]' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Team */}
+          <div>
+            <label className="block text-xs font-mono text-slate-400 mb-1.5">
+              Team
+            </label>
+            <select
+              value={selectedTeamId}
+              onChange={(e) => setSelectedTeamId(e.target.value)}
+              className="gcl-input w-full py-2.5 text-sm"
+            >
+              <option value="">No Team / Individual</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* Recipient Full Name */}
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
-                Recipient Full Name *
+          {/* Certificate Type */}
+          <div>
+            <label className="block text-xs font-mono text-slate-400 mb-1.5">
+              Certificate Type *
+            </label>
+            <select
+              value={certificateType}
+              onChange={(e) => setCertificateType(e.target.value as CertificateType)}
+              className="gcl-input w-full py-2.5 text-sm"
+            >
+              {ALL_CERTIFICATE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {CERTIFICATE_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Achievement / Position (conditional) */}
+          {showAchievementField && (
+            <div className="md:col-span-2">
+              <label className="block text-xs font-mono text-slate-400 mb-1.5">
+                Achievement / Position
               </label>
               <input
                 type="text"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                placeholder="e.g. Alex Rivera"
-                className="gcl-input w-full font-bold text-sm tracking-wide text-white"
-                required
+                value={achievement}
+                onChange={(e) => setAchievement(e.target.value)}
+                placeholder="e.g. Champion — 1st Place, Best Team Dynamics"
+                className="gcl-input w-full py-2.5 text-sm"
               />
-            </div>
-
-            {/* 2-Column Subgrid: Team Affiliation + Certificate Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
-                  Team Affiliation
-                </label>
-                <select
-                  value={selectedTeamId}
-                  onChange={(e) => setSelectedTeamId(e.target.value)}
-                  className="gcl-input w-full text-xs"
-                >
-                  <option value="">None / Solo</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider mb-1.5 block">
-                  Certificate Type
-                </label>
-                <select
-                  value={certificateType}
-                  onChange={(e) =>
-                    setCertificateType(e.target.value as CertificateType)
-                  }
-                  className="gcl-input w-full capitalize text-xs"
-                >
-                  {CERTIFICATE_TYPES.map((ct) => (
-                    <option key={ct.type} value={ct.type}>
-                      {ct.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Template Version Selection */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10px] text-slate-400 uppercase font-black tracking-wider">
-                  Design Template
-                </label>
-                {activeTemplate?.is_active && (
-                  <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded">
-                    Active / Published
-                  </span>
-                )}
-              </div>
-              <select
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="gcl-input w-full font-mono text-xs"
-              >
-                {availableTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    v{t.version} — {t.design_config.title || t.certificate_type}{' '}
-                    {t.is_active ? '(Active)' : '(Archived Version)'}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Generation Submit Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={generating || !recipientName.trim()}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500 hover:from-cyan-300 hover:to-teal-400 text-black font-black text-sm shadow-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                {generating ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" />
-                    Generating Cryptographic PDF...
-                  </>
-                ) : (
-                  <>
-                    <Award size={18} />
-                    Issue & Sign Certificate
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Success banner if certificate was just generated */}
-          {generatedCert && (
-            <div className="mt-4 p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 shadow-xl space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
-                <ShieldCheck size={18} />
-                <span>Certificate Successfully Issued!</span>
-              </div>
-              <div className="font-mono text-xs text-white bg-slate-950 p-2.5 rounded-xl border border-slate-800 break-all select-all">
-                ID: {generatedCert.certificate_id}
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={() => handleCopyVerifyUrl(generatedCert.certificate_id)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 text-slate-200 cursor-pointer"
-                >
-                  <Copy size={13} /> Copy Link
-                </button>
-                <a
-                  href={`/verify/${generatedCert.certificate_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 border border-cyan-500/40"
-                >
-                  <ExternalLink size={13} /> Public Verify
-                </a>
-              </div>
             </div>
           )}
         </div>
 
-        {/* Right Form: Live Interactive Preview */}
-        <div className="xl:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl flex flex-col items-center">
-          <div className="w-full flex items-center justify-between mb-4 pb-3 border-b border-slate-800 flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-white font-bold text-sm">
-              <Eye size={18} className="text-cyan-400" />
-              <span>Real-Time Certificate Hologram</span>
-            </div>
-
-            {/* Scale Presets */}
-            <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[10px] font-mono">
-              <button
-                type="button"
-                onClick={() => setPreviewScale(0.46)}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                  previewScale === 0.46
-                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Compact
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewScale(0.56)}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                  previewScale === 0.56
-                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Fit (Default)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewScale(0.68)}
-                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                  previewScale === 0.68
-                    ? 'bg-cyan-500 text-black font-bold shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Large
-              </button>
-            </div>
+        <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-800">
+          {/* Live Preview Thumbnail */}
+          <div
+            className="border border-slate-700 rounded-lg overflow-hidden bg-white"
+            style={{ width: 280, height: 198 }}
+          >
+            <CertificatePreview
+              recipientName={recipientName || 'Participant Name'}
+              certificateType={certificateType}
+              certificateId={
+                getEditionCode(activeEdition?.year, activeEdition?.name) +
+                '-XXXX-XXXXXX'
+              }
+              templateVersion={1}
+              editionName={activeEdition?.name || 'GenCode League 2026'}
+              teamName={
+                selectedTeamId
+                  ? teams.find((t) => t.id === selectedTeamId)?.name
+                  : null
+              }
+              achievement={showAchievementField ? achievement : null}
+              scale={0.28}
+            />
           </div>
 
-          {/* Scaled Preview Wrapper with Cyber Glow Box */}
-          <div className="w-full overflow-hidden flex justify-center py-2">
-            <div
-              className="rounded-xl overflow-hidden shadow-2xl border border-slate-800 bg-[#070b14]"
-              style={{
-                width: 1000 * previewScale,
-                height: 707 * previewScale,
-                position: 'relative',
-              }}
-            >
-              <CertificatePreview
-                recipientName={recipientName || 'Sample Recipient'}
-                certificateType={certificateType}
-                certificateId={previewCertId}
-                designConfig={
-                  activeTemplate?.design_config || {
-                    title: 'Certificate of Participation',
-                    primary_color: '#00f0ff',
-                    secondary_color: '#7000ff',
-                  }
-                }
-                templateVersion={activeTemplate?.version || 1}
-                editionName={activeEdition?.name || 'GenCode League 2026'}
-                teamName={activeTeam?.name}
-                scale={previewScale}
-              />
-            </div>
-          </div>
-
-          {/* Live Specs Ribbon */}
-          <div className="mt-4 pt-3 border-t border-slate-800/80 w-full flex items-center justify-between text-[11px] font-mono text-slate-400 flex-wrap gap-2 px-2">
-            <div>
-              Target: <strong className="text-white">{recipientName || 'Sample Recipient'}</strong>
-            </div>
-            <div>
-              Type: <strong className="text-cyan-400 uppercase">{certificateType.replace('_', ' ')}</strong>
-            </div>
-            <div>
-              Template: <strong className="text-slate-200">v{activeTemplate?.version || 1}</strong>
-            </div>
-          </div>
+          <button
+            onClick={handleIssueCertificate}
+            disabled={generating || !recipientName.trim()}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-50 transition-all flex items-center gap-2"
+          >
+            <Award size={18} />
+            {generating ? 'Issuing...' : 'Issue Certificate'}
+          </button>
         </div>
       </div>
 
-      {/* Hidden Offscreen DOM element for rendering high-DPI canvas when generating single certificate */}
-      <div
-        id="offscreen-render-cert"
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          pointerEvents: 'none',
-        }}
-      >
-        <CertificatePreview
-          recipientName={recipientName || 'Sample Recipient'}
-          certificateType={certificateType}
-          certificateId={previewCertId}
-          designConfig={
-            activeTemplate?.design_config || {
-              title: 'Certificate of Participation',
-              primary_color: '#00f0ff',
-              secondary_color: '#7000ff',
-            }
-          }
-          templateVersion={activeTemplate?.version || 1}
-          editionName={activeEdition?.name || 'GenCode League 2026'}
-          teamName={activeTeam?.name}
-          scale={1}
-        />
-      </div>
+      {/* ═══ Certificates List ═══ */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <ShieldCheck size={16} className="text-emerald-400" />
+            Issued Certificates
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+              {filteredCerts.length}
+            </span>
+          </h3>
 
-      {/* Issued Certificates Ledger / Table */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div>
-            <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-              <FileText size={20} className="text-cyan-400" />
-              Issued Certificates Registry
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {filteredCertificates.length} certificate record(s) found
-            </p>
-          </div>
-
-          {/* Search & Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-60">
               <Search
                 size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -732,219 +450,158 @@ export default function AdminCertificateManager({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name or ID..."
-                className="gcl-input pl-8 py-1.5 text-xs w-48 font-mono"
+                placeholder="Search by name, ID, or team..."
+                className="gcl-input w-full pl-9 py-2 text-xs"
               />
             </div>
 
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="gcl-input py-1.5 text-xs font-mono"
+              className="gcl-input py-2 text-xs font-mono"
             >
               <option value="all">All Types</option>
-              {CERTIFICATE_TYPES.map((ct) => (
-                <option key={ct.type} value={ct.type}>
-                  {ct.label}
+              {ALL_CERTIFICATE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {CERTIFICATE_TYPE_LABELS[type]}
                 </option>
               ))}
             </select>
 
             <button
               onClick={loadCertificates}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-              title="Refresh Registry"
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              title="Refresh"
             >
-              <RefreshCw size={16} className={loadingList ? 'animate-spin' : ''} />
+              <RefreshCw size={14} />
             </button>
           </div>
         </div>
 
-        {/* Registry Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider">
-                <th className="py-3 px-3">Certificate ID</th>
-                <th className="py-3 px-3">Recipient</th>
-                <th className="py-3 px-3">Type</th>
-                <th className="py-3 px-3">Team</th>
-                <th className="py-3 px-3 text-center">Ver.</th>
-                <th className="py-3 px-3 text-center">Views</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-sans">
-              {filteredCertificates.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 italic">
-                    {loadingList
-                      ? 'Loading certificates...'
-                      : 'No certificates issued yet for this selection.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredCertificates.map((cert) => {
-                  const isValid = cert.status === 'valid';
-                  return (
-                    <tr key={cert.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-cyan-400">
-                        {cert.certificate_id}
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-white">
-                        {cert.recipient_name}
-                      </td>
-                      <td className="py-3 px-3 capitalize text-slate-300">
-                        {cert.certificate_type.replace('_', ' ')}
-                      </td>
-                      <td className="py-3 px-3 text-slate-400">
-                        {cert.team?.name || '—'}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-slate-400">
-                        v{cert.template_version}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-slate-300">
-                        {cert.verify_view_count}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        {isValid ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                            VALID
-                          </span>
-                        ) : (
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/40 cursor-help"
-                            title={`Revoked: ${cert.revoked_reason || 'No reason provided'}`}
-                          >
-                            REVOKED
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => setPreviewCert(cert)}
-                            className="p-1.5 rounded hover:bg-slate-700 text-slate-300 transition-colors"
-                            title="Preview Certificate"
-                          >
-                            <Eye size={15} />
-                          </button>
-
-                          <button
-                            onClick={() => handleCopyVerifyUrl(cert.certificate_id)}
-                            className="p-1.5 rounded hover:bg-slate-700 text-slate-300 transition-colors"
-                            title="Copy Public Verification Link"
-                          >
-                            {copiedId === cert.certificate_id ? (
-                              <Check size={15} className="text-emerald-400" />
-                            ) : (
-                              <Copy size={15} />
-                            )}
-                          </button>
-
-                          {cert.pdf_url && (
-                            <a
-                              href={cert.pdf_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 rounded hover:bg-slate-700 text-cyan-400 transition-colors"
-                              title="Download PDF"
-                            >
-                              <Download size={15} />
-                            </a>
-                          )}
-
-                          {isValid && (
-                            <button
-                              onClick={() => {
-                                setCertToRevoke(cert);
-                                setRevokedReason('');
-                              }}
-                              className="p-1.5 rounded hover:bg-red-950/60 text-red-400 transition-colors"
-                              title="Revoke Certificate"
-                            >
-                              <ShieldAlert size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </>
-      )}
-
-      {/* Revocation Confirmation Modal */}
-      {certToRevoke && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-red-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-red-400">
-              <ShieldAlert size={28} />
-              <h3 className="text-xl font-bold text-white">Revoke Certificate</h3>
-            </div>
-
-            <p className="text-xs text-slate-300">
-              You are invalidating certificate{' '}
-              <span className="font-mono text-cyan-400 font-bold">
-                {certToRevoke.certificate_id}
-              </span>{' '}
-              issued to{' '}
-              <strong className="text-white">{certToRevoke.recipient_name}</strong>.
-              This action is permanent and logged in the audit ledger.
-            </p>
-
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                Reason for Revocation * (Strictly Required)
-              </label>
-              <textarea
-                value={revokedReason}
-                onChange={(e) => setRevokedReason(e.target.value)}
-                placeholder="e.g. Typo in recipient name, incorrect team affiliation, disqualified..."
-                className="gcl-input w-full h-24 text-xs resize-none"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setCertToRevoke(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-semibold transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmRevoke}
-                disabled={revoking || !revokedReason.trim()}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-sm disabled:opacity-50 transition-colors flex items-center gap-2"
-              >
-                {revoking ? 'Revoking...' : 'Confirm Revocation'}
-              </button>
-            </div>
+        {loadingList ? (
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-xs text-slate-400 font-mono">Loading certificates...</p>
           </div>
-        </div>
-      )}
+        ) : filteredCerts.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            <Award size={40} className="mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-semibold">No certificates found</p>
+            <p className="text-xs mt-1">
+              {searchQuery ? 'Try a different search query.' : 'Issue your first certificate above.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {filteredCerts.map((cert) => {
+              const isValid = cert.status === 'valid';
+              return (
+                <div
+                  key={cert.id}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-cyan-500/30 transition-colors"
+                >
+                  {/* Certificate Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-bold text-white truncate">
+                        {cert.recipient_name}
+                      </span>
+                      {isValid ? (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                          VALID
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                          REVOKED
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono text-slate-400">
+                      <span className="text-amber-400 font-bold">
+                        {cert.certificate_id}
+                      </span>
+                      <span className="capitalize">
+                        {cert.certificate_type.replace('_', ' ')}
+                      </span>
+                      {cert.team?.name && (
+                        <span>Team: {cert.team.name}</span>
+                      )}
+                      <span>
+                        {new Date(cert.issued_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
 
-      {/* Modal Preview of Selected Certificate */}
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setPreviewCert(cert)}
+                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                      title="Preview"
+                    >
+                      <Eye size={14} />
+                    </button>
+
+                    <button
+                      onClick={() => handleCopyVerifyUrl(cert.certificate_id)}
+                      className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                      title="Copy Verification URL"
+                    >
+                      {copiedId === cert.certificate_id ? (
+                        <Check size={14} className="text-emerald-400" />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleDownload(cert)}
+                      disabled={downloadingId === cert.certificate_id}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+                      title="Download PDF"
+                    >
+                      <Download size={13} />
+                      {downloadingId === cert.certificate_id ? '...' : 'PDF'}
+                    </button>
+
+                    {isValid && (
+                      <button
+                        onClick={() => setCertToRevoke(cert)}
+                        className="p-2 rounded-lg bg-red-950/40 hover:bg-red-950/70 text-red-400 border border-red-900/40 transition-colors"
+                        title="Revoke"
+                      >
+                        <ShieldAlert size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ Preview Modal ═══ */}
       {previewCert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-4xl w-full flex flex-col items-center space-y-4 my-8">
             <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-cyan-400 font-bold">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-cyan-400 font-bold text-sm">
                   {previewCert.certificate_id}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  (Template v{previewCert.template_version})
-                </span>
+                <a
+                  href={`/verify/${previewCert.certificate_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-slate-400 hover:text-cyan-300 flex items-center gap-1 font-mono"
+                >
+                  Verify <ExternalLink size={12} />
+                </a>
               </div>
               <button
                 onClick={() => setPreviewCert(null)}
@@ -955,57 +612,93 @@ export default function AdminCertificateManager({
             </div>
 
             <div className="w-full overflow-x-auto flex justify-center py-2">
-              <div
-                style={{
-                  width: 1000 * 0.8,
-                  height: 707 * 0.8,
-                  position: 'relative',
-                }}
-              >
+              <div style={{ width: 1000 * 0.75, height: 707 * 0.75 }}>
                 <CertificatePreview
                   recipientName={previewCert.recipient_name}
                   certificateType={previewCert.certificate_type}
                   certificateId={previewCert.certificate_id}
-                  designConfig={
-                    previewCert.template?.design_config || {
-                      title: 'Certificate of ' + previewCert.certificate_type,
-                      primary_color: '#00f0ff',
-                      secondary_color: '#7000ff',
-                    }
-                  }
                   templateVersion={previewCert.template_version}
                   editionName={previewCert.edition?.name}
                   teamName={previewCert.team?.name}
+                  achievement={previewCert.achievement}
                   issuedAt={previewCert.issued_at}
                   status={previewCert.status}
-                  scale={0.8}
+                  scale={0.75}
                 />
               </div>
             </div>
 
             <div className="w-full flex justify-between items-center pt-2 border-t border-slate-800">
-              <div className="text-xs text-slate-400 font-mono">
-                Issued:{' '}
-                {new Date(previewCert.issued_at).toLocaleDateString('en-US')}
+              <button
+                onClick={() => handleCopyVerifyUrl(previewCert.certificate_id)}
+                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Copy size={13} /> Copy Verification Link
+              </button>
+              <button
+                onClick={() => handleDownload(previewCert)}
+                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan"
+              >
+                <Download size={14} /> Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Revoke Modal ═══ */}
+      {certToRevoke && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-slate-900 border border-red-900/60 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                <AlertTriangle size={20} className="text-red-400" />
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleCopyVerifyUrl(previewCert.certificate_id)}
-                  className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5"
-                >
-                  <Copy size={13} /> Copy Link
-                </button>
-                {previewCert.pdf_url && (
-                  <a
-                    href={previewCert.pdf_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs flex items-center gap-1.5"
-                  >
-                    <Download size={13} /> Download PDF
-                  </a>
-                )}
+              <div>
+                <h3 className="text-lg font-bold text-white">Revoke Certificate</h3>
+                <p className="text-xs text-slate-400 font-mono">
+                  {certToRevoke.certificate_id}
+                </p>
               </div>
+            </div>
+
+            <p className="text-sm text-slate-300">
+              You are about to revoke the certificate issued to{' '}
+              <strong className="text-white">{certToRevoke.recipient_name}</strong>.
+              This action is recorded in the audit log.
+            </p>
+
+            <div>
+              <label className="block text-xs font-mono text-slate-400 mb-1.5">
+                Revocation Reason *
+              </label>
+              <textarea
+                value={revokedReason}
+                onChange={(e) => setRevokedReason(e.target.value)}
+                placeholder="Reason for revocation..."
+                rows={3}
+                className="gcl-input w-full py-2.5 text-sm resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setCertToRevoke(null);
+                  setRevokedReason('');
+                }}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRevoke}
+                disabled={revoking || !revokedReason.trim()}
+                className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+              >
+                <ShieldAlert size={16} />
+                {revoking ? 'Revoking...' : 'Confirm Revoke'}
+              </button>
             </div>
           </div>
         </div>

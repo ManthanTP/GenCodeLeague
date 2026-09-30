@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import JSZip from 'jszip';
 import {
@@ -10,7 +10,6 @@ import {
   Download,
   ChevronLeft,
   RefreshCw,
-  Eye,
   ShieldCheck,
   Check,
   Award,
@@ -19,20 +18,17 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
-import CertificatePreview from '../components/CertificatePreview';
 import {
   generateCertificateId,
   getEditionCode,
   logAdminAction,
+  ALL_CERTIFICATE_TYPES,
+  CERTIFICATE_TYPE_LABELS,
 } from '../utils/certificateUtils';
 import {
-  generateCertificatePdfBlob,
-  uploadCertificatePdf,
+  renderCertificatePdfBlob,
 } from '../utils/pdfGenerator';
-import type {
-  CertificateTemplate,
-  CertificateType,
-} from '../types/certificates';
+import type { CertificateType } from '../types/certificates';
 import type { Edition, Team } from '../types/database';
 
 interface CsvRow {
@@ -55,22 +51,11 @@ interface GeneratedItem {
   pdfBlob?: Blob;
 }
 
-const VALID_TYPES: CertificateType[] = [
-  'participation',
-  'winner',
-  'runner_up',
-  'best_team',
-  'judge',
-  'volunteer',
-  'organizer',
-  'mentor',
-];
-
 export default function BulkCertificates() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
 
-  // Authentication check: matches AdminPanel
+  // Authentication check
   const isMasterAuthed =
     sessionStorage.getItem('gcl_admin_authenticated') === 'true';
   const isAdmin = isMasterAuthed || profile?.role === 'admin';
@@ -85,7 +70,6 @@ export default function BulkCertificates() {
   const [editions, setEditions] = useState<Edition[]>([]);
   const [selectedEditionId, setSelectedEditionId] = useState<string>('');
   const [teams, setTeams] = useState<Team[]>([]);
-  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
 
   // CSV States
   const [rawCsv, setRawCsv] = useState<string>('');
@@ -131,31 +115,11 @@ export default function BulkCertificates() {
       });
   }, [selectedEditionId]);
 
-  // Load Active Templates
-  useEffect(() => {
-    supabase
-      .from('certificate_templates')
-      .select('*')
-      .eq('is_active', true)
-      .then(({ data }) => {
-        if (data) setTemplates(data as CertificateTemplate[]);
-      });
-  }, []);
-
   const activeEdition = useMemo(() => {
     return editions.find((e) => e.id === selectedEditionId) || null;
   }, [editions, selectedEditionId]);
 
-  // Template map for quick lookup by type
-  const templateMap = useMemo(() => {
-    const map = new Map<CertificateType, CertificateTemplate>();
-    templates.forEach((t) => {
-      map.set(t.certificate_type, t);
-    });
-    return map;
-  }, [templates]);
-
-  // Parse and validate CSV rows whenever rawCsv, teams, or selectedEditionId change
+  // Parse and validate CSV rows
   useEffect(() => {
     if (!rawCsv.trim()) {
       setParsedRows([]);
@@ -187,7 +151,6 @@ export default function BulkCertificates() {
 
     for (let i = startIndex; i < lines.length; i++) {
       const line = lines[i];
-      // Basic CSV column split handling quotes
       const parts = line.split(',').map((p) => p.trim().replace(/^["']|["']$/g, ''));
       const name = parts[0] || '';
       const teamName = parts[1] || '';
@@ -195,24 +158,21 @@ export default function BulkCertificates() {
 
       const errors: string[] = [];
 
-      // Validate Name
       if (!name) {
         errors.push('Recipient name is empty');
       }
 
-      // Validate Certificate Type
       let matchedType: CertificateType | undefined;
       if (!rawType) {
         errors.push('Certificate type is missing');
-      } else if (!VALID_TYPES.includes(rawType as CertificateType)) {
+      } else if (!ALL_CERTIFICATE_TYPES.includes(rawType as CertificateType)) {
         errors.push(
-          `Invalid type "${rawType}". Allowed: ${VALID_TYPES.join(', ')}`
+          `Invalid type "${rawType}". Allowed: ${ALL_CERTIFICATE_TYPES.join(', ')}`
         );
       } else {
         matchedType = rawType as CertificateType;
       }
 
-      // Validate Team (Optional, but if specified, must exist in selected edition)
       let matchedTeam: Team | null = null;
       if (teamName) {
         const found = teams.find(
@@ -241,7 +201,6 @@ export default function BulkCertificates() {
     setParsedRows(validated);
   }, [rawCsv, teams, activeEdition]);
 
-  // Overall error count
   const totalErrors = useMemo(() => {
     return parsedRows.reduce((acc, row) => acc + row.errors.length, 0);
   }, [parsedRows]);
@@ -272,7 +231,7 @@ Priya Sharma,,volunteer`;
     setResults(null);
   };
 
-  // Generate All Handler
+  // ─── Generate All ───
   const handleGenerateAll = async () => {
     if (parsedRows.length === 0 || totalErrors > 0) return;
     if (!selectedEditionId) {
@@ -293,36 +252,32 @@ Priya Sharma,,volunteer`;
 
       try {
         const certType = row.validType || 'participation';
-        const template = templateMap.get(certType) || templates[0];
-
-        if (!template) {
-          throw new Error(`No active template found for ${certType}`);
-        }
-
         const certId = generateCertificateId(edCode, certType);
 
-        // Generate PDF from dedicated DOM element
-        const el = document.getElementById(`bulk-preview-item-${row.index}`);
+        // Render PDF blob in browser (no Supabase upload)
         let pdfBlob: Blob | undefined;
-        let pdfUrl: string | null = null;
-
-        if (el) {
-          const { blob } = await generateCertificatePdfBlob(el, certId);
-          pdfBlob = blob;
-          pdfUrl = await uploadCertificatePdf(certId, blob);
+        try {
+          pdfBlob = await renderCertificatePdfBlob({
+            recipient_name: row.name,
+            certificate_type: certType,
+            certificate_id: certId,
+            template_version: 1,
+            edition_name: activeEdition?.name || 'GenCode League',
+            team_name: row.matchedTeam?.name || row.team || null,
+          });
+        } catch (renderErr) {
+          console.warn(`PDF render failed for ${certId}:`, renderErr);
         }
 
-        // Insert individual database record
+        // Insert database record (metadata only — no pdf_url)
         const { error: dbError } = await supabase.from('certificates').insert({
           certificate_id: certId,
           edition_id: selectedEditionId,
           team_id: row.matchedTeam?.id || null,
           recipient_name: row.name,
           certificate_type: certType,
-          template_id: template.id,
-          template_version: template.version,
+          template_version: 1,
           status: 'valid',
-          pdf_url: pdfUrl,
           verify_view_count: 0,
         });
 
@@ -348,7 +303,6 @@ Priya Sharma,,volunteer`;
       }
     }
 
-    // Log the bulk generation in audit_log
     const successfulCount = generatedResults.filter(
       (r) => r.status === 'success'
     ).length;
@@ -367,7 +321,7 @@ Priya Sharma,,volunteer`;
     );
   };
 
-  // Download All as ZIP Handler
+  // ─── Download All as ZIP ───
   const handleDownloadZip = async () => {
     if (!results || results.length === 0) return;
 
@@ -392,165 +346,177 @@ Priya Sharma,,volunteer`;
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const downloadUrl = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${activeEdition?.name || 'GCL'}_Certificates_Bulk.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
+      const url = window.URL.createObjectURL(zipBlob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `GCL_Certificates_Bulk_${activeEdition?.year || ''}.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(anchor);
 
-      showToast(`ZIP archive with ${addedCount} certificates downloaded!`, 'success');
-    } catch (err) {
-      showToast('Failed to create ZIP bundle.', 'error');
+      showToast(`ZIP archive downloaded with ${addedCount} PDFs!`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'ZIP creation failed', 'error');
     } finally {
       setIsZipping(false);
     }
   };
 
+  if (authLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
-      <Header
-        viewMode="admin"
-        onToggleView={() => navigate('/')}
-        isAdminAuthenticated={true}
-        onLogout={() => {
-          sessionStorage.removeItem('gcl_admin_authenticated');
-          navigate('/123456789/GCL-0321/admin/login');
-        }}
-      />
+    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black">
+      <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* Navigation Breadcrumb */}
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
             to="/123456789/GCL-0321/admin"
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
           >
-            <ChevronLeft size={16} /> Back to Admin Console
+            <ChevronLeft size={16} /> Back to Admin Panel
           </Link>
-
-          <span className="text-xs font-mono text-cyan-400">
-            PROTECTED BULK PIPELINE
-          </span>
         </div>
 
-        {/* Header Banner */}
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-cyan-500/30 backdrop-blur-md shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-glow-cyan">
-              <Layers size={26} />
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+              <Layers size={22} className="text-cyan-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                Bulk Certificate Generation Engine
-              </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Upload CSV, inspect live rendered preview cards, validate every student row, and generate independent certificates.
+              <h1 className="text-2xl font-black text-white">Bulk Certificate Generator</h1>
+              <p className="text-xs text-slate-400 font-mono">
+                Upload CSV → Validate → Issue all at once
               </p>
             </div>
           </div>
+
+          <select
+            value={selectedEditionId}
+            onChange={(e) => setSelectedEditionId(e.target.value)}
+            className="gcl-input text-xs font-mono py-2"
+          >
+            {editions.map((ed) => (
+              <option key={ed.id} value={ed.id}>
+                {ed.name} ({ed.year})
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Result Screen (If Generation Finished) */}
-        {results && (
-          <div className="bg-slate-900/80 border border-emerald-500/50 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 size={28} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-white">
-                    {results.filter((r) => r.status === 'success').length} Certificates Generated
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Every certificate is saved as an individual verifiable record and uploaded to storage.
-                  </p>
-                </div>
-              </div>
+        {/* CSV Input Section */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+            <UploadCloud size={16} className="text-cyan-400" />
+            Upload or Paste CSV Data
+          </h3>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleDownloadZip}
-                  disabled={isZipping}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-sm shadow-glow-emerald flex items-center gap-2 transition-all disabled:opacity-50"
-                >
-                  <Download size={18} />
-                  {isZipping ? 'Bundling ZIP...' : 'Download All as ZIP'}
-                </button>
+          <p className="text-xs text-slate-400 mb-3">
+            CSV format: <code className="text-cyan-400 bg-slate-950 px-1.5 py-0.5 rounded text-[10px]">name,team,certificate_type</code>. 
+            Valid types: {ALL_CERTIFICATE_TYPES.join(', ')}.
+          </p>
 
-                <button
-                  onClick={() => {
-                    setResults(null);
-                    setRawCsv('');
-                    setParsedRows([]);
-                  }}
-                  className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition-colors"
-                >
-                  New Batch
-                </button>
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <label className="flex-1 cursor-pointer">
+              <div className="px-4 py-8 rounded-xl border-2 border-dashed border-slate-700 hover:border-cyan-500/50 bg-slate-950/40 text-center transition-colors">
+                <UploadCloud size={28} className="mx-auto mb-2 text-slate-500" />
+                <p className="text-xs font-semibold text-slate-400">
+                  {csvFileName || 'Drop CSV file or click to upload'}
+                </p>
               </div>
+              <input
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            <button
+              onClick={handleLoadSampleCsv}
+              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-400 flex items-center gap-1.5 self-end"
+            >
+              <FileText size={14} /> Load Sample CSV
+            </button>
+          </div>
+
+          <textarea
+            value={rawCsv}
+            onChange={(e) => {
+              setRawCsv(e.target.value);
+              setResults(null);
+            }}
+            placeholder={`name,team,certificate_type\nJohn Doe,Team Alpha,participation\nJane Smith,Team Beta,winner`}
+            rows={8}
+            className="gcl-input w-full font-mono text-xs resize-y"
+          />
+        </div>
+
+        {/* Validation Preview */}
+        {parsedRows.length > 0 && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CheckCircle2 size={16} className={totalErrors > 0 ? 'text-amber-400' : 'text-emerald-400'} />
+                Validation Preview
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+                  {parsedRows.length} rows
+                </span>
+                {totalErrors > 0 && (
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-900/50">
+                    {totalErrors} errors
+                  </span>
+                )}
+              </h3>
             </div>
 
-            {/* Success / Failure Ledger Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-mono uppercase">
-                    <th className="py-2.5 px-3">#</th>
-                    <th className="py-2.5 px-3">Certificate ID</th>
-                    <th className="py-2.5 px-3">Recipient Name</th>
-                    <th className="py-2.5 px-3">Team</th>
-                    <th className="py-2.5 px-3">Type</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                    <th className="py-2.5 px-3 text-right">Verify Link</th>
+                  <tr className="border-b border-slate-800 text-left">
+                    <th className="pb-2 px-2 text-slate-400 font-mono">#</th>
+                    <th className="pb-2 px-2 text-slate-400 font-mono">Name</th>
+                    <th className="pb-2 px-2 text-slate-400 font-mono">Team</th>
+                    <th className="pb-2 px-2 text-slate-400 font-mono">Type</th>
+                    <th className="pb-2 px-2 text-slate-400 font-mono">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {results.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30">
-                      <td className="py-2.5 px-3 font-mono text-slate-500">
-                        {idx + 1}
+                <tbody>
+                  {parsedRows.map((row) => (
+                    <tr
+                      key={row.index}
+                      className={`border-b border-slate-900 ${row.errors.length > 0 ? 'bg-red-950/10' : ''}`}
+                    >
+                      <td className="py-2 px-2 text-slate-500 font-mono">{row.index}</td>
+                      <td className="py-2 px-2 font-semibold text-white">{row.name || '—'}</td>
+                      <td className="py-2 px-2 text-slate-300">{row.team || '—'}</td>
+                      <td className="py-2 px-2 capitalize text-cyan-400">
+                        {row.certificate_type || '—'}
                       </td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-cyan-400">
-                        {item.certificate_id}
-                      </td>
-                      <td className="py-2.5 px-3 font-semibold text-white">
-                        {item.recipient_name}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-400">
-                        {item.team_name || '—'}
-                      </td>
-                      <td className="py-2.5 px-3 capitalize text-slate-300">
-                        {item.certificate_type.replace('_', ' ')}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        {item.status === 'success' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                            SUCCESS
+                      <td className="py-2 px-2">
+                        {row.errors.length === 0 ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <Check size={12} /> Valid
                           </span>
                         ) : (
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/40"
-                            title={item.error}
-                          >
-                            FAILED
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        {item.status === 'success' && (
-                          <a
-                            href={`/verify/${item.certificate_id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-cyan-400 hover:underline font-mono"
-                          >
-                            /verify/{item.certificate_id}
-                          </a>
+                          <div className="text-red-400">
+                            {row.errors.map((err, idx) => (
+                              <div key={idx} className="flex items-start gap-1">
+                                <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                                <span>{err}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -558,263 +524,99 @@ Priya Sharma,,volunteer`;
                 </tbody>
               </table>
             </div>
+
+            {/* Generate Button */}
+            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+              <button
+                onClick={handleGenerateAll}
+                disabled={isGenerating || totalErrors > 0 || parsedRows.length === 0}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                <Award size={18} />
+                {isGenerating
+                  ? `Generating ${progressIndex}/${totalToGenerate}...`
+                  : `Issue All ${parsedRows.length} Certificates`}
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Input Configuration & Upload Form */}
-        {!results && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-4 bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-6">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-                <UploadCloud size={20} className="text-cyan-400" />
-                1. Select Edition & CSV
-              </h2>
+        {/* Generation Progress */}
+        {isGenerating && (
+          <div className="bg-slate-900/60 border border-cyan-500/30 rounded-2xl p-6 backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-6 h-6 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-bold text-white">
+                Generating certificate {progressIndex} of {totalToGenerate}...
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all"
+                style={{ width: `${(progressIndex / totalToGenerate) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
 
-              {/* Edition Selector */}
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
-                  Target Event Edition *
-                </label>
-                <select
-                  value={selectedEditionId}
-                  onChange={(e) => setSelectedEditionId(e.target.value)}
-                  className="gcl-input w-full"
-                  disabled={isGenerating}
-                >
-                  {editions.map((ed) => (
-                    <option key={ed.id} value={ed.id}>
-                      {ed.name} ({ed.year}) {ed.is_current ? '— [CURRENT]' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* File Upload Zone */}
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1.5 block">
-                  CSV File (`name,team,certificate_type`)
-                </label>
-                <label className="border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-950/50 transition-colors">
-                  <UploadCloud size={32} className="text-cyan-400 mb-2" />
-                  <span className="text-xs font-semibold text-slate-300">
-                    {csvFileName ? csvFileName : 'Click to select CSV file'}
+        {/* Results Section */}
+        {results && !isGenerating && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <ShieldCheck size={16} className="text-emerald-400" />
+                Generation Results
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900/50">
+                  {results.filter((r) => r.status === 'success').length} ✓
+                </span>
+                {results.some((r) => r.status === 'failed') && (
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-900/50">
+                    {results.filter((r) => r.status === 'failed').length} ✗
                   </span>
-                  <span className="text-[10px] text-slate-500 mt-1">
-                    Format: name,team,certificate_type
-                  </span>
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    disabled={isGenerating}
-                  />
-                </label>
-              </div>
-
-              {/* Direct Paste CSV Fallback */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">
-                    Or Paste CSV Data
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleLoadSampleCsv}
-                    className="text-[11px] text-cyan-400 hover:underline font-mono"
-                  >
-                    Load Sample
-                  </button>
-                </div>
-                <textarea
-                  value={rawCsv}
-                  onChange={(e) => {
-                    setRawCsv(e.target.value);
-                    setResults(null);
-                  }}
-                  placeholder="name,team,certificate_type&#10;John Doe,Team Alpha,participation&#10;Jane Smith,Team Beta,winner"
-                  rows={6}
-                  className="gcl-input w-full font-mono text-xs resize-none"
-                  disabled={isGenerating}
-                />
-              </div>
-
-              {/* Status Summary & Generate Action */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Total Rows Detected:</span>
-                  <span className="font-mono font-bold text-white">
-                    {parsedRows.length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Validation Errors:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      totalErrors > 0 ? 'text-red-400' : 'text-emerald-400'
-                    }`}
-                  >
-                    {totalErrors}
-                  </span>
-                </div>
-
-                {isGenerating && (
-                  <div className="space-y-1.5 pt-2 border-t border-slate-800">
-                    <div className="flex justify-between text-[11px] font-mono text-slate-400">
-                      <span>Generating:</span>
-                      <span className="text-cyan-400">
-                        {progressIndex} / {totalToGenerate}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                      <div
-                        className="bg-cyan-500 h-full transition-all duration-200"
-                        style={{
-                          width: `${(progressIndex / (totalToGenerate || 1)) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
                 )}
+              </h3>
 
-                <button
-                  type="button"
-                  onClick={handleGenerateAll}
-                  disabled={
-                    isGenerating ||
-                    parsedRows.length === 0 ||
-                    totalErrors > 0
-                  }
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={18} className="animate-spin" />
-                      Issuing {progressIndex} of {totalToGenerate}...
-                    </>
-                  ) : (
-                    <>
-                      <Award size={18} />
-                      Generate All ({parsedRows.length} Certificates)
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                onClick={handleDownloadZip}
+                disabled={isZipping || !results.some((r) => r.status === 'success' && r.pdfBlob)}
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download size={14} />
+                {isZipping ? 'Zipping...' : 'Download All as ZIP'}
+              </button>
             </div>
 
-            {/* Right: Mandatory Live Preview Grid & Validation List */}
-            <div className="lg:col-span-8 bg-slate-900/70 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Eye size={20} className="text-cyan-400" />
-                  <h2 className="text-lg font-bold text-white">
-                    2. Mandatory Preview & Row Validation
-                  </h2>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {results.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${
+                    item.status === 'success'
+                      ? 'bg-slate-950/60 border-slate-800/80'
+                      : 'bg-red-950/20 border-red-900/40'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {item.status === 'success' ? (
+                        <Check size={14} className="text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                      )}
+                      <span className="text-sm font-bold text-white truncate">
+                        {item.recipient_name}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      {item.status === 'success' ? (
+                        <span className="text-amber-400 font-bold">{item.certificate_id}</span>
+                      ) : (
+                        <span className="text-red-400">{item.error}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs font-mono text-slate-400">
-                  {parsedRows.length} item(s) in batch
-                </span>
-              </div>
-
-              {parsedRows.length === 0 ? (
-                <div className="py-20 text-center text-slate-500 italic space-y-2">
-                  <FileText size={40} className="mx-auto text-slate-600 opacity-60" />
-                  <p>Upload a CSV file or paste data above to inspect live previews.</p>
-                </div>
-              ) : (
-                <div className="space-y-6 max-h-[750px] overflow-y-auto pr-2">
-                  {parsedRows.map((row) => {
-                    const certType = row.validType || 'participation';
-                    const template = templateMap.get(certType) || templates[0];
-                    const hasError = row.errors.length > 0;
-                    const sampleId = `${getEditionCode(activeEdition?.year, activeEdition?.name)}-${certType.slice(0, 4).toUpperCase()}-PREVIEW`;
-
-                    return (
-                      <div
-                        key={row.index}
-                        className={`p-4 rounded-xl border transition-all ${
-                          hasError
-                            ? 'bg-red-950/20 border-red-500/50'
-                            : 'bg-slate-950/60 border-slate-800'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800/80">
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                              #{row.index}
-                            </span>
-                            <span className="font-bold text-white text-base">
-                              {row.name || 'Unnamed Recipient'}
-                            </span>
-                            <span className="text-xs text-slate-400">
-                              • Team: {row.team || 'None (Individual)'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono capitalize px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                              {certType.replace('_', ' ')}
-                            </span>
-                            {hasError ? (
-                              <span className="text-xs font-mono font-bold text-red-400 flex items-center gap-1 bg-red-950/60 px-2 py-0.5 rounded border border-red-500/40">
-                                <AlertTriangle size={12} /> INVALID
-                              </span>
-                            ) : (
-                              <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/40">
-                                <Check size={12} /> READY
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Inline Errors if any */}
-                        {hasError && (
-                          <div className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-500/40 space-y-1">
-                            {row.errors.map((err, errIdx) => (
-                              <div
-                                key={errIdx}
-                                className="text-xs text-red-300 flex items-center gap-2 font-mono"
-                              >
-                                <AlertTriangle size={14} className="text-red-400 shrink-0" />
-                                <span>{err}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Live Scaled Preview of the certificate */}
-                        <div className="overflow-x-auto flex justify-center py-2 bg-black/40 rounded-lg border border-slate-800/50">
-                          <div
-                            id={`bulk-preview-item-${row.index}`}
-                            style={{
-                              width: 1000 * 0.45,
-                              height: 707 * 0.45,
-                              position: 'relative',
-                            }}
-                          >
-                            <CertificatePreview
-                              recipientName={row.name || 'Sample Name'}
-                              certificateType={certType}
-                              certificateId={sampleId}
-                              designConfig={
-                                template?.design_config || {
-                                  title: 'Certificate of ' + certType,
-                                  primary_color: '#00f0ff',
-                                  secondary_color: '#7000ff',
-                                }
-                              }
-                              templateVersion={template?.version || 1}
-                              editionName={activeEdition?.name || 'GenCode League'}
-                              teamName={row.matchedTeam?.name || row.team}
-                              scale={0.45}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              ))}
             </div>
           </div>
         )}

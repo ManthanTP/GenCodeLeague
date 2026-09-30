@@ -438,3 +438,56 @@ CREATE POLICY "Admin all sponsors" ON sponsors FOR ALL USING (true);
 CREATE POLICY "Public read faq_entries" ON faq_entries FOR SELECT USING (true);
 CREATE POLICY "Admin all faq_entries" ON faq_entries FOR ALL USING (true);
 
+-- 11. Certificate Templates (Theme Editor & Immutable Versioning)
+CREATE TABLE IF NOT EXISTS certificate_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certificate_type TEXT NOT NULL,
+  version INT NOT NULL DEFAULT 1,
+  name TEXT,
+  design_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  is_active BOOLEAN NOT NULL DEFAULT true
+);
+
+-- 12. Certificates (Client-Side Rendering — Metadata Only, No Storage Upload)
+CREATE TABLE IF NOT EXISTS certificates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certificate_id TEXT NOT NULL UNIQUE,
+  edition_id UUID NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  recipient_name TEXT NOT NULL,
+  certificate_type TEXT NOT NULL,
+  achievement TEXT,
+  template_id UUID REFERENCES certificate_templates(id) ON DELETE SET NULL,
+  template_version INT NOT NULL DEFAULT 1,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  status TEXT NOT NULL DEFAULT 'valid',
+  revoked_reason TEXT,
+  pdf_url TEXT, -- Legacy optional field (new certificates do not upload to Supabase Storage)
+  verify_view_count INT NOT NULL DEFAULT 0
+);
+
+-- 13. Audit Log
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id TEXT DEFAULT 'admin',
+  action TEXT NOT NULL,
+  details JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read certificate_templates" ON certificate_templates;
+DROP POLICY IF EXISTS "Admin all certificate_templates" ON certificate_templates;
+DROP POLICY IF EXISTS "Public read certificates" ON certificates;
+DROP POLICY IF EXISTS "Admin all certificates" ON certificates;
+DROP POLICY IF EXISTS "Admin all audit_log" ON audit_log;
+
+CREATE POLICY "Public read certificate_templates" ON certificate_templates FOR SELECT USING (true);
+CREATE POLICY "Admin all certificate_templates" ON certificate_templates FOR ALL USING (true);
+CREATE POLICY "Public read certificates" ON certificates FOR SELECT USING (true);
+CREATE POLICY "Admin all certificates" ON certificates FOR ALL USING (true);
+CREATE POLICY "Admin all audit_log" ON audit_log FOR ALL USING (true);
