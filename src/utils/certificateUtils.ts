@@ -1,5 +1,9 @@
 import { supabase } from '../lib/supabase';
-import type { CertificateType, CertificateSettings } from '../types/certificates';
+import type {
+  CertificateType,
+  CertificateSettings,
+  CertificateTypeConfig,
+} from '../types/certificates';
 
 const TYPE_CODES: Record<CertificateType, string> = {
   participation: 'PART',
@@ -41,19 +45,86 @@ export const ALL_CERTIFICATE_TYPES: CertificateType[] = [
 ];
 
 /**
+ * Default global template configurations for each certificate type.
+ * Each type has its own Title Line, Presentation Text, and Reason / Description.
+ */
+export const DEFAULT_TYPE_CONFIGS: Record<CertificateType, CertificateTypeConfig> = {
+  participation: {
+    title_line: 'OF PARTICIPATION',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'has actively participated in GenCode League as a proud member of',
+  },
+  winner: {
+    title_line: 'OF EXCELLENCE',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'for demonstrating supreme technical excellence and securing 1st Place (Champion) in GenCode League',
+  },
+  runner_up: {
+    title_line: 'OF ACHIEVEMENT',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'for exceptional performance and securing 2nd Place (Runner Up) in GenCode League',
+  },
+  best_team: {
+    title_line: 'BEST TEAM DYNAMICS',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'in recognition of unmatched synergy, collaboration, and technical brilliance in GenCode League',
+  },
+  judge: {
+    title_line: 'OF APPRECIATION',
+    presentation_text: 'THIS IS GRATEFULLY PRESENTED TO',
+    description: 'in sincere gratitude for serving as an esteemed Honorary Judge in GenCode League',
+  },
+  volunteer: {
+    title_line: 'OF SERVICE',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'for selfless dedication, exceptional enthusiasm, and invaluable volunteer support during GenCode League',
+  },
+  organizer: {
+    title_line: 'OF MERIT',
+    presentation_text: 'THIS IS PROUDLY PRESENTED TO',
+    description: 'in recognition of leadership, organization, and stellar execution as a Core Organizer of GenCode League',
+  },
+  mentor: {
+    title_line: 'OF RECOGNITION',
+    presentation_text: 'THIS IS GRATEFULLY PRESENTED TO',
+    description: 'for guiding, inspiring, and empowering participating developers as an official Technical Mentor in GenCode League',
+  },
+};
+
+/**
+ * Retrieves the effective configuration for a certificate type.
+ * Merges edition-level settings with system defaults.
+ */
+export function getTypeConfig(
+  type: CertificateType,
+  settings?: CertificateSettings | null
+): CertificateTypeConfig {
+  const fallback = DEFAULT_TYPE_CONFIGS[type] || DEFAULT_TYPE_CONFIGS.participation;
+  const configured = settings?.type_configs?.[type];
+
+  return {
+    title_line: configured?.title_line?.trim() || fallback.title_line,
+    presentation_text:
+      configured?.presentation_text?.trim() ||
+      (type === 'participation' && settings?.presented_to_text?.trim()
+        ? settings.presented_to_text.trim()
+        : fallback.presentation_text),
+    description:
+      configured?.description?.trim() ||
+      (type === 'participation' && settings?.default_description?.trim()
+        ? settings.default_description.trim()
+        : fallback.description),
+  };
+}
+
+/**
  * Maps a certificate type to its display title on the certificate.
  */
-export function getCertificateTitle(type: CertificateType): string {
-  switch (type) {
-    case 'winner':
-      return 'ACHIEVEMENT';
-    case 'runner_up':
-      return 'ACHIEVEMENT';
-    case 'best_team':
-      return 'ACHIEVEMENT';
-    default:
-      return 'PARTICIPATION';
-  }
+export function getCertificateTitle(
+  type: CertificateType,
+  settings?: CertificateSettings | null
+): string {
+  return getTypeConfig(type, settings).title_line;
 }
 
 /**
@@ -61,26 +132,13 @@ export function getCertificateTitle(type: CertificateType): string {
  */
 export function getCertificateSubtitle(
   type: CertificateType,
-  achievement?: string | null
+  achievement?: string | null,
+  settings?: CertificateSettings | null
 ): string {
-  switch (type) {
-    case 'winner':
-      return achievement || 'has been awarded Champion of GenCode League';
-    case 'runner_up':
-      return achievement || 'has been awarded Runner Up of GenCode League';
-    case 'best_team':
-      return achievement || 'has been awarded Best Team Dynamics in GenCode League';
-    case 'judge':
-      return 'has served as Honorary Judge for GenCode League';
-    case 'volunteer':
-      return 'has served as Volunteer for GenCode League';
-    case 'organizer':
-      return 'has served as Core Organizer for GenCode League';
-    case 'mentor':
-      return 'has served as Technical Mentor for GenCode League';
-    default:
-      return 'has actively participated in GenCode League as a proud member of';
+  if (achievement && achievement.trim()) {
+    return achievement.trim();
   }
+  return getTypeConfig(type, settings).description;
 }
 
 /**
@@ -156,6 +214,7 @@ export const DEFAULT_CERTIFICATE_SETTINGS: CertificateSettings = {
   season_name: 'NATIONAL CODING LEAGUE',
   presented_to_text: 'THIS IS PROUDLY PRESENTED TO',
   default_description: 'has actively participated in GenCode League as a proud member of',
+  type_configs: { ...DEFAULT_TYPE_CONFIGS },
   signatory_left: {
     name: '',
     role: 'FACULTY COORDINATOR',
@@ -187,7 +246,14 @@ export async function fetchCertificateSettings(
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed?.signatory_left && parsed?.signatory_right) {
-        return { ...DEFAULT_CERTIFICATE_SETTINGS, ...parsed };
+        return {
+          ...DEFAULT_CERTIFICATE_SETTINGS,
+          ...parsed,
+          type_configs: {
+            ...DEFAULT_TYPE_CONFIGS,
+            ...(parsed.type_configs || {}),
+          },
+        };
       }
     }
   } catch {
@@ -208,6 +274,10 @@ export async function fetchCertificateSettings(
         const merged: CertificateSettings = {
           ...DEFAULT_CERTIFICATE_SETTINGS,
           ...remoteSettings,
+          type_configs: {
+            ...DEFAULT_TYPE_CONFIGS,
+            ...(remoteSettings.type_configs || {}),
+          },
           signatory_left: {
             ...DEFAULT_CERTIFICATE_SETTINGS.signatory_left,
             ...(remoteSettings.signatory_left || {}),

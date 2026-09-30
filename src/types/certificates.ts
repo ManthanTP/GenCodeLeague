@@ -54,12 +54,19 @@ export interface CertificateSignatory {
   signature_url?: string | null;
 }
 
+export interface CertificateTypeConfig {
+  title_line: string;
+  presentation_text: string;
+  description: string;
+}
+
 export interface CertificateSettings {
   logo_url?: string | null;
   emblem_url?: string | null;
   season_name?: string;
   presented_to_text?: string;
   default_description?: string;
+  type_configs?: Partial<Record<CertificateType, CertificateTypeConfig>>;
   signatory_left: CertificateSignatory;
   signatory_right: CertificateSignatory;
 }

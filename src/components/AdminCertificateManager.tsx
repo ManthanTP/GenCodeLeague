@@ -30,6 +30,8 @@ import {
   getCertificateSubtitle,
   CERTIFICATE_TYPE_LABELS,
   ALL_CERTIFICATE_TYPES,
+  DEFAULT_TYPE_CONFIGS,
+  getTypeConfig,
   DEFAULT_CERTIFICATE_SETTINGS,
   fetchCertificateSettings,
   saveCertificateSettings,
@@ -40,6 +42,7 @@ import type {
   Certificate,
   CertificateType,
   CertificateSettings,
+  CertificateTypeConfig,
 } from '../types/certificates';
 import type { Edition, Team } from '../types/database';
 
@@ -83,6 +86,8 @@ export default function AdminCertificateManager({
     DEFAULT_CERTIFICATE_SETTINGS
   );
   const [savingSettings, setSavingSettings] = useState(false);
+  const [selectedConfigType, setSelectedConfigType] =
+    useState<CertificateType>('participation');
 
   // File input refs for uploads
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -90,36 +95,54 @@ export default function AdminCertificateManager({
   const leftSignInputRef = useRef<HTMLInputElement>(null);
   const rightSignInputRef = useRef<HTMLInputElement>(null);
 
-  // Pre-fill editable title and subtitle when certificate type or achievement changes
-  useEffect(() => {
-    let title = 'OF PARTICIPATION';
-    if (['winner', 'runner_up', 'best_team'].includes(certificateType)) {
-      title = 'OF ACHIEVEMENT';
-    } else if (['organizer', 'volunteer'].includes(certificateType)) {
-      title = 'OF APPRECIATION';
-    } else if (['judge', 'mentor'].includes(certificateType)) {
-      title = 'OF RECOGNITION';
-    }
-    setCustomTitle(title);
+  // Helper to update a field in a specific certificate type's configuration
+  const updateTypeConfig = (
+    type: CertificateType,
+    field: keyof CertificateTypeConfig,
+    value: string
+  ) => {
+    setSettings((prev) => {
+      const existingConfigs = prev.type_configs || DEFAULT_TYPE_CONFIGS;
+      const currentConfig = existingConfigs[type] || DEFAULT_TYPE_CONFIGS[type];
+      return {
+        ...prev,
+        type_configs: {
+          ...existingConfigs,
+          [type]: {
+            ...currentConfig,
+            [field]: value,
+          },
+        },
+      };
+    });
+  };
 
-    let sub = 'has actively participated in GenCode League as a proud member of';
-    if (certificateType === 'winner') {
-      sub = achievement || 'has been awarded Champion of GenCode League';
-    } else if (certificateType === 'runner_up') {
-      sub = achievement || 'has been awarded Runner Up of GenCode League';
-    } else if (certificateType === 'best_team') {
-      sub = achievement || 'has been awarded Best Team Dynamics in GenCode League';
-    } else if (certificateType === 'judge') {
-      sub = 'has served as Honorary Judge for GenCode League';
-    } else if (certificateType === 'volunteer') {
-      sub = 'has served as Volunteer for GenCode League';
-    } else if (certificateType === 'organizer') {
-      sub = 'has served as Core Organizer for GenCode League';
-    } else if (certificateType === 'mentor') {
-      sub = 'has served as Technical Mentor for GenCode League';
+  // Helper to reset a specific certificate type's configuration to defaults
+  const resetTypeConfig = (type: CertificateType) => {
+    setSettings((prev) => ({
+      ...prev,
+      type_configs: {
+        ...(prev.type_configs || DEFAULT_TYPE_CONFIGS),
+        [type]: { ...DEFAULT_TYPE_CONFIGS[type] },
+      },
+    }));
+    onShowToast(
+      `Reset ${CERTIFICATE_TYPE_LABELS[type]} template to default settings`,
+      'success'
+    );
+  };
+
+  // Pre-fill editable title, presentation text, and subtitle when certificate type, achievement, or settings change
+  useEffect(() => {
+    const cfg = getTypeConfig(certificateType, settings);
+    setCustomTitle(cfg.title_line);
+    setPresentedToText(cfg.presentation_text);
+    if (achievement && achievement.trim()) {
+      setCustomSubtitle(achievement.trim());
+    } else {
+      setCustomSubtitle(cfg.description);
     }
-    setCustomSubtitle(sub);
-  }, [certificateType, achievement]);
+  }, [certificateType, achievement, settings]);
 
 
   // Records List states
@@ -896,77 +919,152 @@ export default function AdminCertificateManager({
               </div>
             </div>
 
-            {/* Section 3: Global Certificate Text & Event Badges */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Sliders size={16} className="text-cyan-400" />
-                Global Certificate Text & Event Badges
-              </h3>
+            {/* Section 3: Global Certificate Text & Per-Type Templates */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sliders size={16} className="text-cyan-400" />
+                  Type-Specific Certificate Configuration (Global Settings)
+                </h3>
+              </div>
               <p className="text-xs text-slate-400">
-                Configure global defaults. Any certificate that doesn't have custom overrides will automatically use these settings across all public verifications and downloads.
+                Configure Title Line, Presentation Text, and Reason / Description for each certificate type globally. Any certificate issued or verified will immediately use these type-specific settings.
               </p>
 
-              <div className="space-y-3">
-                {/* Top Right Season / Header text */}
+              {/* Top-Right Header badge */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                <label className="block text-xs font-mono text-slate-300 mb-1">
+                  Top-Right Header / Season Badge (Replaces "GENESIS SEASON")
+                </label>
+                <input
+                  type="text"
+                  value={settings.season_name || ''}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      season_name: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. NATIONAL CODING LEAGUE or TECH ODYSSEY"
+                  className="gcl-input w-full py-2 text-xs font-semibold"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Displayed in the top-right corner of every certificate above GCL year and version.
+                </span>
+              </div>
+
+              {/* Per-Type Settings Box */}
+              <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <Award size={14} />
+                    Select Certificate Type to Configure
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => resetTypeConfig(selectedConfigType)}
+                    className="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                  >
+                    <RotateCcw size={11} /> Reset {CERTIFICATE_TYPE_LABELS[selectedConfigType]} to Defaults
+                  </button>
+                </div>
+
+                {/* Certificate Type Selector */}
                 <div>
                   <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Top-Right Header / Season Badge (Replaces "GENESIS SEASON")
+                    Certificate Type *
+                  </label>
+                  <select
+                    value={selectedConfigType}
+                    onChange={(e) =>
+                      setSelectedConfigType(e.target.value as CertificateType)
+                    }
+                    className="gcl-input w-full py-2 text-xs font-semibold"
+                  >
+                    {ALL_CERTIFICATE_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {CERTIFICATE_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Certificate Title Line */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Certificate Title Line
                   </label>
                   <input
                     type="text"
-                    value={settings.season_name || ''}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        season_name: e.target.value,
-                      }))
+                    value={
+                      settings.type_configs?.[selectedConfigType]?.title_line ??
+                      DEFAULT_TYPE_CONFIGS[selectedConfigType].title_line
                     }
-                    placeholder="e.g. NATIONAL CODING LEAGUE or TECH ODYSSEY"
-                    className="gcl-input w-full py-2 text-xs font-semibold"
+                    onChange={(e) =>
+                      updateTypeConfig(
+                        selectedConfigType,
+                        'title_line',
+                        e.target.value
+                      )
+                    }
+                    placeholder="e.g. OF PARTICIPATION or OF EXCELLENCE"
+                    className="gcl-input w-full py-2 text-xs font-bold text-white tracking-wider"
                   />
-                  <span className="text-[10px] text-slate-500">
-                    Appears in the upper-right corner above GCL year and version.
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Appears directly below "CERTIFICATE" with futuristic typography and red accent flourish.
                   </span>
                 </div>
 
-                {/* Global Presentation Text */}
+                {/* Presentation Text */}
                 <div>
                   <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Global Presentation Text
+                    Presentation Text
                   </label>
                   <input
                     type="text"
-                    value={settings.presented_to_text || ''}
+                    value={
+                      settings.type_configs?.[selectedConfigType]
+                        ?.presentation_text ??
+                      DEFAULT_TYPE_CONFIGS[selectedConfigType].presentation_text
+                    }
                     onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        presented_to_text: e.target.value,
-                      }))
+                      updateTypeConfig(
+                        selectedConfigType,
+                        'presentation_text',
+                        e.target.value
+                      )
                     }
                     placeholder="THIS IS PROUDLY PRESENTED TO"
                     className="gcl-input w-full py-2 text-xs"
                   />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Appears directly above the recipient name.
+                  </span>
                 </div>
 
-                {/* Global Reason / Default Description */}
+                {/* Certificate Reason / Description */}
                 <div>
                   <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Global Certificate Reason / Default Description
+                    Certificate Reason / Description
                   </label>
                   <textarea
-                    value={settings.default_description || ''}
+                    value={
+                      settings.type_configs?.[selectedConfigType]?.description ??
+                      DEFAULT_TYPE_CONFIGS[selectedConfigType].description
+                    }
                     onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        default_description: e.target.value,
-                      }))
+                      updateTypeConfig(
+                        selectedConfigType,
+                        'description',
+                        e.target.value
+                      )
                     }
                     rows={2}
-                    placeholder="has actively participated in GenCode League as a proud member of"
-                    className="gcl-input w-full py-2 px-3 text-xs resize-none"
+                    placeholder="e.g. has actively participated in GenCode League as a proud member of"
+                    className="gcl-input w-full py-2 px-3 text-xs leading-relaxed resize-none"
                   />
-                  <span className="text-[10px] text-amber-400/90 font-mono">
-                    ✦ Applied automatically to all certificates & verification pages unless individually customized.
+                  <span className="text-[10px] text-amber-400/90 font-mono mt-1 block">
+                    ✦ Applied automatically to all {CERTIFICATE_TYPE_LABELS[selectedConfigType]} certificates across public verifications and downloads.
                   </span>
                 </div>
               </div>
@@ -1274,8 +1372,11 @@ export default function AdminCertificateManager({
           {/* Live Preview Column */}
           <div className="lg:col-span-6 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl flex flex-col items-center">
             <div className="w-full flex items-center justify-between mb-3">
-              <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
-                <Sliders size={14} className="text-cyan-400" /> Interactive Preview
+              <span className="text-xs font-mono text-slate-300 flex items-center gap-1.5 font-bold">
+                <Sliders size={14} className="text-cyan-400" /> Live Preview:{' '}
+                <span className="text-amber-400">
+                  {CERTIFICATE_TYPE_LABELS[selectedConfigType]}
+                </span>
               </span>
               <span className="text-[10px] font-mono text-slate-500">
                 Updates in real-time
@@ -1292,8 +1393,8 @@ export default function AdminCertificateManager({
               >
                 <CertificatePreview
                   recipientName="Marcus Vance"
-                  certificateType="participation"
-                  certificateId="GCL26-PART-DEMO01"
+                  certificateType={selectedConfigType}
+                  certificateId={`GCL26-${selectedConfigType.slice(0, 4).toUpperCase()}-DEMO01`}
                   editionId={selectedEditionId}
                   editionName={activeEdition?.name || 'GenCode League 2026'}
                   teamName="Cyber Knights"
@@ -1303,10 +1404,14 @@ export default function AdminCertificateManager({
               </div>
             </div>
 
-            <div className="mt-4 p-3 rounded-lg bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 w-full">
-              💡 <strong>Instant Sync:</strong> All single certificates, bulk
-              certificates, and public verification links will immediately use these
-              updated logos and signatures.
+            <div className="mt-4 p-3 rounded-lg bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 w-full space-y-1">
+              <div>
+                💡 <strong>Instant Global Sync:</strong> All verifications and downloads for{' '}
+                <span className="text-amber-400 font-bold">
+                  {CERTIFICATE_TYPE_LABELS[selectedConfigType]}
+                </span>{' '}
+                will immediately use this title line, presentation text, and description.
+              </div>
             </div>
           </div>
         </div>
@@ -1646,14 +1751,31 @@ export default function AdminCertificateManager({
 
                 {/* Certificate Type */}
                 <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-1">
-                    Certificate Type
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-mono text-slate-400">
+                      Certificate Type
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cfg = getTypeConfig(editCertificateType, settings);
+                        setEditCustomTitle(cfg.title_line);
+                        setEditCustomSubtitle(cfg.description);
+                      }}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-mono cursor-pointer"
+                    >
+                      Fill type defaults
+                    </button>
+                  </div>
                   <select
                     value={editCertificateType}
-                    onChange={(e) =>
-                      setEditCertificateType(e.target.value as CertificateType)
-                    }
+                    onChange={(e) => {
+                      const newType = e.target.value as CertificateType;
+                      setEditCertificateType(newType);
+                      const cfg = getTypeConfig(newType, settings);
+                      setEditCustomTitle(cfg.title_line);
+                      setEditCustomSubtitle(cfg.description);
+                    }}
                     className="gcl-input w-full py-2 text-xs"
                   >
                     {ALL_CERTIFICATE_TYPES.map((type) => (

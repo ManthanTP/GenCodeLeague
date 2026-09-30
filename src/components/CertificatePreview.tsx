@@ -5,6 +5,7 @@ import type { CertificateType, CertificateSettings } from '../types/certificates
 import {
   getCertificateTitle,
   getCertificateSubtitle,
+  getTypeConfig,
   DEFAULT_CERTIFICATE_SETTINGS,
   fetchCertificateSettings,
 } from '../utils/certificateUtils';
@@ -138,23 +139,23 @@ export default function CertificatePreview({
     editionName?.replace(/GCL\s*\d{4}/i, '').trim() ||
     'NATIONAL CODING LEAGUE';
 
-  // Title: Custom or derived from certificate type
-  const rawTitle = customTitle?.trim() || `OF ${getCertificateTitle(certificateType)}`;
-  const displayTitle = rawTitle.startsWith('OF ') ? rawTitle : `OF ${rawTitle}`;
+  // Effective type configuration (merges global settings with defaults)
+  const typeConfig = getTypeConfig(certificateType, activeSettings);
 
-  // Subtitle / body text (supports per-certificate override or global default_description from settings)
+  // Title: Custom per certificate or global configuration for this certificate type
+  const rawTitle = customTitle?.trim() || typeConfig.title_line;
+  const displayTitle = rawTitle;
+
+  // Subtitle / body text (supports per-certificate override, achievement, or type-specific global description)
   const displaySubtitle =
     customSubtitle?.trim() ||
-    (certificateType === 'participation' && activeSettings.default_description
-      ? activeSettings.default_description
-      : getCertificateSubtitle(certificateType, achievement));
+    (achievement?.trim() && certificateType !== 'participation'
+      ? achievement.trim()
+      : typeConfig.description);
 
-
-  // Presentation text
+  // Presentation text: Single certificate override or type-specific global presentation text
   const presentationLine =
-    propPresentedTo?.trim() ||
-    activeSettings.presented_to_text ||
-    'THIS IS PROUDLY PRESENTED TO';
+    propPresentedTo?.trim() || typeConfig.presentation_text;
 
   // Whether this type shows a team affiliation line
   const showTeamLine =
@@ -702,35 +703,11 @@ export default function CertificatePreview({
         </svg>
       </div>
 
-      {/* ── Red Accent Flourish Line after Recipient Name ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '375px',
-          left: 0,
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          zIndex: 10,
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            width: '160px',
-            height: '2px',
-            background:
-              'linear-gradient(90deg, transparent 0%, #dc2626 50%, transparent 100%)',
-          }}
-        />
-      </div>
-
       {/* ── 8. Subtitle / Achievement Body Text (Centered mathematically, no negative transforms) ── */}
-
       <div
         style={{
           position: 'absolute',
-          top: '394px',
+          top: '386px',
           left: '120px',
           width: '760px',
           textAlign: 'center',
@@ -751,12 +728,12 @@ export default function CertificatePreview({
         </span>
       </div>
 
-      {/* ── 9. Team Name (DYNAMIC — highlighted in bold crimson red like the sample) ── */}
-      {showTeamLine && teamName && (
+      {/* ── 9. Team Name / Accent Highlight Line (Bold Dark Red #880808 like the sample) ── */}
+      {teamName && (
         <div
           style={{
             position: 'absolute',
-            top: '422px',
+            top: '416px',
             left: 0,
             width: '100%',
             textAlign: 'center',
@@ -774,7 +751,6 @@ export default function CertificatePreview({
           >
             {teamName.endsWith('.') ? teamName : `${teamName}.`}
           </span>
-
         </div>
       )}
 
