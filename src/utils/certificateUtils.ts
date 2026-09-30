@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { CertificateType } from '../types/certificates';
+import type { CertificateType, CertificateSettings } from '../types/certificates';
 
 const TYPE_CODES: Record<CertificateType, string> = {
   participation: 'PART',
@@ -143,5 +143,117 @@ export async function logAdminAction(
     });
   } catch (err) {
     console.error('Failed to log admin action to audit_log:', err);
+  }
+}
+
+/**
+ * Official default certificate settings.
+ * Pre-populated with Faculty Coordinator and Convenor details.
+ */
+export const DEFAULT_CERTIFICATE_SETTINGS: CertificateSettings = {
+  logo_url: null,
+  season_name: 'GENESIS SEASON',
+  presented_to_text: 'THIS IS PROUDLY PRESENTED TO',
+  signatory_left: {
+    name: '',
+    role: 'FACULTY COORDINATOR',
+    org: 'GenCode League',
+    signature_url: null,
+  },
+  signatory_right: {
+    name: '',
+    role: 'CONVENOR',
+    org: 'Department of CSE',
+    signature_url: null,
+  },
+};
+
+const SETTINGS_STORAGE_KEY = 'gcl_certificate_settings_';
+
+/**
+ * Fetches certificate settings for an edition, with localStorage cache fallback.
+ */
+export async function fetchCertificateSettings(
+  editionId?: string
+): Promise<CertificateSettings> {
+  const cacheKey = `${SETTINGS_STORAGE_KEY}${editionId || 'default'}`;
+
+  // 1. Try reading from memory/localStorage first for instant preview
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed?.signatory_left && parsed?.signatory_right) {
+        return { ...DEFAULT_CERTIFICATE_SETTINGS, ...parsed };
+      }
+    }
+  } catch {
+    // Ignore cache error
+  }
+
+  // 2. Fetch from database if editionId is provided
+  if (editionId) {
+    try {
+      const { data, error } = await supabase
+        .from('editions')
+        .select('certificate_settings')
+        .eq('id', editionId)
+        .maybeSingle();
+
+      if (!error && data?.certificate_settings) {
+        const remoteSettings = data.certificate_settings as CertificateSettings;
+        const merged: CertificateSettings = {
+          ...DEFAULT_CERTIFICATE_SETTINGS,
+          ...remoteSettings,
+          signatory_left: {
+            ...DEFAULT_CERTIFICATE_SETTINGS.signatory_left,
+            ...(remoteSettings.signatory_left || {}),
+          },
+          signatory_right: {
+            ...DEFAULT_CERTIFICATE_SETTINGS.signatory_right,
+            ...(remoteSettings.signatory_right || {}),
+          },
+        };
+
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(merged));
+        } catch {
+          // Ignore storage error
+        }
+
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch certificate settings from database:', err);
+    }
+  }
+
+  return DEFAULT_CERTIFICATE_SETTINGS;
+}
+
+/**
+ * Saves certificate settings to the database and local cache.
+ */
+export async function saveCertificateSettings(
+  editionId: string,
+  settings: CertificateSettings
+): Promise<void> {
+  const cacheKey = `${SETTINGS_STORAGE_KEY}${editionId}`;
+
+  // Update localStorage immediately
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(settings));
+  } catch {
+    // Ignore storage error
+  }
+
+  // Persist to Supabase editions table
+  const { error } = await supabase
+    .from('editions')
+    .update({ certificate_settings: settings })
+    .eq('id', editionId);
+
+  if (error) {
+    throw error;
   }
 }

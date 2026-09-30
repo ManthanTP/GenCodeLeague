@@ -9,7 +9,7 @@ import type { Certificate, CertificateType } from '../types/certificates';
  * Global certificate template image path.
  * This is the single official GCL certificate background.
  */
-export const CERTIFICATE_TEMPLATE_PATH = '/gcl-certificate-template.jpg';
+export const CERTIFICATE_TEMPLATE_PATH = '/gcl-certificate-template.png';
 
 /**
  * Preloads the certificate template image into browser cache.
@@ -101,10 +101,12 @@ export async function renderCertificatePdfBlob(certData: {
   certificate_type: CertificateType;
   certificate_id: string;
   template_version: number;
+  edition_id?: string;
   edition_name?: string;
   team_name?: string | null;
   achievement?: string | null;
   issued_at?: string;
+  settings?: any;
 }): Promise<Blob> {
   const offscreenContainer = document.createElement('div');
   offscreenContainer.style.position = 'fixed';
@@ -124,11 +126,13 @@ export async function renderCertificatePdfBlob(certData: {
         recipientName: certData.recipient_name,
         certificateType: certData.certificate_type,
         certificateId: certData.certificate_id,
+        editionId: certData.edition_id,
         templateVersion: certData.template_version,
         editionName: certData.edition_name || 'GenCode League 2026',
         teamName: certData.team_name || null,
         achievement: certData.achievement || null,
         issuedAt: certData.issued_at,
+        settings: certData.settings,
         scale: 1,
       })
     );
@@ -183,6 +187,7 @@ export async function downloadOrRegenerateCertificate(
     certificate_type: cert.certificate_type,
     certificate_id: cert.certificate_id,
     template_version: cert.template_version,
+    edition_id: cert.edition_id,
     edition_name: cert.edition?.name,
     team_name: cert.team?.name,
     achievement: cert.achievement,

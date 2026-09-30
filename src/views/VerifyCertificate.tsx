@@ -379,6 +379,7 @@ export default function VerifyCertificate() {
                       recipientName={cert.recipient_name}
                       certificateType={cert.certificate_type}
                       certificateId={cert.certificate_id}
+                      editionId={cert.edition_id}
                       templateVersion={cert.template_version}
                       editionName={cert.edition?.name}
                       teamName={cert.team?.name}

@@ -44,3 +44,18 @@ export interface AuditLogEntry {
   details: Record<string, any>;
   created_at: string;
 }
+
+export interface CertificateSignatory {
+  name?: string;
+  role: string;
+  org: string;
+  signature_url?: string | null;
+}
+
+export interface CertificateSettings {
+  logo_url?: string | null;
+  season_name?: string;
+  presented_to_text?: string;
+  signatory_left: CertificateSignatory;
+  signatory_right: CertificateSignatory;
+}

@@ -9,7 +9,6 @@ import {
   FileText,
   Download,
   ChevronLeft,
-  RefreshCw,
   ShieldCheck,
   Check,
   Award,
@@ -23,7 +22,6 @@ import {
   getEditionCode,
   logAdminAction,
   ALL_CERTIFICATE_TYPES,
-  CERTIFICATE_TYPE_LABELS,
 } from '../utils/certificateUtils';
 import {
   renderCertificatePdfBlob,
@@ -261,6 +259,7 @@ Priya Sharma,,volunteer`;
             recipient_name: row.name,
             certificate_type: certType,
             certificate_id: certId,
+            edition_id: selectedEditionId,
             template_version: 1,
             edition_name: activeEdition?.name || 'GenCode League',
             team_name: row.matchedTeam?.name || row.team || null,

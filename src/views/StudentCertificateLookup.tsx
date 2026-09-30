@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -386,6 +386,7 @@ export default function StudentCertificateLookup() {
                     recipientName={previewCert.recipient_name}
                     certificateType={previewCert.certificate_type}
                     certificateId={previewCert.certificate_id}
+                    editionId={previewCert.edition_id}
                     templateVersion={previewCert.template_version}
                     editionName={previewCert.edition?.name}
                     teamName={previewCert.team?.name}
