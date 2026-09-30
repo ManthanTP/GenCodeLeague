@@ -21,6 +21,8 @@ export interface Certificate {
   recipient_name: string;
   certificate_type: CertificateType;
   achievement: string | null;
+  custom_title?: string | null;
+  custom_subtitle?: string | null;
   template_version: number;
   issued_at: string;
   status: 'valid' | 'revoked';
@@ -54,8 +56,10 @@ export interface CertificateSignatory {
 
 export interface CertificateSettings {
   logo_url?: string | null;
+  emblem_url?: string | null;
   season_name?: string;
   presented_to_text?: string;
   signatory_left: CertificateSignatory;
   signatory_right: CertificateSignatory;
 }
+

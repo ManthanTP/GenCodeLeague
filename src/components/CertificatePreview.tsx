@@ -18,6 +18,9 @@ export interface CertificatePreviewProps {
   editionName?: string;
   teamName?: string | null;
   achievement?: string | null;
+  customTitle?: string | null;
+  customSubtitle?: string | null;
+  presentedToText?: string | null;
   issuedAt?: string;
   status?: 'valid' | 'revoked';
   scale?: number;
@@ -32,11 +35,13 @@ export interface CertificatePreviewProps {
  * with pixel-perfect vector styling:
  * - Top-left: GCL Branding or Admin-uploaded Custom Logo
  * - Top-right: Edition Season, Year & Version
- * - Center-top: Vector Laurel Wreath & Auction Gavel Emblem
- * - Center: CERTIFICATE OF PARTICIPATION / ACHIEVEMENT
- * - Dynamic Recipient Name (with auto font scaling)
- * - Dynamic Subtitle & Team Name
- * - Center-bottom: Verification Card with QR Code, Record Badge, ID & Date
+ * - Center-top: Editable Center Emblem/Badge (Custom image or default GCL Gavel & Laurel Wreath vector)
+ * - Main Heading: "CERTIFICATE" (in Orbitron 900 futuristic font)
+ * - Title Suffix: "OF PARTICIPATION" / "OF ACHIEVEMENT" / custom editable title (Rajdhani 700 with red flourish)
+ * - Presentation text: "THIS IS PROUDLY PRESENTED TO" (customizable)
+ * - Recipient Name: Barlow Condensed 800 with first name(s) in dark black and last name in crimson red
+ * - Subtitle & Team Name: Body text with team name highlighted in bold crimson red
+ * - Center-bottom: Verification Card with QR Code, Record Badge, ID & Date (mathematically centered)
  * - Bottom-left: Faculty Coordinator (GenCode League) with Uploadable Signature
  * - Bottom-right: Convenor (Department of CSE) with Uploadable Signature
  */
@@ -49,6 +54,9 @@ export default function CertificatePreview({
   editionName = 'GenCode League 2026',
   teamName,
   achievement,
+  customTitle,
+  customSubtitle,
+  presentedToText: propPresentedTo,
   issuedAt,
   status = 'valid',
   scale = 1,
@@ -130,28 +138,46 @@ export default function CertificatePreview({
     editionName?.replace(/GCL\s*\d{4}/i, '').trim() ||
     'Genesis Season';
 
-  // Certificate title: PARTICIPATION or ACHIEVEMENT
-  const certTitle = getCertificateTitle(certificateType);
+  // Title: Custom or derived from certificate type
+  const rawTitle = customTitle?.trim() || `OF ${getCertificateTitle(certificateType)}`;
+  const displayTitle = rawTitle.startsWith('OF ') ? rawTitle : `OF ${rawTitle}`;
 
   // Subtitle / body text
-  const subtitleText = getCertificateSubtitle(certificateType, achievement);
+  const displaySubtitle =
+    customSubtitle?.trim() || getCertificateSubtitle(certificateType, achievement);
 
   // Presentation text
-  const presentedToText =
-    activeSettings.presented_to_text || 'THIS IS PROUDLY PRESENTED TO';
+  const presentationLine =
+    propPresentedTo?.trim() ||
+    activeSettings.presented_to_text ||
+    'THIS IS PROUDLY PRESENTED TO';
 
   // Whether this type shows a team affiliation line
   const showTeamLine =
     certificateType === 'participation' || certificateType === 'best_team';
 
+  // Recipient name splitting: First name(s) in black, last name in red
+  const formatRecipientName = (fullName: string) => {
+    const trimmed = (fullName || 'Recipient Name').trim();
+    const parts = trimmed.split(/\s+/);
+    if (parts.length <= 1) {
+      return { firstNames: '', lastName: trimmed };
+    }
+    const lastName = parts[parts.length - 1];
+    const firstNames = parts.slice(0, -1).join(' ');
+    return { firstNames, lastName };
+  };
+
+  const { firstNames, lastName } = formatRecipientName(recipientName);
+
   // Dynamic font size for recipient name to prevent overflow
   const getNameFontSize = (name: string): number => {
     const len = name.length;
-    if (len <= 14) return 42;
-    if (len <= 20) return 36;
-    if (len <= 28) return 30;
-    if (len <= 36) return 26;
-    return 22;
+    if (len <= 14) return 48;
+    if (len <= 20) return 42;
+    if (len <= 28) return 36;
+    if (len <= 36) return 30;
+    return 24;
   };
 
   const nameFontSize = getNameFontSize(recipientName || 'Recipient Name');
@@ -405,129 +431,145 @@ export default function CertificatePreview({
         </div>
       </div>
 
-      {/* ── 3. Center-Top: Vector Gavel & Laurel Emblem ── */}
+      {/* ── 3. Center-Top: Editable Center Emblem/Logo (With proper gap to CERTIFICATE) ── */}
       <div
         style={{
           position: 'absolute',
-          top: '106px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          top: '98px',
+          left: 0,
+          width: '100%',
+          height: '64px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           zIndex: 10,
           pointerEvents: 'none',
         }}
       >
-        <svg
-          width="180"
-          height="66"
-          viewBox="0 0 180 66"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Left Accent Line */}
-          <line x1="0" y1="36" x2="48" y2="36" stroke="#d1d5db" strokeWidth="1" />
-          {/* Right Accent Line */}
-          <line x1="132" y1="36" x2="180" y2="36" stroke="#d1d5db" strokeWidth="1" />
-
-          {/* Left Laurel Branch */}
-          <path
-            d="M 68 54 C 58 46 54 34 56 22 C 58 14 62 8 68 2"
-            stroke="#dc2626"
-            strokeWidth="2"
-            strokeLinecap="round"
+        {activeSettings.emblem_url ? (
+          <img
+            src={activeSettings.emblem_url}
+            alt="Certificate Emblem"
+            style={{
+              maxHeight: '62px',
+              maxWidth: '220px',
+              objectFit: 'contain',
+            }}
+          />
+        ) : (
+          <svg
+            width="180"
+            height="64"
+            viewBox="0 0 180 64"
             fill="none"
-          />
-          <path d="M 66 10 C 60 8 57 12 59 16 C 61 20 66 18 66 10 Z" fill="#dc2626" />
-          <path d="M 63 20 C 56 19 53 24 56 28 C 59 32 63 29 63 20 Z" fill="#dc2626" />
-          <path d="M 62 32 C 55 32 53 38 57 41 C 61 44 64 40 62 32 Z" fill="#dc2626" />
-          <path d="M 65 44 C 59 46 58 52 63 54 C 67 56 69 50 65 44 Z" fill="#dc2626" />
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Left Accent Line */}
+            <line x1="0" y1="36" x2="48" y2="36" stroke="#d1d5db" strokeWidth="1" />
+            {/* Right Accent Line */}
+            <line x1="132" y1="36" x2="180" y2="36" stroke="#d1d5db" strokeWidth="1" />
 
-          {/* Right Laurel Branch */}
-          <path
-            d="M 112 54 C 122 46 126 34 124 22 C 122 14 118 8 112 2"
-            stroke="#dc2626"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <path d="M 114 10 C 120 8 123 12 121 16 C 119 20 114 18 114 10 Z" fill="#dc2626" />
-          <path d="M 117 20 C 124 19 127 24 124 28 C 121 32 117 29 117 20 Z" fill="#dc2626" />
-          <path d="M 118 32 C 125 32 127 38 123 41 C 119 44 116 40 118 32 Z" fill="#dc2626" />
-          <path d="M 115 44 C 121 46 122 52 117 54 C 113 56 111 50 115 44 Z" fill="#dc2626" />
-
-          {/* Sounding Block Pedestal */}
-          <polygon
-            points="76,56 104,56 109,62 71,62"
-            fill="#1f2937"
-            stroke="#374151"
-            strokeWidth="1"
-          />
-          <rect x="73" y="60" width="34" height="3" fill="#111827" />
-
-          {/* 3D Gavel at Angle */}
-          <g transform="translate(90, 36) rotate(-35)">
-            {/* Handle */}
-            <rect
-              x="-3"
-              y="2"
-              width="6"
-              height="36"
-              rx="2"
-              fill="url(#gavelWood)"
-              stroke="#111"
-              strokeWidth="0.8"
+            {/* Left Laurel Branch */}
+            <path
+              d="M 68 54 C 58 46 54 34 56 22 C 58 14 62 8 68 2"
+              stroke="#dc2626"
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
             />
-            {/* Head */}
-            <rect
-              x="-18"
-              y="-9"
-              width="36"
-              height="15"
-              rx="3"
-              fill="url(#gavelHead)"
-              stroke="#111"
+            <path d="M 66 10 C 60 8 57 12 59 16 C 61 20 66 18 66 10 Z" fill="#dc2626" />
+            <path d="M 63 20 C 56 19 53 24 56 28 C 59 32 63 29 63 20 Z" fill="#dc2626" />
+            <path d="M 62 32 C 55 32 53 38 57 41 C 61 44 64 40 62 32 Z" fill="#dc2626" />
+            <path d="M 65 44 C 59 46 58 52 63 54 C 67 56 69 50 65 44 Z" fill="#dc2626" />
+
+            {/* Right Laurel Branch */}
+            <path
+              d="M 112 54 C 122 46 126 34 124 22 C 122 14 118 8 112 2"
+              stroke="#dc2626"
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path d="M 114 10 C 120 8 123 12 121 16 C 119 20 114 18 114 10 Z" fill="#dc2626" />
+            <path d="M 117 20 C 124 19 127 24 124 28 C 121 32 117 29 117 20 Z" fill="#dc2626" />
+            <path d="M 118 32 C 125 32 127 38 123 41 C 119 44 116 40 118 32 Z" fill="#dc2626" />
+            <path d="M 115 44 C 121 46 122 52 117 54 C 113 56 111 50 115 44 Z" fill="#dc2626" />
+
+            {/* Sounding Block Pedestal */}
+            <polygon
+              points="76,54 104,54 109,60 71,60"
+              fill="#1f2937"
+              stroke="#374151"
               strokeWidth="1"
             />
-            {/* Red Accent Rings */}
-            <rect x="-14" y="-9" width="3" height="15" fill="#dc2626" />
-            <rect x="11" y="-9" width="3" height="15" fill="#dc2626" />
-          </g>
+            <rect x="73" y="58" width="34" height="3" fill="#111827" />
 
-          <defs>
-            <linearGradient id="gavelWood" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#451a03" />
-              <stop offset="50%" stopColor="#78350f" />
-              <stop offset="100%" stopColor="#291102" />
-            </linearGradient>
-            <linearGradient id="gavelHead" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f9fafb" />
-              <stop offset="35%" stopColor="#e5e7eb" />
-              <stop offset="70%" stopColor="#4b5563" />
-              <stop offset="100%" stopColor="#111827" />
-            </linearGradient>
-          </defs>
-        </svg>
+            {/* 3D Gavel at Angle */}
+            <g transform="translate(90, 34) rotate(-35)">
+              {/* Handle */}
+              <rect
+                x="-3"
+                y="2"
+                width="6"
+                height="36"
+                rx="2"
+                fill="url(#gavelWood)"
+                stroke="#111"
+                strokeWidth="0.8"
+              />
+              {/* Head */}
+              <rect
+                x="-18"
+                y="-9"
+                width="36"
+                height="15"
+                rx="3"
+                fill="url(#gavelHead)"
+                stroke="#111"
+                strokeWidth="1"
+              />
+              {/* Red Accent Rings */}
+              <rect x="-14" y="-9" width="3" height="15" fill="#dc2626" />
+              <rect x="11" y="-9" width="3" height="15" fill="#dc2626" />
+            </g>
+
+            <defs>
+              <linearGradient id="gavelWood" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#451a03" />
+                <stop offset="50%" stopColor="#78350f" />
+                <stop offset="100%" stopColor="#291102" />
+              </linearGradient>
+              <linearGradient id="gavelHead" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f9fafb" />
+                <stop offset="35%" stopColor="#e5e7eb" />
+                <stop offset="70%" stopColor="#4b5563" />
+                <stop offset="100%" stopColor="#111827" />
+              </linearGradient>
+            </defs>
+          </svg>
+        )}
       </div>
 
-      {/* ── 4. Main Title: CERTIFICATE ── */}
+      {/* ── 4. Main Title: CERTIFICATE (Orbitron font, spaced below emblem with clean gap) ── */}
       <div
         style={{
           position: 'absolute',
-          top: '166px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          top: '190px',
+          left: 0,
+          width: '100%',
+          textAlign: 'center',
           zIndex: 10,
           pointerEvents: 'none',
-          textAlign: 'center',
         }}
       >
         <div
           style={{
-            fontSize: '48px',
+            fontSize: '44px',
             fontWeight: 900,
-            letterSpacing: '0.12em',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: '#111111',
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Orbitron', 'Space Grotesk', sans-serif",
             lineHeight: 1,
           }}
         >
@@ -535,32 +577,31 @@ export default function CertificatePreview({
         </div>
       </div>
 
-      {/* ── 5. Title Suffix: OF PARTICIPATION / OF ACHIEVEMENT ── */}
+      {/* ── 5. Title Suffix: OF PARTICIPATION / OF ACHIEVEMENT (Rajdhani font + flourish) ── */}
       <div
         style={{
           position: 'absolute',
-          top: '224px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-          pointerEvents: 'none',
-          textAlign: 'center',
+          top: '246px',
+          left: 0,
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          zIndex: 10,
+          pointerEvents: 'none',
         }}
       >
         <div
           style={{
-            fontSize: '16px',
+            fontSize: '15px',
             fontWeight: 700,
-            letterSpacing: '0.4em',
+            letterSpacing: '0.42em',
             textTransform: 'uppercase',
-            color: '#262626',
-            fontFamily: "'Inter', sans-serif",
+            color: '#1f2937',
+            fontFamily: "'Rajdhani', 'Montserrat', 'Inter', sans-serif",
           }}
         >
-          OF {certTitle}
+          {displayTitle}
         </div>
         {/* Sleek red horizontal flourish */}
         <div
@@ -578,64 +619,71 @@ export default function CertificatePreview({
       <div
         style={{
           position: 'absolute',
-          top: '276px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          top: '294px',
+          left: 0,
+          width: '100%',
+          textAlign: 'center',
           zIndex: 10,
           pointerEvents: 'none',
-          textAlign: 'center',
-          fontSize: '11px',
-          fontWeight: 500,
-          letterSpacing: '0.18em',
+          fontSize: '10.5px',
+          fontWeight: 600,
+          letterSpacing: '0.22em',
           textTransform: 'uppercase',
           color: '#6b7280',
           fontFamily: "'Inter', sans-serif",
         }}
       >
-        {presentedToText}
+        {presentationLine}
       </div>
 
-      {/* ── 7. Recipient Name (DYNAMIC with font scaling & subtle gradient) ── */}
+      {/* ── 7. Recipient Name: Barlow Condensed 800 with Red Last Name & No Transform Clipping ── */}
       <div
         style={{
           position: 'absolute',
-          top: '304px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          top: '320px',
+          left: 0,
+          right: 0,
+          width: '100%',
+          textAlign: 'center',
           zIndex: 10,
           pointerEvents: 'none',
-          textAlign: 'center',
-          maxWidth: '82%',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          padding: '0 32px',
+          boxSizing: 'border-box',
         }}
       >
-        <span
+        <div
           style={{
+            display: 'inline-block',
             fontSize: `${nameFontSize}px`,
-            fontWeight: 900,
+            fontWeight: 800,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            color: '#111111',
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Barlow Condensed', 'Bebas Neue', 'Oswald', sans-serif",
+            lineHeight: 1.1,
+            whiteSpace: 'nowrap',
           }}
         >
-          {recipientName || 'Recipient Name'}
-        </span>
+          {firstNames && (
+            <span style={{ color: '#111111', marginRight: '0.24em' }}>
+              {firstNames}
+            </span>
+          )}
+          <span style={{ color: '#dc2626' }}>
+            {lastName}
+          </span>
+        </div>
       </div>
 
-      {/* ── 8. Subtitle / Achievement Body Text ── */}
+      {/* ── 8. Subtitle / Achievement Body Text (Centered mathematically, no negative transforms) ── */}
       <div
         style={{
           position: 'absolute',
-          top: '380px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          top: '394px',
+          left: '120px',
+          width: '760px',
+          textAlign: 'center',
           zIndex: 10,
           pointerEvents: 'none',
-          textAlign: 'center',
-          maxWidth: '74%',
           lineHeight: 1.5,
         }}
       >
@@ -647,43 +695,42 @@ export default function CertificatePreview({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          {subtitleText}
+          {displaySubtitle}
         </span>
       </div>
 
-      {/* ── 9. Team Name (DYNAMIC — for participation / best_team) ── */}
+      {/* ── 9. Team Name (DYNAMIC — highlighted in bold crimson red like the sample) ── */}
       {showTeamLine && teamName && (
         <div
           style={{
             position: 'absolute',
-            top: '410px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            top: '422px',
+            left: 0,
+            width: '100%',
+            textAlign: 'center',
             zIndex: 10,
             pointerEvents: 'none',
-            textAlign: 'center',
           }}
         >
           <span
             style={{
-              fontSize: '17px',
+              fontSize: '16.5px',
               fontWeight: 800,
-              color: '#b91c1c',
+              color: '#dc2626',
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            {teamName}.
+            {teamName.endsWith('.') ? teamName : `${teamName}.`}
           </span>
         </div>
       )}
 
-      {/* ── 10. Verification Card (Bottom Center) ── */}
+      {/* ── 10. Verification Card (Mathematically centered at left: 325px, width: 350px) ── */}
       <div
         style={{
           position: 'absolute',
           top: '484px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: '325px',
           width: '350px',
           height: '98px',
           borderRadius: '12px',
@@ -696,6 +743,7 @@ export default function CertificatePreview({
           gap: '14px',
           zIndex: 20,
           pointerEvents: 'none',
+          boxSizing: 'border-box',
         }}
       >
         {/* QR Code */}
