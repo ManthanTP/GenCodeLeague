@@ -46,6 +46,16 @@ export async function generateCertificatePdfBlob(
     targetNode.style.transform = 'none';
   }
 
+  // Ensure all custom Google Fonts (Orbitron, Barlow Condensed, etc.) are fully rendered
+
+  if (typeof document !== 'undefined' && document.fonts) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // Continue even if fonts fail to load
+    }
+  }
+
   let canvas: HTMLCanvasElement;
   try {
     canvas = await html2canvas(targetNode, {
@@ -60,6 +70,7 @@ export async function generateCertificatePdfBlob(
     targetNode.style.transform = prevTransform;
     targetNode.style.transformOrigin = prevTransformOrigin;
   }
+
 
   const imgData = canvas.toDataURL('image/png', 1.0);
 
@@ -105,6 +116,8 @@ export async function renderCertificatePdfBlob(certData: {
   edition_name?: string;
   team_name?: string | null;
   achievement?: string | null;
+  custom_title?: string | null;
+  custom_subtitle?: string | null;
   issued_at?: string;
   settings?: any;
 }): Promise<Blob> {
@@ -131,6 +144,8 @@ export async function renderCertificatePdfBlob(certData: {
         editionName: certData.edition_name || 'GenCode League 2026',
         teamName: certData.team_name || null,
         achievement: certData.achievement || null,
+        customTitle: certData.custom_title || null,
+        customSubtitle: certData.custom_subtitle || null,
         issuedAt: certData.issued_at,
         settings: certData.settings,
         scale: 1,
@@ -191,8 +206,11 @@ export async function downloadOrRegenerateCertificate(
     edition_name: cert.edition?.name,
     team_name: cert.team?.name,
     achievement: cert.achievement,
+    custom_title: cert.custom_title,
+    custom_subtitle: cert.custom_subtitle,
     issued_at: cert.issued_at,
   });
+
 
   // Trigger download
   const downloadUrl = window.URL.createObjectURL(blob);

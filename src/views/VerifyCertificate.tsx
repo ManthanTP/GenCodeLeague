@@ -57,8 +57,31 @@ export default function VerifyCertificate() {
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
+  const [autoScale, setAutoScale] = useState<number>(0.75);
+  const [userZoom, setUserZoom] = useState<number | null>(null);
+  const previewContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-fit preview scale to container width
+  useEffect(() => {
+    if (!showPreview || !previewContainerRef.current) return;
+    const updateScale = () => {
+      if (previewContainerRef.current) {
+        const containerW = previewContainerRef.current.clientWidth;
+        // Keep within 0.35 to 0.85 so it never looks excessively zoomed in or overflows
+        const targetScale = Math.min(Math.max((containerW - 32) / 1000, 0.35), 0.85);
+        setAutoScale(Number(targetScale.toFixed(2)));
+      }
+    };
+    updateScale();
+    const handleResize = () => updateScale();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showPreview]);
+
+  const activeScale = userZoom !== null ? userZoom : autoScale;
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
   };
@@ -364,21 +387,74 @@ export default function VerifyCertificate() {
               <div className="pt-6 flex flex-wrap items-center justify-between gap-4">
                 <button
                   onClick={() => setShowPreview(!showPreview)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-semibold flex items-center gap-2 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <Eye size={16} />
                   {showPreview ? 'Hide Certificate Preview' : 'View Full Certificate'}
                 </button>
+
+                {showPreview && (
+                  <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <button
+                      onClick={() =>
+                        setUserZoom((prev) =>
+                          Math.max(Number(((prev ?? autoScale) - 0.1).toFixed(2)), 0.3)
+                        )
+                      }
+                      className="p-1 rounded hover:bg-slate-700 text-slate-300 transition-colors"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut size={14} />
+                    </button>
+                    <span className="text-xs font-mono font-bold text-amber-400 min-w-[42px] text-center">
+                      {Math.round(activeScale * 100)}%
+                    </span>
+                    <button
+                      onClick={() =>
+                        setUserZoom((prev) =>
+                          Math.min(Number(((prev ?? autoScale) + 0.1).toFixed(2)), 1.2)
+                        )
+                      }
+                      className="p-1 rounded hover:bg-slate-700 text-slate-300 transition-colors"
+                      title="Zoom In"
+                    >
+                      <ZoomIn size={14} />
+                    </button>
+                    {userZoom !== null && (
+                      <button
+                        onClick={() => setUserZoom(null)}
+                        className="ml-1 px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-[11px] font-mono text-slate-200 flex items-center gap-1"
+                        title="Fit to Window"
+                      >
+                        <RotateCcw size={11} /> Fit
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 <div className="text-xs text-slate-500 font-mono">
                   Template Version: v{cert.template_version}
                 </div>
               </div>
 
-              {/* Rendered Preview Section */}
+              {/* Rendered Preview Section (Responsive & Auto-fit) */}
               {showPreview && (
-                <div className="mt-8 pt-8 border-t border-slate-800 flex justify-center overflow-x-auto">
-                  <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                <div
+                  ref={previewContainerRef}
+                  className="mt-8 pt-8 border-t border-slate-800 w-full flex flex-col items-center"
+                >
+                  <div
+                    style={{
+                      width: 1000 * activeScale,
+                      height: 707 * activeScale,
+                      overflow: 'hidden',
+                      borderRadius: '12px',
+                      boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      transition: 'width 0.15s ease, height 0.15s ease',
+                      backgroundColor: '#ffffff',
+                    }}
+                  >
                     <CertificatePreview
                       recipientName={cert.recipient_name}
                       certificateType={cert.certificate_type}
@@ -388,12 +464,16 @@ export default function VerifyCertificate() {
                       editionName={cert.edition?.name}
                       teamName={cert.team?.name}
                       achievement={cert.achievement}
+                      customTitle={cert.custom_title}
+                      customSubtitle={cert.custom_subtitle}
                       issuedAt={cert.issued_at}
                       status={cert.status}
+                      scale={activeScale}
                     />
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         )}

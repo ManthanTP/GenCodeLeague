@@ -66,6 +66,11 @@ export default function AdminCertificateManager({
   const [certificateType, setCertificateType] =
     useState<CertificateType>('participation');
   const [achievement, setAchievement] = useState('');
+  const [customTitle, setCustomTitle] = useState('OF PARTICIPATION');
+  const [presentedToText, setPresentedToText] = useState('THIS IS PROUDLY PRESENTED TO');
+  const [customSubtitle, setCustomSubtitle] = useState(
+    'has actively participated in GenCode League as a proud member of'
+  );
   const [generating, setGenerating] = useState(false);
 
   // Certificate Settings (Signatures & Branding)
@@ -76,8 +81,41 @@ export default function AdminCertificateManager({
 
   // File input refs for uploads
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const emblemInputRef = useRef<HTMLInputElement>(null);
   const leftSignInputRef = useRef<HTMLInputElement>(null);
   const rightSignInputRef = useRef<HTMLInputElement>(null);
+
+  // Pre-fill editable title and subtitle when certificate type or achievement changes
+  useEffect(() => {
+    let title = 'OF PARTICIPATION';
+    if (['winner', 'runner_up', 'best_team'].includes(certificateType)) {
+      title = 'OF ACHIEVEMENT';
+    } else if (['organizer', 'volunteer'].includes(certificateType)) {
+      title = 'OF APPRECIATION';
+    } else if (['judge', 'mentor'].includes(certificateType)) {
+      title = 'OF RECOGNITION';
+    }
+    setCustomTitle(title);
+
+    let sub = 'has actively participated in GenCode League as a proud member of';
+    if (certificateType === 'winner') {
+      sub = achievement || 'has been awarded Champion of GenCode League';
+    } else if (certificateType === 'runner_up') {
+      sub = achievement || 'has been awarded Runner Up of GenCode League';
+    } else if (certificateType === 'best_team') {
+      sub = achievement || 'has been awarded Best Team Dynamics in GenCode League';
+    } else if (certificateType === 'judge') {
+      sub = 'has served as Honorary Judge for GenCode League';
+    } else if (certificateType === 'volunteer') {
+      sub = 'has served as Volunteer for GenCode League';
+    } else if (certificateType === 'organizer') {
+      sub = 'has served as Core Organizer for GenCode League';
+    } else if (certificateType === 'mentor') {
+      sub = 'has served as Technical Mentor for GenCode League';
+    }
+    setCustomSubtitle(sub);
+  }, [certificateType, achievement]);
+
 
   // Records List states
   const [certificatesList, setCertificatesList] = useState<Certificate[]>([]);
@@ -258,10 +296,13 @@ export default function AdminCertificateManager({
         recipient_name: recipientName.trim(),
         certificate_type: certificateType,
         achievement: showAchievementField ? achievement.trim() || null : null,
+        custom_title: customTitle.trim() || null,
+        custom_subtitle: customSubtitle.trim() || null,
         template_version: 1,
         status: 'valid',
         verify_view_count: 0,
       };
+
 
       const { error } = await supabase.from('certificates').insert(record);
 
@@ -495,6 +536,35 @@ export default function AdminCertificateManager({
                 </select>
               </div>
 
+              {/* Certificate Title Line (Editable) */}
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1.5 flex items-center justify-between">
+                  <span>Certificate Title Line (Editable)</span>
+                  <span className="text-[10px] text-cyan-400 font-sans">Live Preview Sync</span>
+                </label>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="e.g. OF PARTICIPATION or OF ACHIEVEMENT"
+                  className="gcl-input w-full py-2.5 text-sm font-bold text-white tracking-wider"
+                />
+              </div>
+
+              {/* Presentation Text (Editable) */}
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1.5">
+                  Presentation Text (Editable)
+                </label>
+                <input
+                  type="text"
+                  value={presentedToText}
+                  onChange={(e) => setPresentedToText(e.target.value)}
+                  placeholder="THIS IS PROUDLY PRESENTED TO"
+                  className="gcl-input w-full py-2 text-xs"
+                />
+              </div>
+
               {/* Achievement / Position */}
               {showAchievementField && (
                 <div>
@@ -510,6 +580,20 @@ export default function AdminCertificateManager({
                   />
                 </div>
               )}
+
+              {/* Certificate Body / Reason Description (Editable) */}
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1.5">
+                  Certificate Reason / Description (Editable)
+                </label>
+                <textarea
+                  value={customSubtitle}
+                  onChange={(e) => setCustomSubtitle(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. has actively participated in GenCode League as a proud member of"
+                  className="gcl-input w-full py-2 px-3 text-xs leading-relaxed resize-none"
+                />
+              </div>
 
               {/* Submit Button */}
               <div className="pt-2">
@@ -551,12 +635,16 @@ export default function AdminCertificateManager({
                     editionName={activeEdition?.name || 'GenCode League 2026'}
                     teamName={selectedTeam?.name || 'Cyber Knights'}
                     achievement={achievement || null}
+                    customTitle={customTitle}
+                    customSubtitle={customSubtitle}
+                    presentedToText={presentedToText}
                     scale={0.58}
                     settings={settings}
                   />
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       )}
@@ -636,8 +724,76 @@ export default function AdminCertificateManager({
               </div>
             </div>
 
-            {/* Section 2: Left Signatory (Faculty Coordinator) */}
+            {/* Section 2: Center Emblem / Logo (Above CERTIFICATE Heading) */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Award size={16} className="text-amber-400" />
+                  Center Emblem / Crest (Above "CERTIFICATE" Heading)
+                </h3>
+                {settings.emblem_url && (
+                  <button
+                    onClick={() =>
+                      setSettings((prev) => ({ ...prev, emblem_url: null }))
+                    }
+                    className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw size={12} /> Reset to Default GCL Emblem
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Upload your custom crest, college emblem, or event badge to appear above the CERTIFICATE title with generous vertical spacing.
+              </p>
+
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-16 rounded-xl bg-black/50 border border-slate-800 flex items-center justify-center p-2 overflow-hidden">
+                  {settings.emblem_url ? (
+                    <img
+                      src={settings.emblem_url}
+                      alt="Current Center Emblem"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-[11px] font-mono text-slate-400 text-center leading-tight">
+                      Official GCL Gavel & Laurel
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    ref={emblemInputRef}
+                    accept="image/png,image/jpeg,image/svg+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageFile(file, (dataUrl) => {
+                          setSettings((prev) => ({ ...prev, emblem_url: dataUrl }));
+                          onShowToast('Custom center emblem loaded!', 'success');
+                        });
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => emblemInputRef.current?.click()}
+                    className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white flex items-center gap-2 cursor-pointer"
+                  >
+                    <Upload size={14} /> Upload Custom Emblem
+                  </button>
+                  <p className="text-[10px] text-slate-500 mt-1.5">
+                    Recommended: Transparent PNG or SVG (max height 70px)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Left Signatory (Faculty Coordinator) */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
+
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <PenTool size={16} className="text-red-400" />
@@ -1197,11 +1353,14 @@ export default function AdminCertificateManager({
                   editionName={previewCert.edition?.name}
                   teamName={previewCert.team?.name}
                   achievement={previewCert.achievement}
+                  customTitle={previewCert.custom_title}
+                  customSubtitle={previewCert.custom_subtitle}
                   issuedAt={previewCert.issued_at}
                   status={previewCert.status}
                   scale={0.75}
                   settings={settings}
                 />
+
               </div>
             </div>
 

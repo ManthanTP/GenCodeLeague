@@ -391,10 +391,13 @@ export default function StudentCertificateLookup() {
                     editionName={previewCert.edition?.name}
                     teamName={previewCert.team?.name}
                     achievement={previewCert.achievement}
+                    customTitle={previewCert.custom_title}
+                    customSubtitle={previewCert.custom_subtitle}
                     issuedAt={previewCert.issued_at}
                     status={previewCert.status}
                     scale={0.8}
                   />
+
                 </div>
               </div>
 

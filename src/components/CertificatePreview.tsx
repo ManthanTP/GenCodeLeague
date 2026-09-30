@@ -636,43 +636,68 @@ export default function CertificatePreview({
         {presentationLine}
       </div>
 
-      {/* ── 7. Recipient Name: Barlow Condensed 800 with Red Last Name & No Transform Clipping ── */}
+      {/* ── 7. Recipient Name: Barlow Condensed 800 with 4-Stop Red Gradient Last Name (SVG Rendered) ── */}
       <div
         style={{
           position: 'absolute',
-          top: '320px',
+          top: '318px',
           left: 0,
-          right: 0,
           width: '100%',
           textAlign: 'center',
           zIndex: 10,
           pointerEvents: 'none',
-          padding: '0 32px',
-          boxSizing: 'border-box',
         }}
       >
-        <div
+        <svg
+          width="1000"
+          height={nameFontSize * 1.35}
+          viewBox={`0 0 1000 ${nameFontSize * 1.35}`}
           style={{
-            display: 'inline-block',
-            fontSize: `${nameFontSize}px`,
-            fontWeight: 800,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            fontFamily: "'Barlow Condensed', 'Bebas Neue', 'Oswald', sans-serif",
-            lineHeight: 1.1,
-            whiteSpace: 'nowrap',
+            overflow: 'visible',
+            display: 'block',
+            margin: '0 auto',
           }}
         >
-          {firstNames && (
-            <span style={{ color: '#111111', marginRight: '0.24em' }}>
-              {firstNames}
-            </span>
-          )}
-          <span style={{ color: '#dc2626' }}>
-            {lastName}
-          </span>
-        </div>
+          <defs>
+            <linearGradient
+              id={`nameGrad-${certificateId || 'preview'}`}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              {/* Vibrant ruby-red at top */}
+              <stop offset="0%" stopColor="#ff2830" />
+              {/* Rich crimson-red upper mid */}
+              <stop offset="28%" stopColor="#dc161f" />
+              {/* Deep wine-red lower mid */}
+              <stop offset="68%" stopColor="#820409" />
+              {/* Near-black dark maroon at base */}
+              <stop offset="100%" stopColor="#300002" />
+            </linearGradient>
+          </defs>
+          <text
+            x="500"
+            y={nameFontSize * 0.95}
+            textAnchor="middle"
+            fontFamily="'Barlow Condensed', 'Bebas Neue', 'Oswald', sans-serif"
+            fontWeight="800"
+            letterSpacing="0.04em"
+            fontSize={`${nameFontSize}px`}
+            style={{ textTransform: 'uppercase' }}
+          >
+            {firstNames && (
+              <tspan fill="#111111">
+                {firstNames}{' '}
+              </tspan>
+            )}
+            <tspan fill={`url(#nameGrad-${certificateId || 'preview'})`}>
+              {lastName}
+            </tspan>
+          </text>
+        </svg>
       </div>
+
 
       {/* ── 8. Subtitle / Achievement Body Text (Centered mathematically, no negative transforms) ── */}
       <div
