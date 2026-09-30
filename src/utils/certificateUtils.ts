@@ -152,8 +152,10 @@ export async function logAdminAction(
  */
 export const DEFAULT_CERTIFICATE_SETTINGS: CertificateSettings = {
   logo_url: null,
-  season_name: 'GENESIS SEASON',
+  emblem_url: null,
+  season_name: 'NATIONAL CODING LEAGUE',
   presented_to_text: 'THIS IS PROUDLY PRESENTED TO',
+  default_description: 'has actively participated in GenCode League as a proud member of',
   signatory_left: {
     name: '',
     role: 'FACULTY COORDINATOR',
@@ -167,6 +169,7 @@ export const DEFAULT_CERTIFICATE_SETTINGS: CertificateSettings = {
     signature_url: null,
   },
 };
+
 
 const SETTINGS_STORAGE_KEY = 'gcl_certificate_settings_';
 

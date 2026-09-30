@@ -136,15 +136,19 @@ export default function CertificatePreview({
   const seasonName =
     activeSettings.season_name ||
     editionName?.replace(/GCL\s*\d{4}/i, '').trim() ||
-    'Genesis Season';
+    'NATIONAL CODING LEAGUE';
 
   // Title: Custom or derived from certificate type
   const rawTitle = customTitle?.trim() || `OF ${getCertificateTitle(certificateType)}`;
   const displayTitle = rawTitle.startsWith('OF ') ? rawTitle : `OF ${rawTitle}`;
 
-  // Subtitle / body text
+  // Subtitle / body text (supports per-certificate override or global default_description from settings)
   const displaySubtitle =
-    customSubtitle?.trim() || getCertificateSubtitle(certificateType, achievement);
+    customSubtitle?.trim() ||
+    (certificateType === 'participation' && activeSettings.default_description
+      ? activeSettings.default_description
+      : getCertificateSubtitle(certificateType, achievement));
+
 
   // Presentation text
   const presentationLine =
@@ -698,8 +702,31 @@ export default function CertificatePreview({
         </svg>
       </div>
 
+      {/* ── Red Accent Flourish Line after Recipient Name ── */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '375px',
+          left: 0,
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          zIndex: 10,
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            width: '160px',
+            height: '2px',
+            background:
+              'linear-gradient(90deg, transparent 0%, #dc2626 50%, transparent 100%)',
+          }}
+        />
+      </div>
 
       {/* ── 8. Subtitle / Achievement Body Text (Centered mathematically, no negative transforms) ── */}
+
       <div
         style={{
           position: 'absolute',
@@ -741,12 +768,13 @@ export default function CertificatePreview({
             style={{
               fontSize: '16.5px',
               fontWeight: 800,
-              color: '#dc2626',
+              color: '#880808',
               fontFamily: "'Inter', sans-serif",
             }}
           >
             {teamName.endsWith('.') ? teamName : `${teamName}.`}
           </span>
+
         </div>
       )}
 

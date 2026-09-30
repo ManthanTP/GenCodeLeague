@@ -17,7 +17,9 @@ import {
   ExternalLink,
   ShieldAlert,
   Sliders,
+  Edit3,
 } from 'lucide-react';
+
 import { supabase } from '../lib/supabase';
 import CertificatePreview from './CertificatePreview';
 import {
@@ -132,6 +134,18 @@ export default function AdminCertificateManager({
 
   // Detail / Preview Modal
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
+
+  // Edit Certificate Modal State
+  const [editingCert, setEditingCert] = useState<Certificate | null>(null);
+  const [editRecipientName, setEditRecipientName] = useState('');
+  const [editCertificateType, setEditCertificateType] =
+    useState<CertificateType>('participation');
+  const [editCustomTitle, setEditCustomTitle] = useState('');
+  const [editAchievement, setEditAchievement] = useState('');
+  const [editCustomSubtitle, setEditCustomSubtitle] = useState('');
+  const [editTeamId, setEditTeamId] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
 
   // Load editions
   useEffect(() => {
@@ -339,6 +353,94 @@ export default function AdminCertificateManager({
     onShowToast('Verification URL copied!', 'success');
     setTimeout(() => setCopiedId(null), 2500);
   };
+
+  // ─── Edit Certificate Handlers ───
+  const handleStartEdit = (cert: Certificate) => {
+    setEditingCert(cert);
+    setEditRecipientName(cert.recipient_name || '');
+    setEditCertificateType(cert.certificate_type || 'participation');
+    setEditCustomTitle(
+      cert.custom_title || `OF ${getCertificateTitle(cert.certificate_type)}`
+    );
+    setEditAchievement(cert.achievement || '');
+    setEditCustomSubtitle(
+      cert.custom_subtitle ||
+        getCertificateSubtitle(cert.certificate_type, cert.achievement)
+    );
+    setEditTeamId(cert.team_id || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCert) return;
+    if (!editRecipientName.trim()) {
+      onShowToast('Recipient name cannot be empty', 'error');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const showAch = ['winner', 'runner_up', 'best_team'].includes(
+        editCertificateType
+      );
+      const updates = {
+        recipient_name: editRecipientName.trim(),
+        certificate_type: editCertificateType,
+        team_id: editTeamId || null,
+        achievement: showAch ? editAchievement.trim() || null : null,
+        custom_title: editCustomTitle.trim() || null,
+        custom_subtitle: editCustomSubtitle.trim() || null,
+      };
+
+      const { error } = await supabase
+        .from('certificates')
+        .update(updates)
+        .eq('id', editingCert.id);
+
+      if (error) throw error;
+
+      await logAdminAction('CERTIFICATE_UPDATED', {
+        certificate_id: editingCert.certificate_id,
+        updates,
+      });
+
+      onShowToast(
+        `Certificate ${editingCert.certificate_id} updated successfully!`,
+        'success'
+      );
+
+      // Update certificates in state
+      setCertificatesList((prev) =>
+        prev.map((c) =>
+          c.id === editingCert.id
+            ? {
+                ...c,
+                ...updates,
+                team: teams.find((t) => t.id === editTeamId) || null,
+              }
+            : c
+        )
+      );
+
+      // If previewing this certificate, update preview too
+      if (previewCert && previewCert.id === editingCert.id) {
+        setPreviewCert((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...updates,
+                team: teams.find((t) => t.id === editTeamId) || null,
+              }
+            : null
+        );
+      }
+
+      setEditingCert(null);
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to update certificate.', 'error');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
 
   // ─── Download Certificate PDF ───
   const handleDownload = async (cert: Certificate) => {
@@ -791,8 +893,85 @@ export default function AdminCertificateManager({
               </div>
             </div>
 
-            {/* Section 3: Left Signatory (Faculty Coordinator) */}
+            {/* Section 3: Global Certificate Text & Event Badges */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sliders size={16} className="text-cyan-400" />
+                Global Certificate Text & Event Badges
+              </h3>
+              <p className="text-xs text-slate-400">
+                Configure global defaults. Any certificate that doesn't have custom overrides will automatically use these settings across all public verifications and downloads.
+              </p>
+
+              <div className="space-y-3">
+                {/* Top Right Season / Header text */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Top-Right Header / Season Badge (Replaces "GENESIS SEASON")
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.season_name || ''}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        season_name: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. NATIONAL CODING LEAGUE or TECH ODYSSEY"
+                    className="gcl-input w-full py-2 text-xs font-semibold"
+                  />
+                  <span className="text-[10px] text-slate-500">
+                    Appears in the upper-right corner above GCL year and version.
+                  </span>
+                </div>
+
+                {/* Global Presentation Text */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Global Presentation Text
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.presented_to_text || ''}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        presented_to_text: e.target.value,
+                      }))
+                    }
+                    placeholder="THIS IS PROUDLY PRESENTED TO"
+                    className="gcl-input w-full py-2 text-xs"
+                  />
+                </div>
+
+                {/* Global Reason / Default Description */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Global Certificate Reason / Default Description
+                  </label>
+                  <textarea
+                    value={settings.default_description || ''}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        default_description: e.target.value,
+                      }))
+                    }
+                    rows={2}
+                    placeholder="has actively participated in GenCode League as a proud member of"
+                    className="gcl-input w-full py-2 px-3 text-xs resize-none"
+                  />
+                  <span className="text-[10px] text-amber-400/90 font-mono">
+                    ✦ Applied automatically to all certificates & verification pages unless individually customized.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Left Signatory (Faculty Coordinator) */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
+
 
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -1273,6 +1452,15 @@ export default function AdminCertificateManager({
                           <Eye size={14} />
                         </button>
 
+                        {/* Edit Certificate */}
+                        <button
+                          onClick={() => handleStartEdit(cert)}
+                          className="p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-pointer"
+                          title="Edit Certificate Details"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+
                         {/* Download PDF */}
                         <button
                           onClick={() => handleDownload(cert)}
@@ -1282,6 +1470,7 @@ export default function AdminCertificateManager({
                         >
                           <Download size={14} />
                         </button>
+
 
                         {/* Open Verification page */}
                         <a
@@ -1367,20 +1556,212 @@ export default function AdminCertificateManager({
             <div className="w-full flex justify-between items-center pt-2 border-t border-slate-800">
               <button
                 onClick={() => handleCopyVerifyUrl(previewCert.certificate_id)}
-                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
               >
                 <Copy size={13} /> Copy Verification Link
               </button>
-              <button
-                onClick={() => handleDownload(previewCert)}
-                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan"
-              >
-                <Download size={14} /> Download PDF
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const toEdit = previewCert;
+                    setPreviewCert(null);
+                    handleStartEdit(toEdit);
+                  }}
+                  className="px-3 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Edit3 size={13} /> Edit Certificate
+                </button>
+                <button
+                  onClick={() => handleDownload(previewCert)}
+                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan cursor-pointer"
+                >
+                  <Download size={14} /> Download PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ═══ Edit Issued Certificate Modal ═══ */}
+      {editingCert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-w-5xl w-full my-8 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Edit3 size={18} className="text-amber-400" />
+                  Edit Issued Certificate
+                </h3>
+                <p className="text-xs text-slate-400 font-mono">
+                  {editingCert.certificate_id} • Changes update live and apply immediately to public verification and PDF downloads
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingCert(null)}
+                className="text-slate-400 hover:text-white font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+              {/* Form Controls */}
+              <div className="lg:col-span-5 space-y-3.5">
+                {/* Participant Name */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Participant Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editRecipientName}
+                    onChange={(e) => setEditRecipientName(e.target.value)}
+                    placeholder="e.g. Marcus Vance"
+                    className="gcl-input w-full py-2 text-sm font-semibold"
+                  />
+                </div>
+
+                {/* Team */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Team Affiliation
+                  </label>
+                  <select
+                    value={editTeamId}
+                    onChange={(e) => setEditTeamId(e.target.value)}
+                    className="gcl-input w-full py-2 text-xs"
+                  >
+                    <option value="">No Team Affiliation</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Certificate Type */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Certificate Type
+                  </label>
+                  <select
+                    value={editCertificateType}
+                    onChange={(e) =>
+                      setEditCertificateType(e.target.value as CertificateType)
+                    }
+                    className="gcl-input w-full py-2 text-xs"
+                  >
+                    {ALL_CERTIFICATE_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {CERTIFICATE_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Custom Title Line */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Title Line (e.g. OF PARTICIPATION)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomTitle}
+                    onChange={(e) => setEditCustomTitle(e.target.value)}
+                    placeholder="e.g. OF PARTICIPATION"
+                    className="gcl-input w-full py-2 text-xs font-bold text-white tracking-wider"
+                  />
+                </div>
+
+                {/* Achievement */}
+                {['winner', 'runner_up', 'best_team'].includes(editCertificateType) && (
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">
+                      Achievement / Honor
+                    </label>
+                    <input
+                      type="text"
+                      value={editAchievement}
+                      onChange={(e) => setEditAchievement(e.target.value)}
+                      placeholder="e.g. Champion of GenCode League"
+                      className="gcl-input w-full py-2 text-xs"
+                    />
+                  </div>
+                )}
+
+                {/* Custom Reason / Subtitle Description */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-1">
+                    Certificate Body / Description
+                  </label>
+                  <textarea
+                    value={editCustomSubtitle}
+                    onChange={(e) => setEditCustomSubtitle(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. has actively participated in GenCode League as a proud member of"
+                    className="gcl-input w-full py-2 px-3 text-xs leading-relaxed resize-none"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-3">
+                  <button
+                    onClick={() => setEditingCert(null)}
+                    className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit || !editRecipientName.trim()}
+                    className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-glow-amber cursor-pointer disabled:opacity-50"
+                  >
+                    <Save size={14} />
+                    {savingEdit ? 'Saving Changes...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Real-time Live Preview */}
+              <div className="lg:col-span-7 bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center">
+                <div className="text-[11px] font-mono text-slate-400 mb-2 flex items-center gap-1.5 self-start">
+                  <Eye size={13} className="text-cyan-400" /> Live Update Preview
+                </div>
+                <div
+                  style={{
+                    width: 1000 * 0.52,
+                    height: 707 * 0.52,
+                    overflow: 'hidden',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  }}
+                >
+                  <CertificatePreview
+                    recipientName={editRecipientName || 'Recipient Name'}
+                    certificateType={editCertificateType}
+                    certificateId={editingCert.certificate_id}
+                    editionId={editingCert.edition_id}
+                    templateVersion={editingCert.template_version}
+                    editionName={editingCert.edition?.name}
+                    teamName={
+                      teams.find((t) => t.id === editTeamId)?.name || null
+                    }
+                    achievement={editAchievement || null}
+                    customTitle={editCustomTitle}
+                    customSubtitle={editCustomSubtitle}
+                    issuedAt={editingCert.issued_at}
+                    scale={0.52}
+                    settings={settings}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ═══ Revoke Modal ═══ */}
       {certToRevoke && (

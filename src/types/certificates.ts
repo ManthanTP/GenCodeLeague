@@ -59,7 +59,9 @@ export interface CertificateSettings {
   emblem_url?: string | null;
   season_name?: string;
   presented_to_text?: string;
+  default_description?: string;
   signatory_left: CertificateSignatory;
   signatory_right: CertificateSignatory;
 }
+
 
