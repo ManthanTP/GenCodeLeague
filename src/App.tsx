@@ -19,6 +19,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LiveView />} />
+      <Route path="/live" element={<LiveView />} />
       <Route path="/verify/:certificateId" element={<VerifyCertificate />} />
       <Route path="/my-certificates" element={<StudentCertificateLookup />} />
       <Route path="/hall-of-fame" element={<HallOfFame />} />
