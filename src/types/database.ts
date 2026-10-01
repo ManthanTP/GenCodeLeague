@@ -1,5 +1,27 @@
-export type GameState = 'setup' | 'waiting_start' | 'active' | 'intermission' | 'winner_reveal';
+export type GameState = 'setup' | 'waiting_start' | 'active' | 'intermission' | 'winner_reveal' | 'leaderboard_reveal';
 export type TimerState = 'stopped' | 'running' | 'paused' | 'expired';
+
+export type RoundState =
+  | 'ROUND_SETUP'
+  | 'ROUND_ACTIVE'
+  | 'ROUND_COMPLETED'
+  | 'LEADERBOARD_HIDDEN'
+  | 'LEADERBOARD_REVEAL'
+  | 'INTERMISSION'
+  | 'NEXT_ROUND_READY';
+
+export interface LeaderboardRevealEntry {
+  id?: string;
+  edition_id: string;
+  round_index: number;
+  position: number;
+  team_id: string;
+  team_name: string;
+  is_revealed: boolean;
+  revealed_by?: string;
+  revealed_at?: string | null;
+  created_at?: string;
+}
 
 export interface Edition {
   id: string;
@@ -30,6 +52,7 @@ export interface EventState {
   id: string;
   edition_id: string;
   game_state: GameState;
+  round_state?: RoundState;
   current_round_index: number;
   current_question_index: number;
   current_item_name: string;

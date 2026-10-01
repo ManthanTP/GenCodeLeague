@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   Award,
   Archive,
+  Calculator,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
@@ -40,13 +41,14 @@ import { useEventState, broadcastStateChange } from '../hooks/useEventState';
 import { useTeams, broadcastTeamsChange } from '../hooks/useTeams';
 import { useTeamItems, broadcastItemsChange } from '../hooks/useTeamItems';
 import { useTimer } from '../hooks/useTimer';
+import { useLeaderboardReveal, broadcastLeaderboardRevealChange } from '../hooks/useLeaderboardReveal';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
-import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, GameState } from '../types/database';
+import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, GameState, RoundState, LeaderboardRevealEntry } from '../types/database';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -132,6 +134,21 @@ export default function AdminPanel() {
     firstTeamId: null as string | null,
     firstRevealed: false,
   });
+
+  // Round 1 Leaderboard Reveal State
+  const { reveals: r1Reveals, setReveals: setR1Reveals } = useLeaderboardReveal(edition?.id, 0);
+  const [selectedRevealTeamId, setSelectedRevealTeamId] = useState<string>('');
+
+  // Round 2 -> Round 3 Budget Verification & Confirmation State
+  const [isConfirmingR3Budgets, setIsConfirmingR3Budgets] = useState<boolean>(false);
+  const [r3BudgetsConfirmed, setR3BudgetsConfirmed] = useState<boolean>(false);
+
+  // Ordinal position helper (e.g. 7TH, 6TH, 1ST)
+  const formatOrdinal = (n: number) => {
+    const s = ['TH', 'ST', 'ND', 'RD'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
 
   // Podium Management Table Filter Tab ('all' | 'overall' | roundIndex)
   const [podiumTab, setPodiumTab] = useState<'all' | 'overall' | number>('all');
@@ -561,57 +578,6 @@ export default function AdminPanel() {
     supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
   };
 
-  const handleStartNextRound = async () => {
-    const rIdx = eventState?.current_round_index || 0;
-    const roundData = DEFAULT_ROUNDS_DATA[rIdx] || { name: `Round ${rIdx + 1}`, questions: [] };
-    const firstQ = roundData.questions[0] || '';
-
-    // If entering from intermission, reset round budgets to starting budget
-    const standardBudget = edition?.starting_budget || parseInt(budgetInput) || 50000000;
-    const refreshedTeams = teams.map((t) => ({ ...t, budget: standardBudget }));
-    setTeams(refreshedTeams);
-    broadcastTeamsChange(refreshedTeams);
-    for (const t of refreshedTeams) {
-      supabase.from('teams').update({ budget: standardBudget }).eq('id', t.id).then();
-    }
-
-    const nextState: Partial<EventState> = {
-      game_state: 'active',
-      current_round_index: rIdx,
-      current_question_index: 0,
-      current_item_name: firstQ,
-      current_bid_preview: null,
-      timer_state: 'stopped',
-      timer_duration_seconds: 180,
-      timer_remaining_seconds: 180,
-      timer_started_at: null,
-      timer_paused_at: null,
-      updated_at: new Date().toISOString(),
-    };
-
-    // 1. Immediate optimistic UI transition
-    setEventState((prev) => (prev ? { ...prev, ...nextState } : (nextState as EventState)));
-    setCurrentItem(firstQ);
-
-    // 2. Broadcast immediately to Live View across all browser windows
-    broadcastStateChange(nextState);
-
-    showNotification(`${roundData.name} has officially started!`, 'success');
-    addHistory('Round Started', `${roundData.name} started.`);
-
-    // 3. Persist to database in background
-    if (eventState?.id) {
-      supabase
-        .from('event_state')
-        .update(nextState)
-        .eq('id', eventState.id)
-        .then(({ error }) => {
-          if (error) console.warn('Supabase state update notice:', error.message);
-        });
-    }
-  };
-
-  // Debounced item name change - prevents websocket broadcast loop erasing user keystrokes
   const handleItemNameChange = (text: string) => {
     setCurrentItem(text);
     isTypingQuestionRef.current = true;
@@ -633,30 +599,39 @@ export default function AdminPanel() {
     }, 400);
   };
 
-  // Explicit Advance button for Question 20 (Round End)
-  const handleAdvanceToNextStage = async () => {
-    if (!eventState?.id) return;
-    const rIdx = eventState.current_round_index ?? 0;
-    const currentRoundData = DEFAULT_ROUNDS_DATA[rIdx] || {
-      name: `Round ${rIdx + 1}`,
-      questions: [],
-    };
-    const standardBudget = edition?.starting_budget || parseInt(budgetInput) || 50000000;
+  // --- GCL ROUND SYSTEM STATE MACHINE HANDLERS ---
 
-    // Snapshot current round results
-    const roundSnapshotResults = teamsWithStats.map((t) => ({
-      id: t.id,
-      name: t.name,
-      score: t.score || 0,
-      itemsCount: t.itemsCount,
-      totalSpent: t.totalSpent,
-      remainingBudget: t.budget,
-    }));
+  // 1. Round 1 Completion: Finalize internally, lock results, enter manual reveal
+  const handleCompleteRound1 = async () => {
+    if (!eventState?.id || !edition?.id) return;
+
+    // Snapshot Round 1 results internally
+    const r1Results = teamsWithStats.map((t) => {
+      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 0);
+      const score = tItems.filter((it) => it.is_correct).length;
+      const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      return {
+        id: t.id,
+        name: t.name,
+        score,
+        itemsCount: tItems.length,
+        totalSpent: spent,
+        remainingBudget: t.budget,
+        startingBudget: edition.starting_budget,
+      };
+    });
+
+    // Internal ranking for Round 1 (Score DESC -> Remaining Budget DESC -> Name ASC)
+    const sortedR1 = [...r1Results].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.remainingBudget !== a.remainingBudget) return b.remainingBudget - a.remainingBudget;
+      return a.name.localeCompare(b.name);
+    });
 
     const newSnapshot: PastRoundSnapshot = {
-      roundIndex: rIdx,
-      roundName: currentRoundData.name || `Round ${rIdx + 1}`,
-      results: roundSnapshotResults,
+      roundIndex: 0,
+      roundName: 'Round 1',
+      results: sortedR1,
       timestamp: Date.now(),
     };
 
@@ -668,35 +643,41 @@ export default function AdminPanel() {
         else if (Array.isArray(parsed?.pastRounds)) existingPastRounds = parsed.pastRounds;
       }
     } catch {}
-    const updatedPastRounds = [...existingPastRounds, newSnapshot];
+    const updatedPastRounds = [
+      ...existingPastRounds.filter((r) => r.roundIndex !== 0),
+      newSnapshot,
+    ];
 
-    let nextGameState: GameState = 'intermission';
-    let nextRoundIdx = rIdx;
+    // Save snapshot to round_snapshots table
+    supabase
+      .from('round_snapshots')
+      .upsert({
+        edition_id: edition.id,
+        round_index: 0,
+        round_name: 'Round 1',
+        results: sortedR1,
+      })
+      .then();
 
-    if (rIdx === 2) {
-      // Round 3 completed -> Enter Intermission with Tie Breaker & Podium options
-      nextGameState = 'intermission';
-      nextRoundIdx = 3;
-      showNotification('Round 3 Completed! Intermission active.', 'success');
-      addHistory('Round 3 Complete', 'Ready for Tie Breaker or Winner Announcement.');
-    } else if (rIdx < 2) {
-      nextGameState = 'intermission';
-      nextRoundIdx = rIdx + 1;
-      showNotification(`Round ${rIdx + 1} completed! Entering Intermission.`, 'success');
-      addHistory('Round Complete', `Round ${rIdx + 1} finished.`);
-    } else {
-      // Tie Breaker finished
-      nextGameState = 'winner_reveal';
-      showNotification('Tie Breaker completed! Ready for Podium Reveal.', 'success');
-      addHistory('Tie Breaker Complete', 'Revealing Podium.');
-    }
+    // Initialize leaderboard_reveals rows for Round 1
+    const revealRows: LeaderboardRevealEntry[] = sortedR1.map((t, idx) => ({
+      edition_id: edition.id,
+      round_index: 0,
+      position: idx + 1,
+      team_id: t.id,
+      team_name: t.name,
+      is_revealed: false,
+      revealed_by: 'admin',
+      revealed_at: null,
+    }));
 
-    // Reset teams to fresh round budget
-    const refreshedTeams = teams.map((t) => ({ ...t, budget: standardBudget }));
-    setTeams(refreshedTeams);
-    broadcastTeamsChange(refreshedTeams);
-    for (const t of refreshedTeams) {
-      supabase.from('teams').update({ budget: standardBudget }).eq('id', t.id).then();
+    setR1Reveals(revealRows);
+    broadcastLeaderboardRevealChange(revealRows);
+
+    for (const row of revealRows) {
+      supabase.from('leaderboard_reveals').upsert(row, {
+        onConflict: 'edition_id,round_index,position',
+      }).then();
     }
 
     const payload = {
@@ -705,8 +686,9 @@ export default function AdminPanel() {
     };
 
     const nextState: Partial<EventState> = {
-      game_state: nextGameState,
-      current_round_index: nextRoundIdx,
+      game_state: 'leaderboard_reveal',
+      round_state: 'LEADERBOARD_REVEAL',
+      current_round_index: 0,
       current_question_index: 0,
       current_item_name: '',
       current_bid_preview: null,
@@ -723,6 +705,407 @@ export default function AdminPanel() {
     setCurrentItem('');
     broadcastStateChange(nextState);
     supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 1 Completed! Entering Manual Leaderboard Reveal.', 'success');
+    addHistory('Round 1 Complete', 'Round 1 finished. Starting bottom-up manual leaderboard reveal.');
+  };
+
+  // 2. Round 1 Manual Reveal: Admin reveals position by position bottom-up
+  const handleConfirmAndRevealPosition = async (targetPosition: number, targetTeamId: string) => {
+    if (!eventState?.id || !edition?.id) return;
+    const chosenTeam = teams.find((t) => t.id === targetTeamId);
+    if (!chosenTeam) {
+      showNotification('Please select a team to reveal.', 'error');
+      return;
+    }
+
+    const updatedReveals = r1Reveals.map((r) => {
+      if (r.position === targetPosition) {
+        return {
+          ...r,
+          team_id: chosenTeam.id,
+          team_name: chosenTeam.name,
+          is_revealed: true,
+          revealed_by: 'admin',
+          revealed_at: new Date().toISOString(),
+        };
+      }
+      return r;
+    });
+
+    setR1Reveals(updatedReveals);
+    broadcastLeaderboardRevealChange(updatedReveals);
+    setSelectedRevealTeamId('');
+
+    // Persist to Supabase
+    supabase
+      .from('leaderboard_reveals')
+      .update({
+        team_id: chosenTeam.id,
+        team_name: chosenTeam.name,
+        is_revealed: true,
+        revealed_by: 'admin',
+        revealed_at: new Date().toISOString(),
+      })
+      .match({
+        edition_id: edition.id,
+        round_index: 0,
+        position: targetPosition,
+      })
+      .then();
+
+    showNotification(
+      `Position ${formatOrdinal(targetPosition)} (${chosenTeam.name}) REVEALED on live screen!`,
+      'success'
+    );
+    addHistory(
+      'Leaderboard Reveal',
+      `Revealed ${formatOrdinal(targetPosition)}: ${chosenTeam.name}`
+    );
+  };
+
+  // 3. Round 1 Reveal Completed -> Admin Manually Starts Intermission
+  const handleStartIntermissionAfterReveal = async () => {
+    if (!eventState?.id) return;
+    const nextState: Partial<EventState> = {
+      game_state: 'intermission',
+      round_state: 'INTERMISSION',
+      current_round_index: 0,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+    showNotification('Round 1 Leaderboard reveal complete! Intermission started.', 'success');
+    addHistory('Intermission Started', 'Round 1 intermission active. Ready for Round 2 budget reset.');
+  };
+
+  // 4. Round 1 -> Round 2 Transition: Reset each team's current budget to Starting Budget
+  const handleStartRound2WithReset = async () => {
+    if (!eventState?.id || !edition?.id) return;
+    const startingBudget = edition.starting_budget || 50000000;
+
+    // Reset CURRENT round budget for each team without overwriting Round 1 history
+    const refreshedTeams = teams.map((t) => ({ ...t, budget: startingBudget }));
+    setTeams(refreshedTeams);
+    broadcastTeamsChange(refreshedTeams);
+    for (const t of refreshedTeams) {
+      supabase.from('teams').update({ budget: startingBudget }).eq('id', t.id).then();
+    }
+
+    const roundData = DEFAULT_ROUNDS_DATA[1] || { name: 'Round 2', questions: [] };
+    const firstQ = roundData.questions[0] || '';
+
+    const nextState: Partial<EventState> = {
+      game_state: 'active',
+      round_state: 'ROUND_ACTIVE',
+      current_round_index: 1,
+      current_question_index: 0,
+      current_item_name: firstQ,
+      current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem(firstQ);
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification(
+      `Round 2 started! All teams reset to Starting Budget (${formatCurrency(startingBudget)}).`,
+      'success'
+    );
+    addHistory(
+      'Round 2 Started',
+      `Current budgets reset to ${formatCurrency(startingBudget)}. Round 1 history preserved.`
+    );
+  };
+
+  // 5. Round 2 Completion: Direct to Intermission (NO reveal)
+  const handleCompleteRound2 = async () => {
+    if (!eventState?.id || !edition?.id) return;
+
+    // Snapshot Round 2 results internally
+    const r2Results = teamsWithStats.map((t) => {
+      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 1);
+      const score = tItems.filter((it) => it.is_correct).length;
+      const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      return {
+        id: t.id,
+        name: t.name,
+        score,
+        itemsCount: tItems.length,
+        totalSpent: spent,
+        remainingBudget: t.budget, // Team's remaining budget at end of Round 2
+        startingBudget: edition.starting_budget,
+      };
+    });
+
+    const newSnapshot: PastRoundSnapshot = {
+      roundIndex: 1,
+      roundName: 'Round 2',
+      results: r2Results,
+      timestamp: Date.now(),
+    };
+
+    let existingPastRounds: PastRoundSnapshot[] = [];
+    try {
+      if (eventState.banner_message) {
+        const parsed = JSON.parse(eventState.banner_message);
+        if (Array.isArray(parsed)) existingPastRounds = parsed;
+        else if (Array.isArray(parsed?.pastRounds)) existingPastRounds = parsed.pastRounds;
+      }
+    } catch {}
+    const updatedPastRounds = [
+      ...existingPastRounds.filter((r) => r.roundIndex !== 1),
+      newSnapshot,
+    ];
+
+    supabase
+      .from('round_snapshots')
+      .upsert({
+        edition_id: edition.id,
+        round_index: 1,
+        round_name: 'Round 2',
+        results: r2Results,
+      })
+      .then();
+
+    // IMPORTANT: Round 2 does NOT use leaderboard reveal!
+    // Go DIRECTLY to INTERMISSION with NO reveal of positions or scores.
+    const payload = {
+      pastRounds: updatedPastRounds,
+      podium: podiumState,
+    };
+
+    const nextState: Partial<EventState> = {
+      game_state: 'intermission',
+      round_state: 'INTERMISSION',
+      current_round_index: 1,
+      current_question_index: 0,
+      current_item_name: '',
+      current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      banner_message: JSON.stringify(payload),
+      updated_at: new Date().toISOString(),
+    };
+
+    setR3BudgetsConfirmed(false);
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem('');
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 2 Completed! Direct to Intermission.', 'success');
+    addHistory('Round 2 Complete', 'Round 2 ended. Direct to Intermission. No reveal.');
+  };
+
+  // 6. Round 2 -> Round 3: Budget Calculation & Confirmation
+  const handleConfirmRound3Budgets = async () => {
+    if (!edition?.id || !eventState?.id) return;
+    const startingBudget = edition.starting_budget || 50000000;
+
+    // Calculate: Round 3 Budget = Starting Budget + Round 2 Remaining Budget
+    const calculations = teams.map((team) => {
+      const r2Remaining = team.budget;
+      const r3Budget = startingBudget + r2Remaining;
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        startingBudget,
+        r2Remaining,
+        r3Budget,
+      };
+    });
+
+    // Update each team's budget
+    const updatedTeams = teams.map((team) => {
+      const calc = calculations.find((c) => c.teamId === team.id);
+      return {
+        ...team,
+        budget: calc ? calc.r3Budget : startingBudget,
+      };
+    });
+
+    setTeams(updatedTeams);
+    broadcastTeamsChange(updatedTeams);
+
+    for (const t of updatedTeams) {
+      supabase.from('teams').update({ budget: t.budget }).eq('id', t.id).then();
+    }
+
+    // Insert audit record
+    supabase.from('audit_log').insert({
+      admin_id: 'admin',
+      action: 'ROUND_3_BUDGET_CALCULATION',
+      details: {
+        formula: 'ROUND 3 BUDGET = STARTING BUDGET + ROUND 2 REMAINING BUDGET',
+        starting_budget: startingBudget,
+        calculations,
+        confirmed_at: new Date().toISOString(),
+      },
+    }).then();
+
+    addHistory(
+      'Round 3 Budgets Confirmed',
+      `Budgets confirmed: Starting Budget (${formatCurrency(startingBudget)}) + Round 2 Remaining funds applied.`
+    );
+
+    setR3BudgetsConfirmed(true);
+
+    const nextState: Partial<EventState> = {
+      round_state: 'NEXT_ROUND_READY',
+      updated_at: new Date().toISOString(),
+    };
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 3 Budgets Confirmed! Ready to Start Round 3.', 'success');
+  };
+
+  // 7. Start Round 3 with confirmed budgets
+  const handleStartRound3 = async () => {
+    if (!eventState?.id) return;
+    const roundData = DEFAULT_ROUNDS_DATA[2] || { name: 'Round 3', questions: [] };
+    const firstQ = roundData.questions[0] || '';
+
+    const nextState: Partial<EventState> = {
+      game_state: 'active',
+      round_state: 'ROUND_ACTIVE',
+      current_round_index: 2,
+      current_question_index: 0,
+      current_item_name: firstQ,
+      current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem(firstQ);
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 3 has officially started with confirmed budgets!', 'success');
+    addHistory('Round 3 Started', 'Round 3 auction begins.');
+  };
+
+  // 8. Round 3 Completion: Final results & Podium transition
+  const handleCompleteRound3 = async () => {
+    if (!eventState?.id || !edition?.id) return;
+
+    const r3Results = teamsWithStats.map((t) => {
+      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 2);
+      const score = tItems.filter((it) => it.is_correct).length;
+      const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      return {
+        id: t.id,
+        name: t.name,
+        score,
+        itemsCount: tItems.length,
+        totalSpent: spent,
+        remainingBudget: t.budget,
+      };
+    });
+
+    const newSnapshot: PastRoundSnapshot = {
+      roundIndex: 2,
+      roundName: 'Round 3',
+      results: r3Results,
+      timestamp: Date.now(),
+    };
+
+    let existingPastRounds: PastRoundSnapshot[] = [];
+    try {
+      if (eventState.banner_message) {
+        const parsed = JSON.parse(eventState.banner_message);
+        if (Array.isArray(parsed)) existingPastRounds = parsed;
+        else if (Array.isArray(parsed?.pastRounds)) existingPastRounds = parsed.pastRounds;
+      }
+    } catch {}
+    const updatedPastRounds = [
+      ...existingPastRounds.filter((r) => r.roundIndex !== 2),
+      newSnapshot,
+    ];
+
+    supabase
+      .from('round_snapshots')
+      .upsert({
+        edition_id: edition.id,
+        round_index: 2,
+        round_name: 'Round 3',
+        results: r3Results,
+      })
+      .then();
+
+    const payload = {
+      pastRounds: updatedPastRounds,
+      podium: podiumState,
+    };
+
+    const nextState: Partial<EventState> = {
+      game_state: 'intermission',
+      round_state: 'INTERMISSION',
+      current_round_index: 3,
+      current_question_index: 0,
+      current_item_name: '',
+      current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      banner_message: JSON.stringify(payload),
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem('');
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 3 Completed! Ready for Tie Breaker or Winner Announcement.', 'success');
+    addHistory('Round 3 Complete', 'Round 3 finished. Final results ready.');
+  };
+
+  // 9. Centralized router to advance stages based on current round
+  const handleAdvanceToNextStage = async () => {
+    const rIdx = eventState?.current_round_index ?? 0;
+    if (rIdx === 0) {
+      await handleCompleteRound1();
+    } else if (rIdx === 1) {
+      await handleCompleteRound2();
+    } else if (rIdx === 2) {
+      await handleCompleteRound3();
+    } else {
+      await handleGoToWinnerReveal();
+    }
+  };
+
+  // Legacy alias for starting rounds from generic buttons
+  const handleStartNextRound = async () => {
+    const rIdx = eventState?.current_round_index || 0;
+    if (rIdx === 0) {
+      await handleStartRound2WithReset();
+    } else if (rIdx === 1) {
+      await handleStartRound3();
+    } else {
+      await handleStartTieBreaker();
+    }
   };
 
   // Tie Breaker Round Handler
@@ -1165,85 +1548,7 @@ export default function AdminPanel() {
     let nextItemText = '';
 
     if (isLastQuestionOfRound) {
-      // Save round snapshot into past rounds
-      const roundSnapshotResults = teamsWithStats.map((t) => ({
-        id: t.id,
-        name: t.name,
-        score: t.id === winningTeam.id ? newScore : t.score || 0,
-        itemsCount: t.id === winningTeam.id ? t.itemsCount + 1 : t.itemsCount,
-        totalSpent: t.id === winningTeam.id ? t.totalSpent + amount : t.totalSpent,
-        remainingBudget: t.id === winningTeam.id ? newBudget : t.budget,
-      }));
-
-      const newSnapshot: PastRoundSnapshot = {
-        roundIndex: rIdx,
-        roundName: currentRoundData.name || `Round ${rIdx + 1}`,
-        results: roundSnapshotResults,
-        timestamp: Date.now(),
-      };
-
-      let existingPastRounds: PastRoundSnapshot[] = [];
-      try {
-        if (eventState.banner_message) {
-          const parsed = JSON.parse(eventState.banner_message);
-          if (Array.isArray(parsed)) existingPastRounds = parsed;
-          else if (Array.isArray(parsed?.pastRounds)) existingPastRounds = parsed.pastRounds;
-        }
-      } catch {}
-      const updatedPastRounds = [...existingPastRounds, newSnapshot];
-
-      const standardBudget = edition?.starting_budget || parseInt(budgetInput) || 50000000;
-      const refreshedTeams = teams.map((t) => ({ ...t, budget: standardBudget }));
-      setTeams(refreshedTeams);
-      broadcastTeamsChange(refreshedTeams);
-      for (const t of refreshedTeams) {
-        supabase.from('teams').update({ budget: standardBudget }).eq('id', t.id).then();
-      }
-
-      if (rIdx === 2) {
-        // Round 3 completed -> Enter Intermission with Tie Breaker & Reveal options
-        nextGameState = 'intermission';
-        nextRoundIdx = 3;
-        nextQuestionIdx = 0;
-        showNotification('Round 3 Finished! Intermission active.', 'success');
-        addHistory('Round 3 Complete', 'Ready for Tie Breaker or Winner Announcement.');
-      } else if (rIdx < 2) {
-        // Intermission before next round
-        nextGameState = 'intermission';
-        nextRoundIdx = rIdx + 1;
-        nextQuestionIdx = 0;
-        showNotification(`Round ${rIdx + 1} completed! Entering Intermission.`, 'success');
-        addHistory('Round Complete', `Round ${rIdx + 1} finished.`);
-      } else {
-        nextGameState = 'winner_reveal';
-        showNotification('Tie Breaker completed! Ready for Podium Reveal.', 'success');
-        addHistory('Tie Breaker Complete', 'Revealing Podium.');
-      }
-
-      const payload = {
-        pastRounds: updatedPastRounds,
-        podium: podiumState,
-      };
-
-      const nextState: Partial<EventState> = {
-        game_state: nextGameState,
-        current_round_index: nextRoundIdx,
-        current_question_index: nextQuestionIdx,
-        current_item_name: '',
-        current_bid_preview: null,
-        timer_state: 'stopped',
-        timer_duration_seconds: 180,
-        timer_remaining_seconds: 180,
-        timer_started_at: null,
-        timer_paused_at: null,
-        banner_message: JSON.stringify(payload),
-        updated_at: new Date().toISOString(),
-      };
-
-      setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
-      setCurrentItem('');
-      broadcastStateChange(nextState);
-      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+      await handleAdvanceToNextStage();
     } else {
       // Advance to next question in same round (starts hidden until admin starts timer)
       nextItemText = currentRoundData.questions[nextQuestionIdx] || '';
@@ -1958,7 +2263,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              {isLastQuestion && (
+              {isLastQuestion ? (
                 <div className="advance-notice-box space-y-3 mt-4">
                   <div>
                     <p className="advance-title">Round End: Ready to Advance</p>
@@ -1972,11 +2277,23 @@ export default function AdminPanel() {
                     className="btn-advance-intermission"
                   >
                     <ChevronRight size={20} />
-                    {roundIdx === 2
+                    {roundIdx === 0
+                      ? 'End Round 1 & Go to Leaderboard Reveal'
+                      : roundIdx === 1
+                      ? 'End Round 2 & Go to Intermission'
+                      : roundIdx === 2
                       ? 'End Round 3 & Go to Tie Breaker / Winner Selection'
-                      : roundIdx >= 3
-                      ? 'End Tie Breaker & Reveal Winners'
-                      : `Advance to Round ${roundIdx + 2} Intermission`}
+                      : 'End Tie Breaker & Reveal Winners'}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 pt-3 border-t border-slate-800/80 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAdvanceToNextStage}
+                    className="text-xs text-slate-400 hover:text-yellow-400 flex items-center gap-1 font-semibold transition-colors"
+                  >
+                    <ChevronRight size={14} /> End {currentRoundData.name || `Round ${roundIdx + 1}`} Early
                   </button>
                 </div>
               )}
@@ -2507,6 +2824,199 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* LEADERBOARD REVEAL STATE (ROUND 1 MANUAL REVEAL) */}
+      {(gameState === 'leaderboard_reveal' || eventState?.round_state === 'LEADERBOARD_REVEAL') && (
+        <div className="admin-reveal-container space-y-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="admin-card space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 text-cyan-400">
+                    <Trophy size={24} />
+                    <h2 className="text-2xl font-extrabold text-white">Round 1 Leaderboard Reveal</h2>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Bottom-up manual reveal for the live screen. Scores remain 100% hidden from the audience.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-lg text-right">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider block">Progress</span>
+                    <span className="font-mono text-lg font-bold text-yellow-400">
+                      {r1Reveals.filter((r) => r.is_revealed).length} / {teams.length || r1Reveals.length} Revealed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reveal Controls */}
+              {(() => {
+                const totalCount = teams.length || r1Reveals.length;
+                const unrevealed = r1Reveals.filter((r) => !r.is_revealed);
+                // Sort descending: highest position number first (bottom-up e.g. 7th, 6th... down to 1st)
+                const sortedUnrevealed = [...unrevealed].sort((a, b) => b.position - a.position);
+                const nextTarget = sortedUnrevealed[0];
+                const allRevealed = unrevealed.length === 0 && r1Reveals.length > 0;
+
+                if (allRevealed) {
+                  return (
+                    <div className="p-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-center space-y-4">
+                      <div className="inline-flex p-3 bg-emerald-500/20 rounded-full text-emerald-400">
+                        <CheckCircle2 size={36} />
+                      </div>
+                      <h3 className="text-2xl font-bold text-white">All Positions Revealed!</h3>
+                      <p className="text-slate-300 max-w-md mx-auto text-sm">
+                        All teams from {formatOrdinal(totalCount)} up to 1ST Place have been announced on the live screen. Ready to start Intermission.
+                      </p>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={handleStartIntermissionAfterReveal}
+                          className="btn-start-round"
+                        >
+                          <Play size={20} fill="currentColor" /> START INTERMISSION
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (!nextTarget) {
+                  return (
+                    <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center space-y-4">
+                      <p className="text-slate-400 text-sm">
+                        No reveal records found for Round 1. Click below to initialize the reveal table.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleCompleteRound1}
+                        className="btn-advance-intermission py-2 px-4"
+                      >
+                        Initialize Round 1 Reveal Table
+                      </button>
+                    </div>
+                  );
+                }
+
+                const assignedTeamId = selectedRevealTeamId || nextTarget.team_id;
+
+                return (
+                  <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-xl space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">Next Action:</span>
+                        <span className="px-3 py-1 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 font-mono font-bold rounded text-sm">
+                          Reveal {formatOrdinal(nextTarget.position)} Position
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        Revealing bottom-up from last place to 1st place
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="input-label mb-0">Select / Confirm Team for {formatOrdinal(nextTarget.position)} Place</label>
+                        <select
+                          value={assignedTeamId}
+                          onChange={(e) => setSelectedRevealTeamId(e.target.value)}
+                          className="gcl-select w-full"
+                        >
+                          {teams.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-slate-500">
+                          Calculated rank team: <strong className="text-slate-400">{nextTarget.team_name}</strong>
+                        </p>
+                      </div>
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmAndRevealPosition(nextTarget.position, assignedTeamId)}
+                          className="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40"
+                        >
+                          <Eye size={18} /> CONFIRM & REVEAL
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Positions List */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                  Round 1 Position Standings (Admin View)
+                </h3>
+                <div className="border border-slate-800 rounded-lg overflow-hidden divide-y divide-slate-800/80 bg-slate-950/50">
+                  {r1Reveals
+                    .slice()
+                    .sort((a, b) => b.position - a.position) // Display bottom-up N to 1
+                    .map((rev) => {
+                      const team = teams.find((t) => t.id === rev.team_id);
+                      return (
+                        <div
+                          key={rev.position}
+                          className={`p-3.5 flex items-center justify-between gap-4 transition-colors ${
+                            rev.is_revealed
+                              ? 'bg-slate-900/40'
+                              : 'bg-transparent hover:bg-slate-900/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`w-9 h-9 rounded flex items-center justify-center font-mono font-bold text-sm ${
+                                rev.is_revealed
+                                  ? 'bg-cyan-950/80 text-cyan-400 border border-cyan-800/50'
+                                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+                              }`}
+                            >
+                              {String(rev.position).padStart(2, '0')}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-white">
+                                  {rev.team_name || team?.name || `Team (Pos ${rev.position})`}
+                                </span>
+                                {rev.is_revealed ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <CheckCircle2 size={12} /> REVEALED
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                    HIDDEN ON LIVE SCREEN
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-500 font-mono">
+                                Live Screen shows: {rev.is_revealed ? (rev.team_name || team?.name) : '???'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {!rev.is_revealed && (
+                            <button
+                              type="button"
+                              onClick={() => handleConfirmAndRevealPosition(rev.position, rev.team_id)}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-semibold rounded border border-slate-700 flex items-center gap-1.5 transition-colors"
+                            >
+                              <Eye size={14} /> Reveal Now
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
         <div className="admin-intermission-container space-y-8">
@@ -2522,11 +3032,17 @@ export default function AdminPanel() {
                       <br />
                       All standard rounds completed. Ready to start Tie Breaker or announce winners.
                     </>
+                  ) : roundIdx === 1 ? (
+                    <>
+                      Round 2 completed. The public view is displaying participating teams in alphabetical order without ranks or scores.
+                      <br />
+                      Verify and confirm Round 3 budgets below to begin Round 3.
+                    </>
                   ) : (
                     <>
-                      {lastCompletedRound?.roundName || `Round ${roundIdx}`} results are currently displayed on the live screen.
+                      Round 1 results have been revealed. Round 1 history and scores are permanently preserved.
                       <br />
-                      Teams will receive their reset round budgets. Ready to start {currentRoundData.name}.
+                      Ready to reset current round budgets to the starting budget and start Round 2.
                     </>
                   )}
                 </p>
@@ -2549,15 +3065,98 @@ export default function AdminPanel() {
                     <Trophy size={20} /> SKIP & REVEAL WINNERS
                   </button>
                 </div>
+              ) : roundIdx === 1 ? (
+                /* ROUND 2 INTERMISSION -> ROUND 3 BUDGET VERIFICATION & LAUNCH */
+                <div className="space-y-6 text-left">
+                  {/* Budget Formula Box */}
+                  <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm uppercase tracking-wider">
+                      <Calculator size={16} /> Round 3 Budget Calculation Formula
+                    </div>
+                    <p className="font-mono text-white text-base font-semibold">
+                      ROUND 3 BUDGET = STARTING BUDGET ({formatCurrency(edition?.starting_budget || 50000000)}) + ROUND 2 REMAINING BUDGET
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Audit requirement: Admin must review and confirm calculated budgets before Round 3 can begin.
+                    </p>
+                  </div>
+
+                  {/* Verification Table */}
+                  <div className="overflow-x-auto border border-slate-800 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-900 text-slate-400 uppercase font-mono text-xs border-b border-slate-800">
+                        <tr>
+                          <th className="py-2.5 px-4 text-left">Team</th>
+                          <th className="py-2.5 px-4 text-right">Starting Budget</th>
+                          <th className="py-2.5 px-4 text-right">Round 2 Remaining</th>
+                          <th className="py-2.5 px-4 text-right text-emerald-400">Round 3 Budget</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/80">
+                        {teams.map((t) => {
+                          const starting = edition?.starting_budget || 50000000;
+                          const r2Rem = t.budget;
+                          const r3Calc = starting + r2Rem;
+                          return (
+                            <tr key={t.id} className="hover:bg-slate-900/30 font-mono">
+                              <td className="py-2.5 px-4 font-sans font-semibold text-white">{t.name}</td>
+                              <td className="py-2.5 px-4 text-right text-slate-400">{formatCurrency(starting)}</td>
+                              <td className="py-2.5 px-4 text-right text-yellow-400">+{formatCurrency(r2Rem)}</td>
+                              <td className="py-2.5 px-4 text-right font-bold text-emerald-400">{formatCurrency(r3Calc)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-2">
+                    {!r3BudgetsConfirmed && eventState?.round_state !== 'NEXT_ROUND_READY' ? (
+                      <button
+                        type="button"
+                        onClick={handleConfirmRound3Budgets}
+                        className="btn-advance-intermission w-full sm:w-auto py-3 px-6 text-base font-bold flex items-center justify-center gap-2"
+                      >
+                        <Calculator size={20} /> CONFIRM ROUND 3 BUDGETS
+                      </button>
+                    ) : (
+                      <>
+                        <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold rounded-lg">
+                          <CheckCircle2 size={18} /> Round 3 Budgets Confirmed & Logged
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleStartRound3}
+                          className="btn-start-round w-full sm:w-auto"
+                        >
+                          <Play size={24} fill="currentColor" /> START ROUND 3
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               ) : (
-                <div className="flex justify-center mt-6">
-                  <button
-                    type="button"
-                    onClick={handleStartNextRound}
-                    className="btn-start-round"
-                  >
-                    <Play size={24} fill="currentColor" /> START {currentRoundData.name}
-                  </button>
+                /* ROUND 1 INTERMISSION -> START ROUND 2 WITH RESET */
+                <div className="space-y-6">
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 max-w-md mx-auto">
+                    <span className="text-slate-400 block text-xs uppercase tracking-wider mb-1">Round 2 Starting Budget</span>
+                    <span className="font-mono text-2xl font-bold text-emerald-400">
+                      {formatCurrency(edition?.starting_budget || 50000000)}
+                    </span>
+                    <p className="text-xs text-slate-400 mt-2">
+                      All teams reset to this budget for Round 2. Round 1 questions won and scores remain saved.
+                    </p>
+                  </div>
+                  <div className="flex justify-center mt-6">
+                    <button
+                      type="button"
+                      onClick={handleStartRound2WithReset}
+                      className="btn-start-round"
+                    >
+                      <Play size={24} fill="currentColor" /> START ROUND 2 (RESET TO STARTING BUDGET)
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

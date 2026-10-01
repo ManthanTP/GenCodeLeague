@@ -14,11 +14,13 @@ import {
   Clock,
   AlertTriangle,
   AlertCircle,
+  Users,
 } from 'lucide-react';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamItems } from '../hooks/useTeamItems';
 import { useTimer } from '../hooks/useTimer';
+import { useLeaderboardReveal } from '../hooks/useLeaderboardReveal';
 import Header from '../components/Header';
 import ConnectionHealth from '../components/ConnectionHealth';
 import LiveTeamStatus from '../components/LiveTeamStatus';
@@ -31,6 +33,7 @@ export default function LiveView() {
   const { eventState, edition, loading: stateLoading } = useEventState();
   const { teams } = useTeams(edition?.id);
   const { items } = useTeamItems(edition?.id);
+  const { reveals: r1Reveals } = useLeaderboardReveal(edition?.id, 0);
   const {
     formatted: timerFormatted,
     isRunning: isTimerRunning,
@@ -435,64 +438,212 @@ export default function LiveView() {
         </div>
       )}
 
+      {/* 3b. ROUND 1 LEADERBOARD REVEAL STATE (Sequential Manual Reveal, Scores Strictly Excluded) */}
+      {(gameState === 'leaderboard_reveal' ||
+        eventState?.round_state === 'LEADERBOARD_REVEAL' ||
+        eventState?.round_state === 'LEADERBOARD_HIDDEN') && (
+        <div className="live-page-container">
+          <div className="text-center mb-10">
+            <div className="inline-block mb-3">
+              <span className="badge-official">ROUND 1 OFFICIAL STANDINGS</span>
+            </div>
+            <h1 className="champions-title">LEADERBOARD REVEAL</h1>
+            <p
+              className="text-xl text-slate-400 font-mono uppercase tracking-widest gcl-display"
+              style={{ letterSpacing: '0.2em' }}
+            >
+              ROUND 1 FINAL POSITIONS
+            </p>
+          </div>
+
+          <div className="max-w-4xl w-full mx-auto px-2">
+            <div className="gcl-table-container">
+              <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                <div className="col-span-3 sm:col-span-2">POS</div>
+                <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+              </div>
+
+              <div className="space-y-2 p-2">
+                {Array.from({ length: Math.max(teams.length, r1Reveals.length) }, (_, i) => {
+                  const position = i + 1;
+                  const reveal = r1Reveals.find((r) => r.position === position);
+                  const isRevealed = Boolean(reveal?.is_revealed);
+                  const isMyTeam = isRevealed && reveal?.team_id === myTeamId;
+
+                  return (
+                    <div
+                      key={position}
+                      className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl transition-all duration-500 ${
+                        isRevealed
+                          ? isMyTeam
+                            ? 'bg-cyan-950/40 border border-cyan-500/60 shadow-lg'
+                            : 'bg-slate-900/90 border border-slate-800/80 shadow-md'
+                          : 'bg-slate-950/60 border border-dashed border-slate-800/60 opacity-60'
+                      }`}
+                    >
+                      <div className="col-span-3 sm:col-span-2">
+                        <span
+                          className={`font-mono text-xl sm:text-2xl font-black ${
+                            position === 1 && isRevealed
+                              ? 'text-yellow-400'
+                              : position === 2 && isRevealed
+                              ? 'text-slate-200'
+                              : position === 3 && isRevealed
+                              ? 'text-orange-400'
+                              : isRevealed
+                              ? 'text-cyan-400'
+                              : 'text-slate-600'
+                          }`}
+                        >
+                          {String(position).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                        {isRevealed ? (
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="font-extrabold text-white text-lg sm:text-xl truncate">
+                              {reveal?.team_name}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                            {position === 1 && (
+                              <Crown size={20} className="text-yellow-400 shrink-0 animate-bounce" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-mono text-xl sm:text-2xl font-bold text-slate-600 tracking-widest">
+                            ???
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
         <div className="live-centered-screen">
-          <div className="text-center mb-8">
-            <h1 className="intermission-title">
-              {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
-            </h1>
-            <p className="intermission-subtitle">STAND BY...</p>
-            <div className="intermission-warning-banner">
-              ⚠️ BUDGETS ARE RESETTING ⚠️
+          {roundIdx === 1 ? (
+            /* ROUND 2 INTERMISSION — PARTICIPATING TEAMS IN ALPHABETICAL ORDER ONLY */
+            <div className="max-w-4xl w-full mx-auto px-4 space-y-8">
+              <div className="text-center mb-8">
+                <div className="inline-block mb-3">
+                  <span className="badge-official">ROUND 2 COMPLETE</span>
+                </div>
+                <h1 className="intermission-title">PARTICIPATING TEAMS</h1>
+                <p className="intermission-subtitle">PREPARING FOR ROUND 3 — STAND BY...</p>
+              </div>
+
+              <div className="gcl-table-container">
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-3 sm:col-span-2">#</div>
+                  <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+                </div>
+
+                <div className="space-y-1.5 p-2">
+                  {[...teams]
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                    .map((team, idx) => {
+                      const isMyTeam = team.id === myTeamId;
+                      return (
+                        <div
+                          key={team.id}
+                          className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
+                            isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
+                          }`}
+                        >
+                          <div className="col-span-3 sm:col-span-2">
+                            <span className="font-mono text-lg font-bold text-cyan-400">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                            <span className="font-bold text-white text-base sm:text-lg truncate">
+                              {team.name}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
             </div>
-          </div>
-          {pastRounds.length > 0 && (
-            <div className="max-w-4xl w-full mx-auto px-2 space-y-8">
-              {[...pastRounds].reverse().map((roundSnapshot) => (
-                <div key={roundSnapshot.roundIndex} className="gcl-table-container">
-                  <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-6 uppercase tracking-wider flex items-center justify-center gap-3">
-                    <History className="text-yellow-400 shrink-0" size={24} />
-                    <span>{roundSnapshot.roundName} Summary</span>
-                  </h2>
+          ) : roundIdx === 0 ? (
+            /* ROUND 1 INTERMISSION — COMPLETED STANDINGS & BUDGET RESET NOTICE */
+            <div className="max-w-4xl w-full mx-auto px-4 space-y-8">
+              <div className="text-center mb-8">
+                <div className="inline-block mb-3">
+                  <span className="badge-official">ROUND 1 COMPLETE</span>
+                </div>
+                <h1 className="intermission-title">INTERMISSION</h1>
+                <p className="intermission-subtitle">ROUND 2 WILL START SOON — STAND BY...</p>
+                <div className="intermission-warning-banner">
+                  ⚠️ BUDGETS WILL RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
+                </div>
+              </div>
 
-                  <div className="grid-live-intermission-header">
-                    <div>TEAM</div>
-                    <div className="text-center">ITEMS WON</div>
-                    <div className="text-right">TOTAL SPENT</div>
-                    <div className="text-right">REM. BUDGET</div>
-                  </div>
+              <div className="gcl-table-container">
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-3 sm:col-span-2">POS</div>
+                  <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+                </div>
 
-                  <div className="space-y-1">
-                    {[...roundSnapshot.results]
-                      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-                      .map((res, i) => (
+                <div className="space-y-1.5 p-2">
+                  {Array.from({ length: Math.max(teams.length, r1Reveals.length) }, (_, i) => {
+                    const position = i + 1;
+                    const reveal = r1Reveals.find((r) => r.position === position);
+                    const teamName = reveal?.team_name || teams[i]?.name || 'Unknown Team';
+                    const isMyTeam = reveal?.team_id === myTeamId;
+
+                    return (
                       <div
-                        key={res.id || i}
-                        className={`grid-live-intermission-row ${res.id === myTeamId ? 'grid-live-status-me' : ''}`}
+                        key={position}
+                        className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
+                          isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
+                        }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <span className="font-bold text-white text-base md:text-lg truncate">
-                            {res.name}
+                        <div className="col-span-3 sm:col-span-2">
+                          <span
+                            className={`font-mono text-lg font-black ${
+                              position === 1
+                                ? 'text-yellow-400'
+                                : position === 2
+                                ? 'text-slate-200'
+                                : position === 3
+                                ? 'text-orange-400'
+                                : 'text-cyan-400'
+                            }`}
+                          >
+                            {String(position).padStart(2, '0')}
                           </span>
-                          {res.id === myTeamId && <span className="badge-you-inline">YOU</span>}
                         </div>
-                        <div className="text-center font-mono">
-                          <span className="badge-items-sm">
-                            {res.itemsCount ?? 0} {res.itemsCount === 1 ? 'item' : 'items'}
+                        <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                          <span className="font-bold text-white text-base sm:text-lg truncate">
+                            {teamName}
                           </span>
-                        </div>
-                        <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
-                          {formatCurrency(res.totalSpent)}
-                        </div>
-                        <div className="text-right font-mono font-bold text-green-400 text-base md:text-lg">
-                          {formatCurrency(res.remainingBudget)}
+                          {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          {position === 1 && (
+                            <Crown size={18} className="text-yellow-400 shrink-0" />
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+            </div>
+          ) : (
+            /* AFTER ROUND 3 OR TIE BREAKER INTERMISSION */
+            <div className="text-center mb-8">
+              <h1 className="intermission-title">
+                {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
+              </h1>
+              <p className="intermission-subtitle">STAND BY...</p>
             </div>
           )}
         </div>

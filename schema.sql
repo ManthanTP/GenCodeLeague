@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS event_state (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   edition_id UUID REFERENCES editions(id) ON DELETE CASCADE,
   game_state TEXT NOT NULL DEFAULT 'setup',
+  round_state TEXT NOT NULL DEFAULT 'ROUND_SETUP',
   current_round_index INT NOT NULL DEFAULT 0,
   current_question_index INT NOT NULL DEFAULT 0,
   current_item_name TEXT DEFAULT '',
@@ -129,6 +130,24 @@ CREATE TABLE IF NOT EXISTS round_questions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 10b. Leaderboard Reveals (Manual Position Reveal, Scores Strictly Excluded)
+CREATE TABLE IF NOT EXISTS leaderboard_reveals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  edition_id UUID REFERENCES editions(id) ON DELETE CASCADE,
+  round_index INT NOT NULL DEFAULT 0,
+  position INT NOT NULL,
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+  team_name TEXT NOT NULL,
+  is_revealed BOOLEAN NOT NULL DEFAULT false,
+  revealed_by TEXT DEFAULT 'admin',
+  revealed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT uq_leaderboard_reveals_round_pos UNIQUE (edition_id, round_index, position)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leaderboard_reveals_round 
+  ON leaderboard_reveals (edition_id, round_index, position);
+
 -- Seed Initial Edition if not present
 INSERT INTO editions (name, year, is_current, starting_budget)
 SELECT 'GCL 2025', 2025, true, 50000000
@@ -220,27 +239,40 @@ CREATE POLICY "Public read team_items" ON team_items FOR SELECT USING (true);
 CREATE POLICY "Public read transaction_history" ON transaction_history FOR SELECT USING (true);
 CREATE POLICY "Public read round_snapshots" ON round_snapshots FOR SELECT USING (true);
 CREATE POLICY "Public read winner_reveals" ON winner_reveals FOR SELECT USING (true);
+CREATE POLICY "Public read leaderboard_reveals" ON leaderboard_reveals FOR SELECT USING (true);
 CREATE POLICY "Public read round_questions" ON round_questions FOR SELECT USING (true);
 CREATE POLICY "Anyone can read profiles" ON profiles FOR SELECT USING (true);
 
 -- User profile self-update
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (id = auth.uid());
 
--- Admin full management policies (using simple non-recursive check or direct admin verification)
+-- Admin full management policies (enforces is_admin() role validation)
 CREATE POLICY "Admin all editions" ON editions FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
 );
 
 CREATE POLICY "Admin all event_state" ON event_state FOR ALL USING (
-  true -- Public read & live updates allow smooth control
+  is_admin() OR auth.role() = 'service_role'
+) WITH CHECK (
+  is_admin() OR auth.role() = 'service_role'
 );
 
 CREATE POLICY "Admin all teams" ON teams FOR ALL USING (
-  true -- Allows event organizer control without session timeouts
+  is_admin() OR auth.role() = 'service_role'
+) WITH CHECK (
+  is_admin() OR auth.role() = 'service_role'
 );
 
 CREATE POLICY "Admin all team_items" ON team_items FOR ALL USING (
-  true -- Allows recording auction sales
+  is_admin() OR auth.role() = 'service_role'
+) WITH CHECK (
+  is_admin() OR auth.role() = 'service_role'
+);
+
+CREATE POLICY "Admin all leaderboard_reveals" ON leaderboard_reveals FOR ALL USING (
+  is_admin() OR auth.role() = 'service_role'
+) WITH CHECK (
+  is_admin() OR auth.role() = 'service_role'
 );
 
 CREATE POLICY "Admin all transaction_history" ON transaction_history FOR ALL USING (
@@ -248,7 +280,9 @@ CREATE POLICY "Admin all transaction_history" ON transaction_history FOR ALL USI
 );
 
 CREATE POLICY "Admin all round_snapshots" ON round_snapshots FOR ALL USING (
-  true
+  is_admin() OR auth.role() = 'service_role'
+) WITH CHECK (
+  is_admin() OR auth.role() = 'service_role'
 );
 
 CREATE POLICY "Admin all winner_reveals" ON winner_reveals FOR ALL USING (
