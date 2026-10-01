@@ -33,6 +33,7 @@ import {
   Archive,
   Calculator,
   Lock,
+  KeyRound,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
@@ -65,18 +66,14 @@ export default function AdminPanel() {
     isExpired,
   } = useTimer(eventState);
 
-  // Authentication check (allows session profile OR local/session storage flag)
-  const isMasterAuthed =
-    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
-    localStorage.getItem('gcl_admin_authenticated') === 'true';
-  const isAdmin = isMasterAuthed || profile?.role === 'admin';
+  // Pure Supabase Admin Authentication check
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
-    if (isMasterAuthed) return;
     if (!authLoading && !isAdmin) {
       navigate('/123456789/GCL-0321/admin/login');
     }
-  }, [authLoading, isAdmin, isMasterAuthed, navigate]);
+  }, [authLoading, isAdmin, navigate]);
 
   // UI States & URL Tab Sync
   const [searchParams, setSearchParams] = useSearchParams();
@@ -104,6 +101,9 @@ export default function AdminPanel() {
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [isFinalizingArchive, setIsFinalizingArchive] = useState(false);
   const [isNewEditionModalOpen, setIsNewEditionModalOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // 4 Confirmation Dialog States (Point 7)
   const [isConfirmingSold, setIsConfirmingSold] = useState(false);
@@ -1997,13 +1997,35 @@ export default function AdminPanel() {
   };
 
   const handleLogout = async () => {
-    sessionStorage.removeItem('gcl_admin_authenticated');
-    localStorage.removeItem('gcl_admin_authenticated');
+    try {
+      sessionStorage.removeItem('gcl_admin_authenticated');
+      localStorage.removeItem('gcl_admin_authenticated');
+    } catch {}
     await supabase.auth.signOut();
-    navigate('/');
+    navigate('/123456789/GCL-0321/admin/login');
   };
 
-  if (stateLoading || (!isMasterAuthed && authLoading)) {
+  const handleUpdateAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPasswordVal || newPasswordVal.length < 6) {
+      showNotification('Password must be at least 6 characters.', 'error');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPasswordVal });
+      if (error) throw error;
+      showNotification('Admin password updated successfully!', 'success');
+      setIsChangePasswordOpen(false);
+      setNewPasswordVal('');
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to update password.', 'error');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  if (stateLoading || authLoading) {
     return (
       <div className="gcl-loading-screen">
         <div className="loading-spinner"></div>
@@ -2292,6 +2314,57 @@ export default function AdminPanel() {
         />
       )}
 
+      {/* Admin Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-cyan-400">
+              <KeyRound size={24} />
+              <h3 className="text-xl font-bold text-white">Set / Update Admin Password</h3>
+            </div>
+            <p className="text-xs text-slate-400 mb-4">
+              Enter your new administrator password. This will update your login credentials in Supabase Auth immediately.
+            </p>
+            <form onSubmit={handleUpdateAdminPassword} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                  New Password (min 6 chars)
+                </label>
+                <input
+                  type="password"
+                  value={newPasswordVal}
+                  onChange={(e) => setNewPasswordVal(e.target.value)}
+                  placeholder="Enter new password"
+                  className="gcl-input w-full"
+                  minLength={6}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsChangePasswordOpen(false);
+                    setNewPasswordVal('');
+                  }}
+                  className="btn-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPassword || !newPasswordVal}
+                  className="btn-primary"
+                >
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Cyber Admin Command Bar */}
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 relative z-30">
         <div className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
@@ -2348,6 +2421,21 @@ export default function AdminPanel() {
 
           {/* Quick Context & Public Portal Links */}
           <div className="hidden lg:flex items-center gap-2">
+            {profile?.email && (
+              <span className="text-xs font-mono text-cyan-300 px-2.5 py-1.5 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center gap-1.5" title={`Logged in as ${profile.email}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span className="max-w-[150px] truncate">{profile.email}</span>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Set / Change Admin Password"
+            >
+              <KeyRound size={13} className="text-amber-400" />
+              <span>Password</span>
+            </button>
             <span className="text-xs font-mono text-slate-400 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
               Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
             </span>

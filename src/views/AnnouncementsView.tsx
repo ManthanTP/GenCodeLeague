@@ -14,17 +14,15 @@ import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import { logAdminAction } from '../utils/certificateUtils';
+import { useAuth } from '../hooks/useAuth';
 import type { Announcement } from '../types/database';
 
 export default function AnnouncementsView() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState | null>(null);
-
-  // Admin state
-  const isMasterAuthed =
-    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
-    localStorage.getItem('gcl_admin_authenticated') === 'true';
 
   // New announcement modal
   const [isCreating, setIsCreating] = useState(false);
@@ -118,7 +116,7 @@ export default function AnnouncementsView() {
             <ChevronLeft size={16} /> Back to Hall of Fame
           </Link>
 
-          {isMasterAuthed && (
+          {isAdmin && (
             <button
               onClick={() => setIsCreating(true)}
               className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
@@ -188,7 +186,7 @@ export default function AnnouncementsView() {
                       })}
                     </span>
 
-                    {isMasterAuthed && (
+                    {isAdmin && (
                       <button
                         onClick={() => handleDelete(ann.id, ann.title)}
                         className="p-1.5 rounded-lg hover:bg-red-950/50 text-red-400 transition-colors"

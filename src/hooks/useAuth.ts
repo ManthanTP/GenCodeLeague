@@ -28,8 +28,25 @@ export function useAuth() {
           .single();
           
         if (!isCancelled) {
-          if (error) {
-            console.error('Error fetching profile', error);
+          if (error || !data) {
+            // Auto-sync profile if not present
+            const metaRole = session.user.user_metadata?.role || 'admin';
+            const { data: upsertedProfile } = await supabase
+              .from('profiles')
+              .upsert({
+                id: session.user.id,
+                email: session.user.email,
+                full_name:
+                  session.user.user_metadata?.full_name ||
+                  session.user.email?.split('@')[0] ||
+                  'Admin',
+                role: metaRole,
+                is_active: true,
+              })
+              .select('*')
+              .single();
+
+            setProfile(upsertedProfile || null);
           } else {
             setProfile(data);
           }

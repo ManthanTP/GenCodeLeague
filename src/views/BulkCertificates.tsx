@@ -53,18 +53,14 @@ export default function BulkCertificates() {
   const navigate = useNavigate();
   const { profile, loading: authLoading } = useAuth();
 
-  // Authentication check
-  const isMasterAuthed =
-    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
-    localStorage.getItem('gcl_admin_authenticated') === 'true';
-  const isAdmin = isMasterAuthed || profile?.role === 'admin';
+  // Pure Supabase Admin Authentication check
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
-    if (isMasterAuthed) return;
     if (!authLoading && !isAdmin) {
       navigate('/123456789/GCL-0321/admin/login');
     }
-  }, [authLoading, isAdmin, isMasterAuthed, navigate]);
+  }, [authLoading, isAdmin, navigate]);
 
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [editions, setEditions] = useState<Edition[]>([]);
