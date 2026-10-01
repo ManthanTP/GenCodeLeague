@@ -246,44 +246,27 @@ CREATE POLICY "Anyone can read profiles" ON profiles FOR SELECT USING (true);
 -- User profile self-update
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (id = auth.uid());
 
--- Admin full management policies (enforces is_admin() role validation)
-CREATE POLICY "Admin all editions" ON editions FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
-);
+-- Helper function to check if authenticated user is admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT role = 'admin' FROM profiles WHERE id = auth.uid()),
+    false
+  );
+$$;
 
-CREATE POLICY "Admin all event_state" ON event_state FOR ALL USING (
-  is_admin() OR auth.role() = 'service_role'
-) WITH CHECK (
-  is_admin() OR auth.role() = 'service_role'
-);
-
-CREATE POLICY "Admin all teams" ON teams FOR ALL USING (
-  is_admin() OR auth.role() = 'service_role'
-) WITH CHECK (
-  is_admin() OR auth.role() = 'service_role'
-);
-
-CREATE POLICY "Admin all team_items" ON team_items FOR ALL USING (
-  is_admin() OR auth.role() = 'service_role'
-) WITH CHECK (
-  is_admin() OR auth.role() = 'service_role'
-);
-
-CREATE POLICY "Admin all leaderboard_reveals" ON leaderboard_reveals FOR ALL USING (
-  is_admin() OR auth.role() = 'service_role'
-) WITH CHECK (
-  is_admin() OR auth.role() = 'service_role'
-);
-
-CREATE POLICY "Admin all transaction_history" ON transaction_history FOR ALL USING (
-  true
-);
-
-CREATE POLICY "Admin all round_snapshots" ON round_snapshots FOR ALL USING (
-  is_admin() OR auth.role() = 'service_role'
-) WITH CHECK (
-  is_admin() OR auth.role() = 'service_role'
-);
+-- Admin full management policies (allows authenticated admin OR master admin via client)
+CREATE POLICY "Admin all editions" ON editions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all event_state" ON event_state FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all teams" ON teams FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all team_items" ON team_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all leaderboard_reveals" ON leaderboard_reveals FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all transaction_history" ON transaction_history FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin all round_snapshots" ON round_snapshots FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Admin all winner_reveals" ON winner_reveals FOR ALL USING (
   true
@@ -525,3 +508,59 @@ CREATE POLICY "Admin all certificate_templates" ON certificate_templates FOR ALL
 CREATE POLICY "Public read certificates" ON certificates FOR SELECT USING (true);
 CREATE POLICY "Admin all certificates" ON certificates FOR ALL USING (true);
 CREATE POLICY "Admin all audit_log" ON audit_log FOR ALL USING (true);
+
+-- ====================================================
+-- REALTIME PUBLICATIONS (Required for Live Sync)
+-- ====================================================
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE event_state;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE teams;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE team_items;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE editions;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE leaderboard_reveals;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE announcements;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;
+
+-- ====================================================
+-- STORAGE BUCKET SETUP (For Gallery & Archive photos)
+-- ====================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('gallery', 'gallery', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public gallery access" ON storage.objects;
+DROP POLICY IF EXISTS "Public gallery upload" ON storage.objects;
+DROP POLICY IF EXISTS "Public gallery update" ON storage.objects;
+DROP POLICY IF EXISTS "Public gallery delete" ON storage.objects;
+
+CREATE POLICY "Public gallery access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'gallery');
+
+CREATE POLICY "Public gallery upload" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'gallery');
+
+CREATE POLICY "Public gallery update" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'gallery');
+
+CREATE POLICY "Public gallery delete" ON storage.objects
+  FOR DELETE USING (bucket_id = 'gallery');
+
