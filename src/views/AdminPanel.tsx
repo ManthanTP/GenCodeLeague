@@ -48,7 +48,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
-import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, GameState, RoundState, LeaderboardRevealEntry } from '../types/database';
+import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry } from '../types/database';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -913,65 +913,70 @@ export default function AdminPanel() {
   // 6. Round 2 -> Round 3: Budget Calculation & Confirmation
   const handleConfirmRound3Budgets = async () => {
     if (!edition?.id || !eventState?.id) return;
-    const startingBudget = edition.starting_budget || 50000000;
+    setIsConfirmingR3Budgets(true);
+    try {
+      const startingBudget = edition.starting_budget || 50000000;
 
-    // Calculate: Round 3 Budget = Starting Budget + Round 2 Remaining Budget
-    const calculations = teams.map((team) => {
-      const r2Remaining = team.budget;
-      const r3Budget = startingBudget + r2Remaining;
-      return {
-        teamId: team.id,
-        teamName: team.name,
-        startingBudget,
-        r2Remaining,
-        r3Budget,
+      // Calculate: Round 3 Budget = Starting Budget + Round 2 Remaining Budget
+      const calculations = teams.map((team) => {
+        const r2Remaining = team.budget;
+        const r3Budget = startingBudget + r2Remaining;
+        return {
+          teamId: team.id,
+          teamName: team.name,
+          startingBudget,
+          r2Remaining,
+          r3Budget,
+        };
+      });
+
+      // Update each team's budget
+      const updatedTeams = teams.map((team) => {
+        const calc = calculations.find((c) => c.teamId === team.id);
+        return {
+          ...team,
+          budget: calc ? calc.r3Budget : startingBudget,
+        };
+      });
+
+      setTeams(updatedTeams);
+      broadcastTeamsChange(updatedTeams);
+
+      for (const t of updatedTeams) {
+        supabase.from('teams').update({ budget: t.budget }).eq('id', t.id).then();
+      }
+
+      // Insert audit record
+      supabase.from('audit_log').insert({
+        admin_id: 'admin',
+        action: 'ROUND_3_BUDGET_CALCULATION',
+        details: {
+          formula: 'ROUND 3 BUDGET = STARTING BUDGET + ROUND 2 REMAINING BUDGET',
+          starting_budget: startingBudget,
+          calculations,
+          confirmed_at: new Date().toISOString(),
+        },
+      }).then();
+
+      addHistory(
+        'Round 3 Budgets Confirmed',
+        `Budgets confirmed: Starting Budget (${formatCurrency(startingBudget)}) + Round 2 Remaining funds applied.`
+      );
+
+      setR3BudgetsConfirmed(true);
+
+      const nextState: Partial<EventState> = {
+        round_state: 'NEXT_ROUND_READY',
+        updated_at: new Date().toISOString(),
       };
-    });
+      setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+      broadcastStateChange(nextState);
+      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
 
-    // Update each team's budget
-    const updatedTeams = teams.map((team) => {
-      const calc = calculations.find((c) => c.teamId === team.id);
-      return {
-        ...team,
-        budget: calc ? calc.r3Budget : startingBudget,
-      };
-    });
-
-    setTeams(updatedTeams);
-    broadcastTeamsChange(updatedTeams);
-
-    for (const t of updatedTeams) {
-      supabase.from('teams').update({ budget: t.budget }).eq('id', t.id).then();
+      showNotification('Round 3 Budgets Confirmed! Ready to Start Round 3.', 'success');
+    } finally {
+      setIsConfirmingR3Budgets(false);
     }
-
-    // Insert audit record
-    supabase.from('audit_log').insert({
-      admin_id: 'admin',
-      action: 'ROUND_3_BUDGET_CALCULATION',
-      details: {
-        formula: 'ROUND 3 BUDGET = STARTING BUDGET + ROUND 2 REMAINING BUDGET',
-        starting_budget: startingBudget,
-        calculations,
-        confirmed_at: new Date().toISOString(),
-      },
-    }).then();
-
-    addHistory(
-      'Round 3 Budgets Confirmed',
-      `Budgets confirmed: Starting Budget (${formatCurrency(startingBudget)}) + Round 2 Remaining funds applied.`
-    );
-
-    setR3BudgetsConfirmed(true);
-
-    const nextState: Partial<EventState> = {
-      round_state: 'NEXT_ROUND_READY',
-      updated_at: new Date().toISOString(),
-    };
-    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
-    broadcastStateChange(nextState);
-    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
-
-    showNotification('Round 3 Budgets Confirmed! Ready to Start Round 3.', 'success');
   };
 
   // 7. Start Round 3 with confirmed budgets
@@ -1542,8 +1547,6 @@ export default function AdminPanel() {
     // 4. Determine next game state
     const isLastQuestionOfRound = qIdx >= currentRoundData.questions.length - 1;
 
-    let nextGameState = eventState.game_state;
-    let nextRoundIdx = rIdx;
     let nextQuestionIdx = qIdx + 1;
     let nextItemText = '';
 
@@ -1717,7 +1720,6 @@ export default function AdminPanel() {
   const maxIdx = totalQuestions > 0 ? totalQuestions - 1 : 0;
   const isLastQuestion = questionIdx === maxIdx && totalQuestions > 0;
   const isRoundEnd = roundIdx >= DEFAULT_ROUNDS_DATA.length;
-  const lastCompletedRound = pastRounds.length > 0 ? pastRounds[pastRounds.length - 1] : null;
   const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
   const roundBasePrice = getRoundBasePrice(roundIdx);
 
@@ -3116,9 +3118,18 @@ export default function AdminPanel() {
                       <button
                         type="button"
                         onClick={handleConfirmRound3Budgets}
+                        disabled={isConfirmingR3Budgets}
                         className="btn-advance-intermission w-full sm:w-auto py-3 px-6 text-base font-bold flex items-center justify-center gap-2"
                       >
-                        <Calculator size={20} /> CONFIRM ROUND 3 BUDGETS
+                        {isConfirmingR3Budgets ? (
+                          <>
+                            <Loader2 size={20} className="animate-spin" /> CONFIRMING...
+                          </>
+                        ) : (
+                          <>
+                            <Calculator size={20} /> CONFIRM ROUND 3 BUDGETS
+                          </>
+                        )}
                       </button>
                     ) : (
                       <>
