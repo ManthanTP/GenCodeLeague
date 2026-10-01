@@ -18,6 +18,10 @@ import {
   ShieldAlert,
   Sliders,
   Edit3,
+  Users,
+  CheckCircle2,
+  Sparkles,
+  UserPlus,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -44,7 +48,7 @@ import type {
   CertificateSettings,
   CertificateTypeConfig,
 } from '../types/certificates';
-import type { Edition, Team } from '../types/database';
+import type { Edition, Team, TeamMember } from '../types/database';
 
 interface AdminCertificateManagerProps {
   currentEdition?: Edition | null;
@@ -80,6 +84,12 @@ export default function AdminCertificateManager({
     'has actively participated in GenCode League as a proud member of'
   );
   const [generating, setGenerating] = useState(false);
+
+  // Team members states
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [batchIssuing, setBatchIssuing] = useState(false);
+  const [newInlineMemberName, setNewInlineMemberName] = useState('');
+  const [addingMemberInline, setAddingMemberInline] = useState(false);
 
   // Certificate Settings (Signatures & Branding)
   const [settings, setSettings] = useState<CertificateSettings>(
@@ -210,6 +220,31 @@ export default function AdminCertificateManager({
       null
     );
   }, [editions, selectedEditionId, currentEdition]);
+
+  // Load team members for all teams in the active edition
+  useEffect(() => {
+    if (!teams || teams.length === 0) {
+      setTeamMembers([]);
+      return;
+    }
+    const teamIds = teams.map((t) => t.id);
+    supabase
+      .from('team_members')
+      .select('*')
+      .in('team_id', teamIds)
+      .order('full_name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setTeamMembers(data as TeamMember[]);
+        }
+      });
+  }, [teams, selectedEditionId]);
+
+  // Members belonging to the currently selected team
+  const currentTeamMembers = useMemo(() => {
+    if (!selectedTeamId) return [];
+    return teamMembers.filter((m) => m.team_id === selectedTeamId);
+  }, [teamMembers, selectedTeamId]);
 
   // Load issued certificates
   const loadCertificates = async () => {
@@ -368,6 +403,102 @@ export default function AdminCertificateManager({
       onShowToast(err?.message || 'Failed to issue certificate.', 'error');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // ─── Batch Issue for All Members of Selected Team ───
+  const handleBatchIssueTeamCertificates = async () => {
+    if (!selectedTeamId || currentTeamMembers.length === 0 || !selectedEditionId) return;
+    const teamName = selectedTeam?.name || 'Selected Team';
+
+    const confirmed = window.confirm(
+      `Issue "${CERTIFICATE_TYPE_LABELS[certificateType]}" certificates for all ${currentTeamMembers.length} member(s) of team "${teamName}"?`
+    );
+    if (!confirmed) return;
+
+    setBatchIssuing(true);
+    try {
+      const editionCode = getEditionCode(
+        activeEdition?.year,
+        activeEdition?.name
+      );
+
+      const records = [];
+      for (const m of currentTeamMembers) {
+        const memberName = (m.full_name || m.name || '').trim();
+        if (!memberName) continue;
+
+        const certId = generateCertificateId(editionCode, certificateType);
+        records.push({
+          certificate_id: certId,
+          edition_id: selectedEditionId,
+          team_id: selectedTeamId,
+          recipient_name: memberName,
+          certificate_type: certificateType,
+          achievement: showAchievementField ? achievement.trim() || null : null,
+          custom_title: customTitle.trim() || null,
+          custom_subtitle: customSubtitle.trim() || null,
+          template_version: 1,
+          status: 'valid',
+          verify_view_count: 0,
+        });
+      }
+
+      if (records.length === 0) {
+        onShowToast('No members found with valid names.', 'error');
+        return;
+      }
+
+      const { error } = await supabase.from('certificates').insert(records);
+      if (error) throw error;
+
+      await logAdminAction('BATCH_TEAM_CERTIFICATES_ISSUED', {
+        team_id: selectedTeamId,
+        team_name: teamName,
+        count: records.length,
+        certificate_type: certificateType,
+        edition_id: selectedEditionId,
+      });
+
+      onShowToast(
+        `Successfully issued ${records.length} certificates for team "${teamName}"!`,
+        'success'
+      );
+
+      // Refresh list
+      loadCertificates();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to issue batch certificates.', 'error');
+    } finally {
+      setBatchIssuing(false);
+    }
+  };
+
+  // ─── Quick-Add Member to Selected Team Inline ───
+  const handleQuickAddInlineMember = async () => {
+    if (!selectedTeamId || !newInlineMemberName.trim()) return;
+    setAddingMemberInline(true);
+    try {
+      const name = newInlineMemberName.trim();
+      const newRec = {
+        id: crypto.randomUUID(),
+        team_id: selectedTeamId,
+        full_name: name,
+        name: name,
+        role: 'member',
+        created_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('team_members').insert(newRec);
+      if (error) throw error;
+
+      setTeamMembers((prev) => [...prev, newRec as TeamMember]);
+      setRecipientName(name);
+      setNewInlineMemberName('');
+      onShowToast(`Added "${name}" to team & autofilled name!`, 'success');
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to add member', 'error');
+    } finally {
+      setAddingMemberInline(false);
     }
   };
 
@@ -642,6 +773,100 @@ export default function AdminCertificateManager({
                     </option>
                   ))}
                 </select>
+
+                {/* Team Members Quick Picker & Batch Issue for Selected Team */}
+                {selectedTeamId && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5">
+                        <Users size={14} className="text-cyan-400" />
+                        Team Members ({currentTeamMembers.length})
+                      </span>
+                      {currentTeamMembers.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleBatchIssueTeamCertificates}
+                          disabled={batchIssuing || generating}
+                          className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-black text-xs font-black flex items-center gap-1.5 shadow-glow-cyan cursor-pointer transition-all disabled:opacity-50"
+                          title={`Issue "${CERTIFICATE_TYPE_LABELS[certificateType]}" certificate to all ${currentTeamMembers.length} members`}
+                        >
+                          <Award size={13} />
+                          {batchIssuing ? 'Issuing...' : `⚡ Issue All (${currentTeamMembers.length})`}
+                        </button>
+                      )}
+                    </div>
+
+                    {currentTeamMembers.length > 0 ? (
+                      <div>
+                        <p className="text-[11px] text-slate-400 mb-1.5">
+                          Click any member to autofill name, or use <strong>⚡ Issue All</strong> above:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentTeamMembers.map((m) => {
+                            const memberName = (m.full_name || m.name || '').trim();
+                            const isSelected =
+                              recipientName.trim().toLowerCase() === memberName.toLowerCase();
+                            const isAlreadyIssued = certificatesList.some(
+                              (c) =>
+                                c.recipient_name.trim().toLowerCase() === memberName.toLowerCase() &&
+                                c.certificate_type === certificateType &&
+                                c.edition_id === selectedEditionId
+                            );
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setRecipientName(memberName)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-cyan-500 text-black font-bold ring-2 ring-cyan-300 shadow-glow-cyan'
+                                    : 'bg-slate-900 text-slate-300 border border-slate-700/80 hover:border-cyan-500/60 hover:text-white'
+                                }`}
+                              >
+                                <span>{memberName}</span>
+                                  <span title="Certificate of this type already issued for this edition">
+                                    <CheckCircle2
+                                      size={12}
+                                      className={isSelected ? 'text-black' : 'text-emerald-400'}
+                                    />
+                                  </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic">
+                        No members registered for this team yet. Add one below:
+                      </p>
+                    )}
+
+                    {/* Inline quick add member form */}
+                    <div className="flex gap-2 pt-1 border-t border-slate-800/80">
+                      <input
+                        type="text"
+                        placeholder="Quick add member to team..."
+                        value={newInlineMemberName}
+                        onChange={(e) => setNewInlineMemberName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleQuickAddInlineMember();
+                          }
+                        }}
+                        className="gcl-input flex-1 py-1.5 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickAddInlineMember}
+                        disabled={!newInlineMemberName.trim() || addingMemberInline}
+                        className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                      >
+                        <UserPlus size={13} /> Add
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Certificate Type */}

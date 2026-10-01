@@ -11,6 +11,7 @@ interface AdminSetupProps {
 export default function AdminSetup({ edition, eventState, teams }: AdminSetupProps) {
   const [budgetInput, setBudgetInput] = useState(edition.starting_budget.toString());
   const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamMembers, setNewTeamMembers] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleUpdateBudget = async () => {
@@ -28,14 +29,31 @@ export default function AdminSetup({ edition, eventState, teams }: AdminSetupPro
     setLoading(true);
 
     const sortOrder = teams.length + 1;
+    const newTeamId = crypto.randomUUID();
     await supabase.from('teams').insert({
+      id: newTeamId,
       edition_id: edition.id,
       name: newTeamName.trim(),
       budget: parseInt(budgetInput) || 50000000,
       sort_order: sortOrder
     });
 
+    if (newTeamMembers.trim()) {
+      const names = newTeamMembers.split(/[,;\n]/).map(n => n.trim()).filter(Boolean);
+      if (names.length > 0) {
+        const records = names.map(name => ({
+          id: crypto.randomUUID(),
+          team_id: newTeamId,
+          full_name: name,
+          name: name,
+          role: 'member'
+        }));
+        await supabase.from('team_members').insert(records);
+      }
+    }
+
     setNewTeamName('');
+    setNewTeamMembers('');
     setLoading(false);
   };
 
@@ -104,15 +122,24 @@ export default function AdminSetup({ edition, eventState, teams }: AdminSetupPro
             ))}
           </div>
 
-          <form onSubmit={handleAddTeam} className="flex gap-2">
+          <form onSubmit={handleAddTeam} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="New Team Name *" 
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button type="submit" className="primary" disabled={loading || !newTeamName.trim()}>+ Add Team</button>
+            </div>
             <input 
               type="text" 
-              placeholder="New Team Name" 
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              style={{ flex: 1 }}
+              placeholder="Member Names (Optional, comma-separated e.g. Alice, Bob)" 
+              value={newTeamMembers}
+              onChange={(e) => setNewTeamMembers(e.target.value)}
+              style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
             />
-            <button type="submit" className="primary" disabled={loading || !newTeamName.trim()}>+ Add Team</button>
           </form>
         </div>
 

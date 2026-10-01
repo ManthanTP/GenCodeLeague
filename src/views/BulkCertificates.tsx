@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Check,
   Award,
+  Users,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -227,6 +228,39 @@ Priya Sharma,,volunteer`;
     setResults(null);
   };
 
+  const handleImportRegisteredTeamMembers = async () => {
+    if (!selectedEditionId || teams.length === 0) {
+      showToast('No teams found in this edition', 'error');
+      return;
+    }
+    const teamIds = teams.map((t) => t.id);
+    const { data: members, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .in('team_id', teamIds)
+      .order('full_name', { ascending: true });
+
+    if (error || !members || members.length === 0) {
+      showToast('No registered members found for teams in this edition. Add members in Event Configuration.', 'error');
+      return;
+    }
+
+    const teamMap = new Map(teams.map((t) => [t.id, t.name]));
+    const lines = ['name,team,certificate_type'];
+    for (const m of members) {
+      const name = (m.full_name || m.name || '').trim();
+      const teamName = teamMap.get(m.team_id) || '';
+      if (name) {
+        lines.push(`${name},${teamName},participation`);
+      }
+    }
+
+    setRawCsv(lines.join('\n'));
+    setResults(null);
+    setCsvFileName('Registered_Team_Members.csv');
+    showToast(`Loaded ${lines.length - 1} registered team members into CSV!`, 'success');
+  };
+
   // ─── Generate All ───
   const handleGenerateAll = async () => {
     if (parsedRows.length === 0 || totalErrors > 0) return;
@@ -439,12 +473,23 @@ Priya Sharma,,volunteer`;
               />
             </label>
 
-            <button
-              onClick={handleLoadSampleCsv}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-400 flex items-center gap-1.5 self-end"
-            >
-              <FileText size={14} /> Load Sample CSV
-            </button>
+            <div className="flex flex-col gap-2 self-end">
+              <button
+                type="button"
+                onClick={handleImportRegisteredTeamMembers}
+                className="px-4 py-2 rounded-lg bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Populate CSV rows directly from teams and members registered in Event Configuration"
+              >
+                <Users size={14} className="text-cyan-400" /> Import Registered Team Members
+              </button>
+              <button
+                type="button"
+                onClick={handleLoadSampleCsv}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <FileText size={14} /> Load Sample CSV
+              </button>
+            </div>
           </div>
 
           <textarea

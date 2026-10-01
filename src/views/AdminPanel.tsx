@@ -50,7 +50,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
-import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry } from '../types/database';
+import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry, TeamMember } from '../types/database';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -114,6 +114,11 @@ export default function AdminPanel() {
   // Setup form states
   const [budgetInput, setBudgetInput] = useState<string>('50000000');
   const [newTeamName, setNewTeamName] = useState<string>('');
+  const [newTeamMembers, setNewTeamMembers] = useState<string>('');
+  const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>({});
+  const [expandedTeamMembers, setExpandedTeamMembers] = useState<Record<string, boolean>>({});
+  const [newMemberInputs, setNewMemberInputs] = useState<Record<string, string>>({});
+  const [addingMemberTeamId, setAddingMemberTeamId] = useState<string | null>(null);
 
   // Active round auction states
   const [bidAmount, setBidAmount] = useState<string>('');
@@ -503,16 +508,45 @@ export default function AdminPanel() {
     }
   };
 
+  // Load all team members for current teams
+  const loadAllTeamMembers = useCallback(async (teamList: Team[]) => {
+    if (!teamList || teamList.length === 0) {
+      setTeamMembersMap({});
+      return;
+    }
+    const teamIds = teamList.map((t) => t.id);
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .in('team_id', teamIds)
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      const map: Record<string, TeamMember[]> = {};
+      for (const m of data as TeamMember[]) {
+        if (!map[m.team_id]) map[m.team_id] = [];
+        map[m.team_id].push(m);
+      }
+      setTeamMembersMap(map);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAllTeamMembers(teams);
+  }, [teams, loadAllTeamMembers]);
+
   const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamName.trim() || !edition?.id) return;
 
     const initialBudget = parseInt(budgetInput) || edition.starting_budget || 50000000;
     const newTeamId = crypto.randomUUID();
+    const addedTeamName = newTeamName.trim();
+    const rawMembers = newTeamMembers.trim();
+
     const newTeamObj: Team = {
       id: newTeamId,
       edition_id: edition.id,
-      name: newTeamName.trim(),
+      name: addedTeamName,
       budget: initialBudget,
       score: 0,
       status: 'active',
@@ -524,8 +558,7 @@ export default function AdminPanel() {
     setTeams(updated);
     broadcastTeamsChange(updated, edition.id);
     setNewTeamName('');
-    showNotification(`Team "${newTeamName.trim()}" added!`, 'success');
-    addHistory('Team Added', `Team "${newTeamName.trim()}" registered.`);
+    setNewTeamMembers('');
 
     const { error } = await supabase
       .from('teams')
@@ -541,7 +574,106 @@ export default function AdminPanel() {
     if (error) {
       console.error('Error inserting team:', error);
       showNotification(`Failed to save team: ${error.message}`, 'error');
+      return;
     }
+
+    // Process optional member names
+    if (rawMembers) {
+      const memberNames = rawMembers
+        .split(/[,;\n]/)
+        .map((n) => n.trim())
+        .filter((n) => n.length > 0);
+
+      if (memberNames.length > 0) {
+        const memberRecords = memberNames.map((name) => ({
+          id: crypto.randomUUID(),
+          team_id: newTeamId,
+          full_name: name,
+          name: name,
+          role: 'member',
+          created_at: new Date().toISOString(),
+        }));
+
+        const { error: memberError } = await supabase.from('team_members').insert(memberRecords);
+        if (!memberError) {
+          setTeamMembersMap((prev) => ({
+            ...prev,
+            [newTeamId]: memberRecords as TeamMember[],
+          }));
+          showNotification(`Team "${addedTeamName}" added with ${memberNames.length} member(s)!`, 'success');
+        } else {
+          console.error('Error adding members:', memberError);
+          showNotification(`Team "${addedTeamName}" added, but failed to save members: ${memberError.message}`, 'error');
+        }
+      } else {
+        showNotification(`Team "${addedTeamName}" added!`, 'success');
+      }
+    } else {
+      showNotification(`Team "${addedTeamName}" added!`, 'success');
+    }
+
+    addHistory('Team Added', `Team "${addedTeamName}" registered.`);
+  };
+
+  const handleAddMemberToTeam = async (teamId: string) => {
+    const rawInput = newMemberInputs[teamId]?.trim();
+    if (!rawInput) return;
+
+    setAddingMemberTeamId(teamId);
+    try {
+      const names = rawInput
+        .split(/[,;\n]/)
+        .map((n) => n.trim())
+        .filter((n) => n.length > 0);
+
+      if (names.length === 0) return;
+
+      const records = names.map((name) => ({
+        id: crypto.randomUUID(),
+        team_id: teamId,
+        full_name: name,
+        name: name,
+        role: 'member',
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase.from('team_members').insert(records);
+      if (error) throw error;
+
+      setTeamMembersMap((prev) => ({
+        ...prev,
+        [teamId]: [...(prev[teamId] || []), ...(records as TeamMember[])],
+      }));
+
+      setNewMemberInputs((prev) => ({ ...prev, [teamId]: '' }));
+      showNotification(`Added ${names.length} member(s) to team!`, 'success');
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to add member', 'error');
+    } finally {
+      setAddingMemberTeamId(null);
+    }
+  };
+
+  const handleRemoveMemberFromTeam = async (memberId: string, teamId: string) => {
+    try {
+      const { error } = await supabase.from('team_members').delete().eq('id', memberId);
+      if (error) throw error;
+
+      setTeamMembersMap((prev) => ({
+        ...prev,
+        [teamId]: (prev[teamId] || []).filter((m) => m.id !== memberId),
+      }));
+      showNotification('Member removed.', 'success');
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to remove member', 'error');
+    }
+  };
+
+  const toggleTeamMembersExpanded = (teamId: string) => {
+    setExpandedTeamMembers((prev) => ({
+      ...prev,
+      [teamId]: !prev[teamId],
+    }));
   };
 
   const handleTeamNameChange = (teamId: string, newName: string) => {
@@ -608,6 +740,11 @@ export default function AdminPanel() {
       showNotification(`Team ${teamToRemove.name} removed!`, 'success');
       addHistory('Team Removed', `${teamToRemove.name} was removed.`);
     }
+    setTeamMembersMap((prev) => {
+      const copy = { ...prev };
+      delete copy[teamToRemove.id];
+      return copy;
+    });
     setTeamToRemove(null);
   };
 
@@ -2538,53 +2675,172 @@ export default function AdminPanel() {
 
               {/* Team Management */}
               <div className="pt-4 border-t border-slate-800">
-                <div className="flex justify-between items-center mb-4">
-                  <label className="input-label">Teams ({teams.length})</label>
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <label className="input-label mb-0">Participating Teams ({teams.length})</label>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Configure teams and their member names. Members will be ready for 1-click certificate generation.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-2 mb-4">
-                  {teams.map((team, idx) => (
-                    <div key={team.id} className="team-manage-item">
-                      <span className="font-mono text-slate-500 w-6">{idx + 1}.</span>
-                      <input
-                        type="text"
-                        value={team.name}
-                        onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                        onBlur={() => handleTeamNameBlur(team.id)}
-                        className="gcl-input-inline"
-                        placeholder={`Team ${idx + 1}`}
-                      />
-                      <button
-                        onClick={() => setTeamToRemove(team)}
-                        disabled={teams.length <= 1}
-                        className="btn-remove-circle"
+                <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 mb-4">
+                  {teams.map((team, idx) => {
+                    const members = teamMembersMap[team.id] || [];
+                    const isExpanded = !!expandedTeamMembers[team.id];
+                    return (
+                      <div
+                        key={team.id}
+                        className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 transition-all hover:border-slate-700"
                       >
-                        <Minus size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 w-6 font-bold">{idx + 1}.</span>
+                          <input
+                            type="text"
+                            value={team.name}
+                            onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                            onBlur={() => handleTeamNameBlur(team.id)}
+                            className="gcl-input-inline flex-1 text-sm font-semibold"
+                            placeholder={`Team ${idx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleTeamMembersExpanded(team.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              isExpanded || members.length > 0
+                                ? 'bg-cyan-950 text-cyan-300 border border-cyan-800 hover:bg-cyan-900/60'
+                                : 'bg-slate-800/80 text-slate-400 border border-slate-700/60 hover:text-white'
+                            }`}
+                            title="Manage Team Members"
+                          >
+                            <Users size={13} className={members.length > 0 ? 'text-cyan-400' : 'text-slate-400'} />
+                            <span>{members.length} {members.length === 1 ? 'Member' : 'Members'}</span>
+                          </button>
+                          <button
+                            onClick={() => setTeamToRemove(team)}
+                            disabled={teams.length <= 1}
+                            className="btn-remove-circle"
+                            title="Remove Team"
+                          >
+                            <Minus size={14} />
+                          </button>
+                        </div>
+
+                        {/* Collapsible Members Section */}
+                        {isExpanded && (
+                          <div className="mt-3 pt-3 border-t border-slate-800/80 pl-8 pr-1 space-y-2.5">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
+                                Team Members ({members.length})
+                              </span>
+                              <span className="text-[10px] text-cyan-400 font-mono">
+                                ⚡ Ready for 1-click certificate generation
+                              </span>
+                            </div>
+
+                            {/* Member Chips */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {members.map((m) => (
+                                <span
+                                  key={m.id}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-xs text-slate-200"
+                                >
+                                  <span>{m.full_name || m.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMemberFromTeam(m.id, team.id)}
+                                    className="text-slate-400 hover:text-red-400 transition-colors ml-0.5 cursor-pointer"
+                                    title="Remove member"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                              {members.length === 0 && (
+                                <span className="text-xs text-slate-500 italic">
+                                  No members registered yet. Type names below to add.
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Add Member inline input */}
+                            <div className="flex gap-2 pt-1">
+                              <input
+                                type="text"
+                                placeholder="Add member name (or comma-separated)..."
+                                value={newMemberInputs[team.id] || ''}
+                                onChange={(e) =>
+                                  setNewMemberInputs((prev) => ({
+                                    ...prev,
+                                    [team.id]: e.target.value,
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddMemberToTeam(team.id);
+                                  }
+                                }}
+                                className="gcl-input flex-1 py-1.5 text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddMemberToTeam(team.id)}
+                                disabled={!newMemberInputs[team.id]?.trim() || addingMemberTeamId === team.id}
+                                className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus size={13} /> Add
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {teams.length === 0 && (
-                    <p className="col-span-2 text-slate-500 italic text-center py-4">
+                    <p className="text-slate-500 italic text-center py-4">
                       No teams added yet. Add your participating teams below.
                     </p>
                   )}
                 </div>
 
-                <form onSubmit={handleAddTeam} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="New Team Name..."
-                    value={newTeamName}
-                    onChange={(e) => setNewTeamName(e.target.value)}
-                    className="gcl-input flex-1"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newTeamName.trim()}
-                    className="btn-primary-add"
-                  >
-                    <Plus size={18} /> Add Team
-                  </button>
+                <form onSubmit={handleAddTeam} className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <Plus size={15} className="text-blue-400" /> Add Participating Team
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Team Name * (e.g. Code Warriors)"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      className="gcl-input flex-1 py-2 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTeamName.trim()}
+                      className="btn-primary-add shrink-0"
+                    >
+                      <Plus size={18} /> Add Team
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-mono text-slate-400 block mb-1">
+                      Member Names (Optional, comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rahul Sharma, Priya Patel, Aman Gupta"
+                      value={newTeamMembers}
+                      onChange={(e) => setNewTeamMembers(e.target.value)}
+                      className="gcl-input w-full py-1.5 text-xs text-slate-200"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Members added here will be automatically registered for instant 1-click certificate generation in the Certificate Hub.
+                    </span>
+                  </div>
                 </form>
               </div>
 
