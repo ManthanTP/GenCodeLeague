@@ -4216,5 +4216,165 @@ select.gcl-input option {
   transform: translateY(-1px);
 }
 
+/* ==================================================== */
+/* --- REDESIGNED LEADERBOARD & INTERMISSION TABLES --- */
+/* ==================================================== */
+
+.gcl-table-card {
+  background: rgba(11, 17, 32, 0.85);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.gcl-leaderboard-header {
+  display: grid;
+  grid-template-columns: 80px minmax(220px, 2.5fr) 130px 1.4fr 1.4fr;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.gcl-leaderboard-row {
+  display: grid;
+  grid-template-columns: 80px minmax(220px, 2.5fr) 130px 1.4fr 1.4fr;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 0.85rem;
+  margin-bottom: 0.6rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.gcl-leaderboard-row:hover {
+  background: rgba(30, 41, 59, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* 1st Place Champion Row */
+.gcl-leaderboard-champion {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.14) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1.5px solid rgba(234, 179, 8, 0.6) !important;
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 2nd Place Runner-Up Row */
+.gcl-leaderboard-runnerup {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1.5px solid rgba(203, 213, 225, 0.6) !important;
+  box-shadow: 0 0 20px rgba(148, 163, 184, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 3rd Place Bronze Row */
+.gcl-leaderboard-third {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.6) !important;
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* My Team Glow in Leaderboard */
+.gcl-leaderboard-me {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3) !important;
+}
+
+/* Unrevealed Mystery Row */
+.gcl-leaderboard-unrevealed {
+  background: rgba(11, 17, 32, 0.45);
+  border: 1.5px dashed rgba(71, 85, 105, 0.5);
+  border-radius: 0.85rem;
+  margin-bottom: 0.6rem;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.gcl-leaderboard-unrevealed:hover {
+  opacity: 0.9;
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+/* Position Number Badges */
+.gcl-pos-badge {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.gcl-pos-gold {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: #000;
+  border-color: #fde047;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+}
+
+.gcl-pos-silver {
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+  color: #000;
+  border-color: #f1f5f9;
+  box-shadow: 0 0 15px rgba(148, 163, 184, 0.3);
+}
+
+.gcl-pos-bronze {
+  background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+  color: #fff;
+  border-color: #fdba74;
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+}
+
+.gcl-pos-cyan {
+  background: rgba(15, 23, 42, 0.9);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.gcl-pos-muted {
+  background: rgba(15, 23, 42, 0.6);
+  color: #64748b;
+  border-color: rgba(51, 65, 85, 0.4);
+}
+
+@media (max-width: 768px) {
+  .gcl-leaderboard-header,
+  .gcl-leaderboard-row {
+    grid-template-columns: 55px minmax(140px, 1.8fr) 95px 1.1fr 1.1fr;
+    padding: 0.75rem 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .gcl-leaderboard-header {
+    display: none;
+  }
+  .gcl-leaderboard-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 1rem;
+  }
+}
+
+
 
 

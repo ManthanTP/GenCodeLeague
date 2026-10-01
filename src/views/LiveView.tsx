@@ -27,7 +27,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA } from '../data/roundsData';
-import type { PastRoundSnapshot } from '../types/database';
+import type { PastRoundSnapshot, LeaderboardRevealEntry } from '../types/database';
 
 export default function LiveView() {
   const navigate = useNavigate();
@@ -70,18 +70,22 @@ export default function LiveView() {
   );
 
   // Parse past rounds & podium state from event_state.banner_message
-  const { pastRounds, podiumState } = useMemo(() => {
+  const { pastRounds, podiumState, bannerReveals } = useMemo(() => {
     let past: PastRoundSnapshot[] = [];
     let podium = {
       thirdTeamId: null as string | null,
+      thirdTeamName: null as string | null,
       thirdRevealed: false,
       secondTeamId: null as string | null,
+      secondTeamName: null as string | null,
       secondRevealed: false,
       firstTeamId: null as string | null,
+      firstTeamName: null as string | null,
       firstRevealed: false,
     };
+    let bReveals: LeaderboardRevealEntry[] = [];
 
-    if (!eventState?.banner_message) return { pastRounds: past, podiumState: podium };
+    if (!eventState?.banner_message) return { pastRounds: past, podiumState: podium, bannerReveals: bReveals };
     try {
       const parsed = JSON.parse(eventState.banner_message);
       if (Array.isArray(parsed)) {
@@ -92,12 +96,30 @@ export default function LiveView() {
         if (parsed.firstRevealed !== undefined || parsed.thirdRevealed !== undefined) {
           podium = { ...podium, ...parsed };
         }
+        if (Array.isArray(parsed.r1Reveals)) bReveals = parsed.r1Reveals;
       }
     } catch {
       // not json, return defaults
     }
-    return { pastRounds: past, podiumState: podium };
+    return { pastRounds: past, podiumState: podium, bannerReveals: bReveals };
   }, [eventState?.banner_message]);
+
+  // Resilient real-time reveal state across direct hook and broadcast banner_message
+  const effectiveReveals = useMemo(() => {
+    if (r1Reveals && r1Reveals.length > 0) {
+      if (bannerReveals && bannerReveals.length > 0) {
+        return r1Reveals.map((r) => {
+          const fromBanner = bannerReveals.find((br) => br.position === r.position);
+          if (fromBanner && fromBanner.is_revealed && !r.is_revealed) {
+            return fromBanner;
+          }
+          return r;
+        });
+      }
+      return r1Reveals;
+    }
+    return bannerReveals;
+  }, [r1Reveals, bannerReveals]);
 
   const currentRoundIndex = eventState?.current_round_index ?? 0;
 
@@ -443,107 +465,155 @@ export default function LiveView() {
         eventState?.round_state === 'LEADERBOARD_REVEAL' ||
         eventState?.round_state === 'LEADERBOARD_HIDDEN') && (
         <div className="live-page-container">
-          <div className="text-center mb-10">
+          <div className="text-center mb-8">
             <div className="inline-block mb-3">
               <span className="badge-official">ROUND 1 OFFICIAL STANDINGS</span>
             </div>
             <h1 className="champions-title">LEADERBOARD REVEAL</h1>
             <p
-              className="text-xl text-slate-400 font-mono uppercase tracking-widest gcl-display"
+              className="text-base sm:text-lg text-slate-400 font-mono uppercase tracking-widest gcl-display"
               style={{ letterSpacing: '0.2em' }}
             >
-              ROUND 1 FINAL POSITIONS
+              ROUND 1 FINAL POSITIONS (REVEALING FROM BOTTOM TO TOP)
             </p>
           </div>
 
           <div className="max-w-5xl w-full mx-auto px-2">
-            <div className="gcl-table-container">
-              <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                <div className="col-span-2 sm:col-span-1">POS</div>
-                <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
-                <div className="col-span-2 text-center">TOTAL ITEMS</div>
-                <div className="col-span-2 text-right">TOTAL SPENT</div>
-                <div className="col-span-2 text-right">REMAINING</div>
+            <div className="gcl-table-card">
+              <div className="gcl-leaderboard-header">
+                <div>POS</div>
+                <div>TEAM NAME</div>
+                <div className="text-center">TOTAL ITEMS</div>
+                <div className="text-right">TOTAL SPENT</div>
+                <div className="text-right">REMAINING</div>
               </div>
 
-              <div className="space-y-2 p-2">
-                {Array.from({ length: Math.max(teams.length, r1Reveals.length) }, (_, i) => {
-                  const position = i + 1;
-                  const reveal = r1Reveals.find((r) => r.position === position);
-                  const isRevealed = Boolean(reveal?.is_revealed);
-                  const isMyTeam = isRevealed && reveal?.team_id === myTeamId;
-                  const teamObj = teams.find((t) => t.id === reveal?.team_id);
-                  const teamItems = items.filter((it) => it.team_id === reveal?.team_id && it.round_index === 0);
-                  const r1ItemsCount = teamItems.length;
-                  const r1Spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-                  const r1Remaining = teamObj?.budget ?? (edition?.starting_budget || 50000000) - r1Spent;
+              <div className="space-y-2">
+                {(() => {
+                  const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
+                  const totalCount = Math.max(
+                    teams.length,
+                    effectiveReveals.length,
+                    r1Snapshot?.results?.length || 0
+                  );
 
-                  return (
-                    <div
-                      key={position}
-                      className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl transition-all duration-500 ${
-                        isRevealed
-                          ? isMyTeam
-                            ? 'bg-cyan-950/40 border border-cyan-500/60 shadow-lg'
-                            : 'bg-slate-900/90 border border-slate-800/80 shadow-md'
-                          : 'bg-slate-950/60 border border-dashed border-slate-800/60 opacity-60'
-                      }`}
-                    >
-                      <div className="col-span-2 sm:col-span-1">
-                        <span
-                          className={`font-mono text-xl sm:text-2xl font-black ${
-                            position === 1 && isRevealed
-                              ? 'text-yellow-400'
-                              : position === 2 && isRevealed
-                              ? 'text-slate-200'
-                              : position === 3 && isRevealed
-                              ? 'text-orange-400'
-                              : isRevealed
-                              ? 'text-cyan-400'
-                              : 'text-slate-600'
-                          }`}
+                  return Array.from({ length: totalCount }, (_, i) => {
+                    const position = i + 1;
+                    const reveal = effectiveReveals.find((r) => r.position === position);
+                    const isRevealed = Boolean(reveal?.is_revealed);
+                    const r1Result = r1Snapshot?.results?.[position - 1] || r1Snapshot?.results?.find((r) => r.id === reveal?.team_id);
+                    const teamObj = teams.find((t) => t.id === reveal?.team_id) || (r1Result?.id ? teams.find((t) => t.id === r1Result.id) : undefined);
+
+                    // Robust fallback for team name: never blank during reveal time
+                    const teamDisplayName =
+                      reveal?.team_name ||
+                      teamObj?.name ||
+                      r1Result?.name ||
+                      (isRevealed ? `Team ${position}` : '???');
+
+                    const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
+
+                    const teamItems = items.filter((it) => it.team_id === (reveal?.team_id || teamObj?.id || r1Result?.id) && it.round_index === 0);
+                    const r1ItemsCount = r1Result?.itemsCount ?? teamItems.length;
+                    const r1Spent = r1Result?.totalSpent ?? teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                    const r1Remaining = r1Result?.remainingBudget ?? (teamObj?.budget ?? Math.max(0, (edition?.starting_budget || 50000000) - r1Spent));
+
+                    if (!isRevealed) {
+                      return (
+                        <div
+                          key={position}
+                          className="gcl-leaderboard-row gcl-leaderboard-unrevealed"
                         >
-                          {String(position).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
-                        {isRevealed ? (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-extrabold text-white text-base sm:text-lg truncate">
-                              {reveal?.team_name}
-                            </span>
-                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                            {position === 1 && (
-                              <Crown size={18} className="text-yellow-400 shrink-0 animate-bounce" />
-                            )}
+                          <div className="flex items-center">
+                            <div className="gcl-pos-badge gcl-pos-muted opacity-60">
+                              ?
+                            </div>
                           </div>
-                        ) : (
-                          <span className="font-mono text-xl font-bold text-slate-600 tracking-widest">
-                            ???
-                          </span>
-                        )}
-                      </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm sm:text-base font-bold text-slate-500 tracking-widest flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-slate-600 animate-ping"></span>
+                              AWAITING REVEAL
+                            </span>
+                          </div>
+                          <div className="text-center font-mono text-slate-600 font-bold">
+                            —
+                          </div>
+                          <div className="text-right font-mono text-slate-600">
+                            —
+                          </div>
+                          <div className="text-right font-mono text-slate-600">
+                            —
+                          </div>
+                        </div>
+                      );
+                    }
 
-                      <div className="col-span-2 text-center font-mono">
-                        {isRevealed ? (
-                          <span className="badge-items-sm">
+                    return (
+                      <div
+                        key={position}
+                        className={`gcl-leaderboard-row animate-reveal-up ${
+                          position === 1
+                            ? 'gcl-leaderboard-champion'
+                            : position === 2
+                            ? 'gcl-leaderboard-runnerup'
+                            : position === 3
+                            ? 'gcl-leaderboard-third'
+                            : isMyTeam
+                            ? 'gcl-leaderboard-me'
+                            : ''
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <div
+                            className={`gcl-pos-badge ${
+                              position === 1
+                                ? 'gcl-pos-gold'
+                                : position === 2
+                                ? 'gcl-pos-silver'
+                                : position === 3
+                                ? 'gcl-pos-bronze'
+                                : isMyTeam
+                                ? 'gcl-pos-cyan'
+                                : 'gcl-pos-muted'
+                            }`}
+                          >
+                            {String(position).padStart(2, '0')}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                          {position === 1 && (
+                            <Crown size={22} className="text-yellow-400 shrink-0 animate-bounce" />
+                          )}
+                          {position === 2 && (
+                            <Medal size={20} className="text-slate-300 shrink-0" />
+                          )}
+                          {position === 3 && (
+                            <Medal size={20} className="text-orange-400 shrink-0" />
+                          )}
+                          <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
+                            {teamDisplayName}
+                          </span>
+                          {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                        </div>
+
+                        <div className="text-center">
+                          <span className="badge-items-sm font-mono">
                             {r1ItemsCount} {r1ItemsCount === 1 ? 'item' : 'items'}
                           </span>
-                        ) : (
-                          <span className="text-slate-600 font-bold">???</span>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
-                        {isRevealed ? formatCurrency(r1Spent) : <span className="text-slate-600">???</span>}
-                      </div>
+                        <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                          {formatCurrency(r1Spent)}
+                        </div>
 
-                      <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
-                        {isRevealed ? formatCurrency(r1Remaining) : <span className="text-slate-600">???</span>}
+                        <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                          {formatCurrency(r1Remaining)}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>
@@ -555,8 +625,8 @@ export default function LiveView() {
         <div className="live-centered-screen">
           {roundIdx === 1 ? (
             /* ROUND 2 INTERMISSION — PARTICIPATING TEAMS IN ALPHABETICAL ORDER ONLY */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
-              <div className="text-center mb-8">
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+              <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 2 COMPLETE</span>
                 </div>
@@ -564,16 +634,16 @@ export default function LiveView() {
                 <p className="intermission-subtitle">PREPARING FOR ROUND 3 — STAND BY...</p>
               </div>
 
-              <div className="gcl-table-container">
-                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                  <div className="col-span-2 sm:col-span-1">#</div>
-                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
-                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
-                  <div className="col-span-2 text-right">TOTAL SPENT</div>
-                  <div className="col-span-2 text-right">REMAINING</div>
+              <div className="gcl-table-card">
+                <div className="gcl-leaderboard-header">
+                  <div>#</div>
+                  <div>TEAM NAME</div>
+                  <div className="text-center">TOTAL ITEMS</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-1.5 p-2">
+                <div className="space-y-2">
                   {[...teams]
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
@@ -584,30 +654,28 @@ export default function LiveView() {
                       return (
                         <div
                           key={team.id}
-                          className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
-                            isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
-                          }`}
+                          className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
                         >
-                          <div className="col-span-2 sm:col-span-1">
-                            <span className="font-mono text-lg font-bold text-cyan-400">
+                          <div className="flex items-center">
+                            <div className="gcl-pos-badge gcl-pos-cyan text-sm">
                               {String(idx + 1).padStart(2, '0')}
-                            </span>
+                            </div>
                           </div>
-                          <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
-                            <span className="font-bold text-white text-base sm:text-lg truncate">
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
                               {team.name}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
-                          <div className="col-span-2 text-center font-mono">
-                            <span className="badge-items-sm">
+                          <div className="text-center">
+                            <span className="badge-items-sm font-mono">
                               {totalItems} {totalItems === 1 ? 'item' : 'items'}
                             </span>
                           </div>
-                          <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
                             {formatCurrency(totalSpent)}
                           </div>
-                          <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
                             {formatCurrency(team.budget)}
                           </div>
                         </div>
@@ -618,91 +686,117 @@ export default function LiveView() {
             </div>
           ) : roundIdx === 0 ? (
             /* ROUND 1 INTERMISSION — COMPLETED STANDINGS & BUDGET RESET NOTICE */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
-              <div className="text-center mb-8">
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+              <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 1 COMPLETE</span>
                 </div>
                 <h1 className="intermission-title">INTERMISSION</h1>
                 <p className="intermission-subtitle">ROUND 2 WILL START SOON — STAND BY...</p>
-                <div className="intermission-warning-banner">
-                  ⚠️ BUDGETS WILL RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
+                <div className="intermission-warning-banner mt-4">
+                  ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
                 </div>
               </div>
 
-              <div className="gcl-table-container">
-                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                  <div className="col-span-2 sm:col-span-1">POS</div>
-                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
-                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
-                  <div className="col-span-2 text-right">TOTAL SPENT</div>
-                  <div className="col-span-2 text-right">REMAINING</div>
+              <div className="gcl-table-card">
+                <div className="gcl-leaderboard-header">
+                  <div>POS</div>
+                  <div>TEAM NAME</div>
+                  <div className="text-center">TOTAL ITEMS</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-1.5 p-2">
-                  {Array.from({ length: Math.max(teams.length, r1Reveals.length) }, (_, i) => {
-                    const position = i + 1;
-                    const reveal = r1Reveals.find((r) => r.position === position);
-                    const teamObj = teams.find((t) => t.id === reveal?.team_id) || teams[i];
-                    const teamName = reveal?.team_name || teamObj?.name || 'Unknown Team';
-                    const isMyTeam = (reveal?.team_id || teamObj?.id) === myTeamId;
-                    const teamItems = items.filter((it) => it.team_id === (reveal?.team_id || teamObj?.id));
-                    const totalItems = teamItems.length;
-                    const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-                    const remaining = teamObj?.budget ?? 0;
+                <div className="space-y-2">
+                  {(() => {
+                    const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
+                    const sourceList = (r1Snapshot?.results && r1Snapshot.results.length > 0)
+                      ? r1Snapshot.results
+                      : teams;
 
-                    return (
-                      <div
-                        key={position}
-                        className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
-                          isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
-                        }`}
-                      >
-                        <div className="col-span-2 sm:col-span-1">
-                          <span
-                            className={`font-mono text-lg font-black ${
-                              position === 1
-                                ? 'text-yellow-400'
-                                : position === 2
-                                ? 'text-slate-200'
-                                : position === 3
-                                ? 'text-orange-400'
-                                : 'text-cyan-400'
-                            }`}
-                          >
-                            {String(position).padStart(2, '0')}
-                          </span>
+                    return sourceList.map((entry: any, i: number) => {
+                      const position = i + 1;
+                      const teamObj = teams.find((t) => t.id === entry.id) || entry;
+                      const teamName = entry.name || teamObj?.name || `Team ${position}`;
+                      const isMyTeam = (entry.id || teamObj?.id) === myTeamId;
+                      const teamItems = items.filter((it) => it.team_id === (entry.id || teamObj?.id) && it.round_index === 0);
+                      const itemsCount = entry.itemsCount ?? teamItems.length;
+                      const totalSpent = entry.totalSpent ?? teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                      const remaining = entry.remainingBudget ?? (teamObj?.budget ?? Math.max(0, (edition?.starting_budget || 50000000) - totalSpent));
+
+                      return (
+                        <div
+                          key={entry.id || position}
+                          className={`gcl-leaderboard-row ${
+                            position === 1
+                              ? 'gcl-leaderboard-champion'
+                              : position === 2
+                              ? 'gcl-leaderboard-runnerup'
+                              : position === 3
+                              ? 'gcl-leaderboard-third'
+                              : isMyTeam
+                              ? 'gcl-leaderboard-me'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div
+                              className={`gcl-pos-badge ${
+                                position === 1
+                                  ? 'gcl-pos-gold'
+                                  : position === 2
+                                  ? 'gcl-pos-silver'
+                                  : position === 3
+                                  ? 'gcl-pos-bronze'
+                                  : isMyTeam
+                                  ? 'gcl-pos-cyan'
+                                  : 'gcl-pos-muted'
+                              }`}
+                            >
+                              {String(position).padStart(2, '0')}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            {position === 1 && (
+                              <Crown size={22} className="text-yellow-400 shrink-0" />
+                            )}
+                            {position === 2 && (
+                              <Medal size={20} className="text-slate-300 shrink-0" />
+                            )}
+                            {position === 3 && (
+                              <Medal size={20} className="text-orange-400 shrink-0" />
+                            )}
+                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
+                              {teamName}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          </div>
+
+                          <div className="text-center">
+                            <span className="badge-items-sm font-mono">
+                              {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+
+                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                            {formatCurrency(totalSpent)}
+                          </div>
+
+                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                            {formatCurrency(remaining)}
+                          </div>
                         </div>
-                        <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
-                          <span className="font-bold text-white text-base sm:text-lg truncate">
-                            {teamName}
-                          </span>
-                          {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                          {position === 1 && (
-                            <Crown size={18} className="text-yellow-400 shrink-0" />
-                          )}
-                        </div>
-                        <div className="col-span-2 text-center font-mono">
-                          <span className="badge-items-sm">
-                            {totalItems} {totalItems === 1 ? 'item' : 'items'}
-                          </span>
-                        </div>
-                        <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
-                          {formatCurrency(totalSpent)}
-                        </div>
-                        <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
-                          {formatCurrency(remaining)}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
           ) : (
             /* AFTER ROUND 3 OR TIE BREAKER INTERMISSION */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
-              <div className="text-center mb-8">
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+              <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 3 COMPLETE</span>
                 </div>
@@ -712,16 +806,16 @@ export default function LiveView() {
                 <p className="intermission-subtitle">STAND BY...</p>
               </div>
 
-              <div className="gcl-table-container">
-                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                  <div className="col-span-2 sm:col-span-1">#</div>
-                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
-                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
-                  <div className="col-span-2 text-right">TOTAL SPENT</div>
-                  <div className="col-span-2 text-right">REMAINING</div>
+              <div className="gcl-table-card">
+                <div className="gcl-leaderboard-header">
+                  <div>#</div>
+                  <div>TEAM NAME</div>
+                  <div className="text-center">TOTAL ITEMS</div>
+                  <div className="text-right">TOTAL SPENT</div>
+                  <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-1.5 p-2">
+                <div className="space-y-2">
                   {[...teams]
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
@@ -732,30 +826,28 @@ export default function LiveView() {
                       return (
                         <div
                           key={team.id}
-                          className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
-                            isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
-                          }`}
+                          className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
                         >
-                          <div className="col-span-2 sm:col-span-1">
-                            <span className="font-mono text-lg font-bold text-cyan-400">
+                          <div className="flex items-center">
+                            <div className="gcl-pos-badge gcl-pos-cyan text-sm">
                               {String(idx + 1).padStart(2, '0')}
-                            </span>
+                            </div>
                           </div>
-                          <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
-                            <span className="font-bold text-white text-base sm:text-lg truncate">
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
                               {team.name}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
-                          <div className="col-span-2 text-center font-mono">
-                            <span className="badge-items-sm">
+                          <div className="text-center">
+                            <span className="badge-items-sm font-mono">
                               {totalItems} {totalItems === 1 ? 'item' : 'items'}
                             </span>
                           </div>
-                          <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
                             {formatCurrency(totalSpent)}
                           </div>
-                          <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
                             {formatCurrency(team.budget)}
                           </div>
                         </div>
@@ -781,18 +873,23 @@ export default function LiveView() {
           {/* Grand Champions Podium */}
           {(() => {
             const firstTeam = teams.find((t) => t.id === podiumState.firstTeamId);
+            const firstName = firstTeam?.name || (podiumState as any)?.firstTeamName || (podiumState.firstTeamId ? 'Champion' : '');
+
             const secondTeam = teams.find((t) => t.id === podiumState.secondTeamId);
+            const secondName = secondTeam?.name || (podiumState as any)?.secondTeamName || (podiumState.secondTeamId ? 'Runner-Up' : '');
+
             const thirdTeam = teams.find((t) => t.id === podiumState.thirdTeamId);
+            const thirdName = thirdTeam?.name || (podiumState as any)?.thirdTeamName || (podiumState.thirdTeamId ? '3rd Place' : '');
 
             return (
               <div className="podium-wrapper">
                 {/* 2nd Place Pedestal (Left) */}
                 <div className="podium-col order-2 md:order-1">
                   <div className="podium-badge mb-4">
-                    {podiumState.secondRevealed && secondTeam ? (
+                    {podiumState.secondRevealed && (secondTeam || secondName) ? (
                       <div className="animate-reveal-up">
                         <Medal size={56} className="text-slate-300 mx-auto mb-2" />
-                        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-100">{secondTeam.name}</h2>
+                        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-100">{secondName}</h2>
                       </div>
                     ) : (
                       <div>
@@ -809,10 +906,10 @@ export default function LiveView() {
                 {/* 1st Place Champion Pedestal (Middle) */}
                 <div className="podium-col order-1 md:order-2 scale-105 z-20">
                   <div className="podium-badge mb-6">
-                    {podiumState.firstRevealed && firstTeam ? (
+                    {podiumState.firstRevealed && (firstTeam || firstName) ? (
                       <div className="animate-reveal-up">
                         <Crown size={72} className="text-yellow-400 mx-auto mb-2 animate-bounce" />
-                        <h2 className="text-3xl md:text-4xl font-black text-yellow-300">{firstTeam.name}</h2>
+                        <h2 className="text-3xl md:text-4xl font-black text-yellow-300">{firstName}</h2>
                       </div>
                     ) : (
                       <div>
@@ -829,10 +926,10 @@ export default function LiveView() {
                 {/* 3rd Place Pedestal (Right) */}
                 <div className="podium-col order-3 md:order-3">
                   <div className="podium-badge mb-4">
-                    {podiumState.thirdRevealed && thirdTeam ? (
+                    {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
                       <div className="animate-reveal-up">
                         <Medal size={56} className="text-orange-400 mx-auto mb-2" />
-                        <h2 className="text-2xl md:text-3xl font-extrabold text-orange-200">{thirdTeam.name}</h2>
+                        <h2 className="text-2xl md:text-3xl font-extrabold text-orange-200">{thirdName}</h2>
                       </div>
                     ) : (
                       <div>
@@ -869,9 +966,15 @@ export default function LiveView() {
               {/* Rows */}
               <div className="space-y-1">
                 {overallStats.map((team) => {
-                  const isGrandChampion = team.id === podiumState.firstTeamId && podiumState.firstRevealed;
-                  const isRunnerUp = team.id === podiumState.secondTeamId && podiumState.secondRevealed;
-                  const isThirdPlace = team.id === podiumState.thirdTeamId && podiumState.thirdRevealed;
+                  const isGrandChampion =
+                    ((team.id === podiumState.firstTeamId || team.name === (podiumState as any)?.firstTeamName) &&
+                    podiumState.firstRevealed);
+                  const isRunnerUp =
+                    ((team.id === podiumState.secondTeamId || team.name === (podiumState as any)?.secondTeamName) &&
+                    podiumState.secondRevealed);
+                  const isThirdPlace =
+                    ((team.id === podiumState.thirdTeamId || team.name === (podiumState as any)?.thirdTeamName) &&
+                    podiumState.thirdRevealed);
                   const isOutOfBudget = team.totalRemaining <= 0;
                   const isMyTeam = team.id === myTeamId;
 

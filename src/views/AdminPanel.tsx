@@ -130,10 +130,13 @@ export default function AdminPanel() {
   // Podium Management State (matches Old GCL Admin UI)
   const [podiumState, setPodiumState] = useState({
     thirdTeamId: null as string | null,
+    thirdTeamName: null as string | null,
     thirdRevealed: false,
     secondTeamId: null as string | null,
+    secondTeamName: null as string | null,
     secondRevealed: false,
     firstTeamId: null as string | null,
+    firstTeamName: null as string | null,
     firstRevealed: false,
   });
 
@@ -178,10 +181,13 @@ export default function AdminPanel() {
     if (!eventState?.banner_message) {
       setPodiumState({
         thirdTeamId: null,
+        thirdTeamName: null,
         thirdRevealed: false,
         secondTeamId: null,
+        secondTeamName: null,
         secondRevealed: false,
         firstTeamId: null,
+        firstTeamName: null,
         firstRevealed: false,
       });
       return;
@@ -192,10 +198,13 @@ export default function AdminPanel() {
         if (parsed.podium) {
           setPodiumState({
             thirdTeamId: parsed.podium.thirdTeamId || null,
+            thirdTeamName: parsed.podium.thirdTeamName || null,
             thirdRevealed: Boolean(parsed.podium.thirdRevealed),
             secondTeamId: parsed.podium.secondTeamId || null,
+            secondTeamName: parsed.podium.secondTeamName || null,
             secondRevealed: Boolean(parsed.podium.secondRevealed),
             firstTeamId: parsed.podium.firstTeamId || null,
+            firstTeamName: parsed.podium.firstTeamName || null,
             firstRevealed: Boolean(parsed.podium.firstRevealed),
           });
         } else if (parsed.firstRevealed !== undefined || parsed.thirdRevealed !== undefined) {
@@ -203,10 +212,13 @@ export default function AdminPanel() {
         } else {
           setPodiumState({
             thirdTeamId: null,
+            thirdTeamName: null,
             thirdRevealed: false,
             secondTeamId: null,
+            secondTeamName: null,
             secondRevealed: false,
             firstTeamId: null,
+            firstTeamName: null,
             firstRevealed: false,
           });
         }
@@ -214,10 +226,13 @@ export default function AdminPanel() {
     } catch {
       setPodiumState({
         thirdTeamId: null,
+        thirdTeamName: null,
         thirdRevealed: false,
         secondTeamId: null,
+        secondTeamName: null,
         secondRevealed: false,
         firstTeamId: null,
+        firstTeamName: null,
         firstRevealed: false,
       });
     }
@@ -686,6 +701,7 @@ export default function AdminPanel() {
     const payload = {
       pastRounds: updatedPastRounds,
       podium: podiumState,
+      r1Reveals: revealRows,
     };
 
     const nextState: Partial<EventState> = {
@@ -756,6 +772,30 @@ export default function AdminPanel() {
         position: targetPosition,
       })
       .then();
+
+    // Also persist into event_state.banner_message so all live screens get immediate real-time sync
+    let existingPastRounds: PastRoundSnapshot[] = [];
+    let existingPodium = podiumState;
+    try {
+      if (eventState.banner_message) {
+        const parsed = JSON.parse(eventState.banner_message);
+        if (Array.isArray(parsed)) existingPastRounds = parsed;
+        else if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.pastRounds)) existingPastRounds = parsed.pastRounds;
+          if (parsed.podium) existingPodium = parsed.podium;
+        }
+      }
+    } catch {}
+
+    const payload = {
+      pastRounds: existingPastRounds,
+      podium: existingPodium,
+      r1Reveals: updatedReveals,
+    };
+    const bannerMsg = JSON.stringify(payload);
+    supabase.from('event_state').update({ banner_message: bannerMsg, updated_at: new Date().toISOString() }).eq('id', eventState.id).then();
+    setEventState((prev) => (prev ? { ...prev, banner_message: bannerMsg } : null));
+    broadcastStateChange({ banner_message: bannerMsg });
 
     showNotification(
       `Position ${formatOrdinal(targetPosition)} (${chosenTeam.name}) REVEALED on live screen!`,
@@ -1223,12 +1263,19 @@ export default function AdminPanel() {
     const sorted = [...teamsWithStats].sort(
       (a, b) => (b.score || 0) - (a.score || 0) || b.budget - a.budget
     );
+    const firstTeam = teamsWithStats.find(t => t.id === (podiumState.firstTeamId || sorted[0]?.id));
+    const secondTeam = teamsWithStats.find(t => t.id === (podiumState.secondTeamId || sorted[1]?.id));
+    const thirdTeam = teamsWithStats.find(t => t.id === (podiumState.thirdTeamId || sorted[2]?.id));
+
     const initialPodium = {
-      thirdTeamId: podiumState.thirdTeamId || sorted[2]?.id || null,
+      thirdTeamId: thirdTeam?.id || null,
+      thirdTeamName: thirdTeam?.name || null,
       thirdRevealed: Boolean(podiumState.thirdRevealed),
-      secondTeamId: podiumState.secondTeamId || sorted[1]?.id || null,
+      secondTeamId: secondTeam?.id || null,
+      secondTeamName: secondTeam?.name || null,
       secondRevealed: Boolean(podiumState.secondRevealed),
-      firstTeamId: podiumState.firstTeamId || sorted[0]?.id || null,
+      firstTeamId: firstTeam?.id || null,
+      firstTeamName: firstTeam?.name || null,
       firstRevealed: Boolean(podiumState.firstRevealed),
     };
     setPodiumState(initialPodium);
@@ -1264,9 +1311,11 @@ export default function AdminPanel() {
   };
 
   const updatePodiumTeam = (place: 'third' | 'second' | 'first', teamId: string) => {
+    const teamObj = teams.find((t) => t.id === teamId);
     const updated = {
       ...podiumState,
       [`${place}TeamId`]: teamId || null,
+      [`${place}TeamName`]: teamObj?.name || null,
     };
     setPodiumState(updated);
     savePodiumState(updated);
@@ -1301,10 +1350,13 @@ export default function AdminPanel() {
   const handleResetPodium = () => {
     const updated = {
       thirdTeamId: null,
+      thirdTeamName: null,
       thirdRevealed: false,
       secondTeamId: null,
+      secondTeamName: null,
       secondRevealed: false,
       firstTeamId: null,
+      firstTeamName: null,
       firstRevealed: false,
     };
     setPodiumState(updated);
@@ -1315,17 +1367,20 @@ export default function AdminPanel() {
   const savePodiumState = (newPodium: typeof podiumState) => {
     if (!eventState?.id) return;
     let existingPastRounds: PastRoundSnapshot[] = [];
+    let existingR1Reveals: any[] = [];
     try {
       if (eventState.banner_message) {
         const parsed = JSON.parse(eventState.banner_message);
         if (Array.isArray(parsed)) existingPastRounds = parsed;
         else if (Array.isArray(parsed?.pastRounds)) existingPastRounds = parsed.pastRounds;
+        if (Array.isArray(parsed?.r1Reveals)) existingR1Reveals = parsed.r1Reveals;
       }
     } catch {}
 
     const payload = {
       pastRounds: existingPastRounds,
       podium: newPodium,
+      r1Reveals: existingR1Reveals,
     };
 
     const nextState = { banner_message: JSON.stringify(payload) };
@@ -1716,10 +1771,13 @@ export default function AdminPanel() {
 
     const resetPodium = {
       thirdTeamId: null,
+      thirdTeamName: null,
       thirdRevealed: false,
       secondTeamId: null,
+      secondTeamName: null,
       secondRevealed: false,
       firstTeamId: null,
+      firstTeamName: null,
       firstRevealed: false,
     };
     setPodiumState(resetPodium);
@@ -3041,7 +3099,7 @@ export default function AdminPanel() {
                           ))}
                         </select>
                         <p className="text-xs text-slate-500">
-                          Calculated rank team: <strong className="text-slate-400">{nextTarget.team_name}</strong>
+                          Calculated rank team: <strong className="text-slate-400">{nextTarget.team_name || teams.find(t => t.id === nextTarget.team_id)?.name || 'Unknown'}</strong>
                         </p>
                       </div>
 
