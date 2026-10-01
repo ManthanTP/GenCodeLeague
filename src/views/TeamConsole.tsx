@@ -4,6 +4,7 @@ import { Users, Wallet, Trophy, Hammer, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
+import { useTeamItems } from '../hooks/useTeamItems';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import LiveTeamStatus from '../components/LiveTeamStatus';
@@ -13,6 +14,7 @@ export default function TeamConsole() {
   const { profile, loading: authLoading } = useAuth();
   const { eventState, edition, loading: stateLoading } = useEventState();
   const { teams } = useTeams(edition?.id);
+  const { items } = useTeamItems(edition?.id);
   const navigate = useNavigate();
 
   const [itemsCount, setItemsCount] = useState(0);
@@ -151,7 +153,7 @@ export default function TeamConsole() {
           </div>
         )}
 
-        <LiveTeamStatus teams={teams} startingBudget={edition.starting_budget} myTeamId={myTeam.id} />
+        <LiveTeamStatus teams={teams} startingBudget={edition.starting_budget} myTeamId={myTeam.id} items={items} />
       </div>
     </div>
   );

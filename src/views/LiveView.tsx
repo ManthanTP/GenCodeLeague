@@ -144,16 +144,12 @@ export default function LiveView() {
 
   // Overall Stats across ALL rounds combined (Sorted strictly A to Z, not rank)
   const overallStats = useMemo(() => {
-    const standardBudget = edition?.starting_budget || 50000000;
-    const roundsCount = Math.max(1, currentRoundIndex + 1);
-
     return teams.map((team) => {
       const allTeamItems = items.filter((it) => it.team_id === team.id);
       const totalScore = team.score || 0;
       const totalItems = allTeamItems.length;
       const totalSpent = allTeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-      const totalAllocated = roundsCount * standardBudget;
-      const totalRemaining = Math.max(0, totalAllocated - totalSpent);
+      const totalRemaining = team.budget;
 
       return {
         ...team,
@@ -163,7 +159,7 @@ export default function LiveView() {
         totalRemaining,
       };
     }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }, [teams, items, edition?.starting_budget, currentRoundIndex]);
+  }, [teams, items]);
 
   // Sorted teams for dropdown selects (A to Z)
   const sortedTeamsDropdown = useMemo(() => {
@@ -648,9 +644,14 @@ export default function LiveView() {
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
                       const isMyTeam = team.id === myTeamId;
-                      const teamItems = items.filter((it) => it.team_id === team.id);
+                      const teamItems = items.filter((it) => it.team_id === team.id && it.round_index === 1);
                       const totalItems = teamItems.length;
                       const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                      const startingBudget = edition?.starting_budget || 50000000;
+                      const r2Remaining = Math.max(0, startingBudget - totalSpent);
+                      const r3Budget = startingBudget + r2Remaining;
+                      const displayRemaining = team.budget > startingBudget ? team.budget : (eventState?.round_state === 'NEXT_ROUND_READY' ? r3Budget : team.budget);
+
                       return (
                         <div
                           key={team.id}
@@ -676,7 +677,7 @@ export default function LiveView() {
                             {formatCurrency(totalSpent)}
                           </div>
                           <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
-                            {formatCurrency(team.budget)}
+                            {formatCurrency(displayRemaining)}
                           </div>
                         </div>
                       );
@@ -820,7 +821,7 @@ export default function LiveView() {
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
                       const isMyTeam = team.id === myTeamId;
-                      const teamItems = items.filter((it) => it.team_id === team.id);
+                      const teamItems = items.filter((it) => it.team_id === team.id && it.round_index === 2);
                       const totalItems = teamItems.length;
                       const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
                       return (

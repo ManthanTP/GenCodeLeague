@@ -1,18 +1,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { LeaderboardRevealEntry } from '../types/database';
-import { syncChannel } from './useEventState';
 
-const CACHE_KEY_LEADERBOARD_REVEAL = 'gcl_cached_leaderboard_reveal';
+export function getLeaderboardRevealCacheKey(editionId?: string, roundIndex: number = 0) {
+  return editionId ? `gcl_cached_reveals_${editionId}_${roundIndex}` : `gcl_cached_reveals_${roundIndex}`;
+}
 
-export function broadcastLeaderboardRevealChange(reveals: LeaderboardRevealEntry[]) {
+export function broadcastLeaderboardRevealChange(reveals: LeaderboardRevealEntry[], editionId?: string, roundIndex: number = 0) {
   try {
-    localStorage.setItem(CACHE_KEY_LEADERBOARD_REVEAL, JSON.stringify(reveals));
+    const key = getLeaderboardRevealCacheKey(editionId || reveals[0]?.edition_id, roundIndex);
+    localStorage.setItem(key, JSON.stringify(reveals));
+    localStorage.setItem('gcl_cached_leaderboard_reveal', JSON.stringify(reveals));
   } catch (err) {
     console.warn('Failed to cache leaderboard reveal to localStorage:', err);
   }
 
-  syncChannel.send({
+  const ch = supabase.channel('auction-broadcast-sync');
+  ch.send({
     type: 'broadcast',
     event: 'LEADERBOARD_REVEAL_CHANGED',
     payload: reveals,
@@ -22,7 +26,8 @@ export function broadcastLeaderboardRevealChange(reveals: LeaderboardRevealEntry
 export function useLeaderboardReveal(editionId: string | undefined, roundIndex: number = 0) {
   const [reveals, setReveals] = useState<LeaderboardRevealEntry[]>(() => {
     try {
-      const cached = localStorage.getItem(CACHE_KEY_LEADERBOARD_REVEAL);
+      const key = getLeaderboardRevealCacheKey(editionId, roundIndex);
+      const cached = localStorage.getItem(key) || localStorage.getItem('gcl_cached_leaderboard_reveal');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
@@ -49,10 +54,11 @@ export function useLeaderboardReveal(editionId: string | undefined, roundIndex: 
 
     if (error) {
       console.warn('Error loading leaderboard reveals:', error.message);
-    } else if (data) {
-      setReveals(data as LeaderboardRevealEntry[]);
+    } else {
+      const safeData = data || [];
+      setReveals(safeData as LeaderboardRevealEntry[]);
       try {
-        localStorage.setItem(CACHE_KEY_LEADERBOARD_REVEAL, JSON.stringify(data));
+        localStorage.setItem(getLeaderboardRevealCacheKey(editionId, roundIndex), JSON.stringify(safeData));
       } catch {}
     }
     setLoading(false);
@@ -62,8 +68,9 @@ export function useLeaderboardReveal(editionId: string | undefined, roundIndex: 
     if (!editionId) return;
     loadReveals();
 
+    const channelName = `reveals-${editionId}-${roundIndex}-${Math.random().toString(36).slice(2, 7)}`;
     const channel = supabase
-      .channel(`leaderboard-reveals-${editionId}-${roundIndex}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -76,23 +83,34 @@ export function useLeaderboardReveal(editionId: string | undefined, roundIndex: 
           loadReveals();
         }
       )
+      .on('broadcast', { event: 'LEADERBOARD_REVEAL_CHANGED' }, (payload) => {
+        if (payload?.payload && Array.isArray(payload.payload)) {
+          const matching = payload.payload.filter(
+            (r: LeaderboardRevealEntry) => r.round_index === roundIndex
+          );
+          setReveals(matching);
+          try {
+            localStorage.setItem(getLeaderboardRevealCacheKey(editionId, roundIndex), JSON.stringify(matching));
+          } catch {}
+        }
+      })
       .subscribe();
 
-    const broadcastListener = syncChannel.on('broadcast', { event: 'LEADERBOARD_REVEAL_CHANGED' }, (payload) => {
-      if (payload?.payload && Array.isArray(payload.payload)) {
-        const matching = payload.payload.filter(
-          (r: LeaderboardRevealEntry) => r.round_index === roundIndex
-        );
-        setReveals(matching);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === getLeaderboardRevealCacheKey(editionId, roundIndex) && e.newValue) {
         try {
-          localStorage.setItem(CACHE_KEY_LEADERBOARD_REVEAL, JSON.stringify(payload.payload));
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setReveals(parsed);
+          }
         } catch {}
       }
-    });
+    };
+    window.addEventListener('storage', handleStorage);
 
     return () => {
+      window.removeEventListener('storage', handleStorage);
       supabase.removeChannel(channel);
-      broadcastListener.unsubscribe();
     };
   }, [editionId, roundIndex, loadReveals]);
 

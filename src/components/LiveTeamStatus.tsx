@@ -42,8 +42,7 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId, items 
             sortedTeams.map((team) => {
               const teamItems = items.filter((it) => it.team_id === team.id);
               const itemsCount = teamItems.length;
-              const calculatedSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-              const spent = calculatedSpent > 0 ? calculatedSpent : Math.max(0, startingBudget - team.budget);
+              const spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
               const isOutOfBudget = team.budget <= 0;
               const isLowBudget = !isOutOfBudget && team.budget <= 5000000;
               const isMyTeam = team.id === myTeamId;

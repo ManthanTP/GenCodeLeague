@@ -161,6 +161,7 @@ export default function AdminPanel() {
   // Debouncing refs for question typing to prevent websocket echo glitches
   const isTypingQuestionRef = useRef(false);
   const questionDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const teamNameDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Update budgetInput when edition loads
   useEffect(() => {
@@ -384,10 +385,18 @@ export default function AdminPanel() {
         const totalSpent = roundItems.reduce((acc, it) => acc + (it.cost || 0), 0);
         // If snapshot has recorded remainingBudget, check if available
         const snapTeam = snap?.results?.find((r) => r.id === team.id);
+        let roundAllocated = standardBudget;
+        if (rIdx === 2) {
+          // Round 3 budget: Starting Budget + Round 2 Remaining Budget
+          const r2Spent = items
+            .filter((it) => it.team_id === team.id && it.round_index === 1)
+            .reduce((acc, it) => acc + (it.cost || 0), 0);
+          roundAllocated = standardBudget + Math.max(0, standardBudget - r2Spent);
+        }
         const remainingBudget =
           snapTeam && typeof snapTeam.remainingBudget === 'number'
             ? snapTeam.remainingBudget
-            : Math.max(0, standardBudget - totalSpent);
+            : (currentRoundIndex === rIdx ? team.budget : Math.max(0, roundAllocated - totalSpent));
 
         return {
           id: team.id,
@@ -466,10 +475,12 @@ export default function AdminPanel() {
       if (eventState?.game_state === 'setup') {
         const updatedTeams = teams.map((t) => ({ ...t, budget: val }));
         setTeams(updatedTeams);
-        broadcastTeamsChange(updatedTeams);
-        for (const t of updatedTeams) {
-          supabase.from('teams').update({ budget: val }).eq('id', t.id).then();
-        }
+        broadcastTeamsChange(updatedTeams, edition.id);
+        await Promise.all(
+          updatedTeams.map((t) =>
+            supabase.from('teams').update({ budget: val }).eq('id', t.id)
+          )
+        );
       }
       showNotification(`Starting budget updated to ${formatCurrency(val)}`, 'success');
       addHistory('Budget Updated', `Starting budget set to ${formatCurrency(val)}`);
@@ -481,8 +492,9 @@ export default function AdminPanel() {
     if (!newTeamName.trim() || !edition?.id) return;
 
     const initialBudget = parseInt(budgetInput) || edition.starting_budget || 50000000;
+    const newTeamId = crypto.randomUUID();
     const newTeamObj: Team = {
-      id: 'team_' + Date.now(),
+      id: newTeamId,
       edition_id: edition.id,
       name: newTeamName.trim(),
       budget: initialBudget,
@@ -494,28 +506,55 @@ export default function AdminPanel() {
 
     const updated = [...teams, newTeamObj];
     setTeams(updated);
-    broadcastTeamsChange(updated);
+    broadcastTeamsChange(updated, edition.id);
     setNewTeamName('');
     showNotification(`Team "${newTeamName.trim()}" added!`, 'success');
     addHistory('Team Added', `Team "${newTeamName.trim()}" registered.`);
 
-    supabase
+    const { error } = await supabase
       .from('teams')
       .insert({
+        id: newTeamObj.id,
         edition_id: edition.id,
         name: newTeamObj.name,
         budget: newTeamObj.budget,
         score: 0,
         sort_order: newTeamObj.sort_order,
-      })
-      .then();
+      });
+
+    if (error) {
+      console.error('Error inserting team:', error);
+      showNotification(`Failed to save team: ${error.message}`, 'error');
+    }
   };
 
-  const handleTeamNameChange = async (teamId: string, newName: string) => {
+  const handleTeamNameChange = (teamId: string, newName: string) => {
+    // 1. Immediately update local state so user's typing never lags or flickers
     const updated = teams.map((t) => (t.id === teamId ? { ...t, name: newName } : t));
     setTeams(updated);
-    broadcastTeamsChange(updated);
-    supabase.from('teams').update({ name: newName }).eq('id', teamId).then();
+
+    // 2. Debounce database update and broadcast
+    if (teamNameDebounceTimers.current[teamId]) {
+      clearTimeout(teamNameDebounceTimers.current[teamId]);
+    }
+
+    teamNameDebounceTimers.current[teamId] = setTimeout(async () => {
+      broadcastTeamsChange(updated, edition?.id);
+      await supabase.from('teams').update({ name: newName.trim() }).eq('id', teamId);
+    }, 400);
+  };
+
+  const handleTeamNameBlur = async (teamId: string) => {
+    if (teamNameDebounceTimers.current[teamId]) {
+      clearTimeout(teamNameDebounceTimers.current[teamId]);
+    }
+    const currentTeam = teams.find((t) => t.id === teamId);
+    if (!currentTeam) return;
+    const finalName = currentTeam.name.trim();
+    const updated = teams.map((t) => (t.id === teamId ? { ...t, name: finalName } : t));
+    setTeams(updated);
+    broadcastTeamsChange(updated, edition?.id);
+    await supabase.from('teams').update({ name: finalName }).eq('id', teamId);
   };
 
   const handleConfirmTeamRename = async () => {
@@ -528,8 +567,8 @@ export default function AdminPanel() {
     }
     const updated = teams.map((t) => (t.id === id ? { ...t, name: newName.trim() } : t));
     setTeams(updated);
-    broadcastTeamsChange(updated);
-    supabase.from('teams').update({ name: newName.trim() }).eq('id', id).then();
+    broadcastTeamsChange(updated, edition?.id);
+    await supabase.from('teams').update({ name: newName.trim() }).eq('id', id);
     showNotification(`Team renamed to "${newName.trim()}"!`, 'success');
     addHistory('Team Renamed', `Renamed "${oldName}" to "${newName.trim()}".`);
     setEditingTeamNames((prev) => {
@@ -544,10 +583,15 @@ export default function AdminPanel() {
     if (!teamToRemove) return;
     const updated = teams.filter((t) => t.id !== teamToRemove.id);
     setTeams(updated);
-    broadcastTeamsChange(updated);
-    supabase.from('teams').delete().eq('id', teamToRemove.id).then();
-    showNotification(`Team ${teamToRemove.name} removed!`, 'success');
-    addHistory('Team Removed', `${teamToRemove.name} was removed.`);
+    broadcastTeamsChange(updated, edition?.id);
+    const { error } = await supabase.from('teams').delete().eq('id', teamToRemove.id);
+    if (error) {
+      console.error('Error removing team:', error);
+      showNotification(`Failed to remove team: ${error.message}`, 'error');
+    } else {
+      showNotification(`Team ${teamToRemove.name} removed!`, 'success');
+      addHistory('Team Removed', `${teamToRemove.name} was removed.`);
+    }
     setTeamToRemove(null);
   };
 
@@ -562,12 +606,12 @@ export default function AdminPanel() {
     const targetBudget = parseInt(budgetInput) || edition?.starting_budget || 50000000;
     if (edition?.id) {
       setEdition((prev) => (prev ? { ...prev, starting_budget: targetBudget } : null));
-      supabase.from('editions').update({ starting_budget: targetBudget }).eq('id', edition.id).then();
+      await supabase.from('editions').update({ starting_budget: targetBudget }).eq('id', edition.id);
     }
 
     const resetTeams = teams.map((t) => ({ ...t, budget: targetBudget, score: 0 }));
     setTeams(resetTeams);
-    broadcastTeamsChange(resetTeams);
+    broadcastTeamsChange(resetTeams, edition?.id);
 
     const nextState: Partial<EventState> = {
       game_state: 'waiting_start',
@@ -590,10 +634,12 @@ export default function AdminPanel() {
     showNotification('Auction Initialized! Live screen is in Starting Soon mode.', 'success');
     addHistory('Event Initialized', 'Auction setup complete. Waiting for Round 1.');
 
-    for (const team of resetTeams) {
-      supabase.from('teams').update({ budget: targetBudget, score: 0 }).eq('id', team.id).then();
-    }
-    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+    await Promise.all(
+      resetTeams.map((team) =>
+        supabase.from('teams').update({ budget: targetBudget, score: 0 }).eq('id', team.id)
+      )
+    );
+    await supabase.from('event_state').update(nextState).eq('id', eventState.id);
   };
 
   const handleItemNameChange = (text: string) => {
@@ -962,12 +1008,15 @@ export default function AdminPanel() {
 
       // Calculate: Round 3 Budget = Starting Budget + Round 2 Remaining Budget
       const calculations = teams.map((team) => {
-        const r2Remaining = team.budget;
+        const r2Items = items.filter((it) => it.team_id === team.id && it.round_index === 1);
+        const r2Spent = r2Items.reduce((acc, it) => acc + (it.cost || 0), 0);
+        const r2Remaining = Math.max(0, startingBudget - r2Spent);
         const r3Budget = startingBudget + r2Remaining;
         return {
           teamId: team.id,
           teamName: team.name,
           startingBudget,
+          r2Spent,
           r2Remaining,
           r3Budget,
         };
@@ -983,14 +1032,16 @@ export default function AdminPanel() {
       });
 
       setTeams(updatedTeams);
-      broadcastTeamsChange(updatedTeams);
+      broadcastTeamsChange(updatedTeams, edition.id);
 
-      for (const t of updatedTeams) {
-        supabase.from('teams').update({ budget: t.budget }).eq('id', t.id).then();
-      }
+      await Promise.all(
+        updatedTeams.map((t) =>
+          supabase.from('teams').update({ budget: t.budget }).eq('id', t.id)
+        )
+      );
 
       // Insert audit record
-      supabase.from('audit_log').insert({
+      await supabase.from('audit_log').insert({
         admin_id: 'admin',
         action: 'ROUND_3_BUDGET_CALCULATION',
         details: {
@@ -999,7 +1050,7 @@ export default function AdminPanel() {
           calculations,
           confirmed_at: new Date().toISOString(),
         },
-      }).then();
+      });
 
       addHistory(
         'Round 3 Budgets Confirmed',
@@ -1014,9 +1065,12 @@ export default function AdminPanel() {
       };
       setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
       broadcastStateChange(nextState);
-      supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+      await supabase.from('event_state').update(nextState).eq('id', eventState.id);
 
       showNotification('Round 3 Budgets Confirmed! Ready to Start Round 3.', 'success');
+    } catch (err: any) {
+      console.error('Error confirming Round 3 budgets:', err);
+      showNotification(`Failed to confirm Round 3 budgets: ${err?.message || 'Error'}`, 'error');
     } finally {
       setIsConfirmingR3Budgets(false);
     }
@@ -1024,7 +1078,30 @@ export default function AdminPanel() {
 
   // 7. Start Round 3 with confirmed budgets
   const handleStartRound3 = async () => {
-    if (!eventState?.id) return;
+    if (!eventState?.id || !edition?.id) return;
+    const startingBudget = edition.starting_budget || 50000000;
+
+    // Safety guarantee: Ensure Round 3 budgets have Round 2 carryover applied
+    const updatedTeams = teams.map((team) => {
+      const r2Items = items.filter((it) => it.team_id === team.id && it.round_index === 1);
+      const r2Spent = r2Items.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const r2Remaining = Math.max(0, startingBudget - r2Spent);
+      const r3Budget = startingBudget + r2Remaining;
+      return {
+        ...team,
+        budget: r3Budget,
+      };
+    });
+
+    setTeams(updatedTeams);
+    broadcastTeamsChange(updatedTeams, edition.id);
+
+    await Promise.all(
+      updatedTeams.map((t) =>
+        supabase.from('teams').update({ budget: t.budget }).eq('id', t.id)
+      )
+    );
+
     const roundData = DEFAULT_ROUNDS_DATA[2] || { name: 'Round 3', questions: [] };
     const firstQ = roundData.questions[0] || '';
 
@@ -1046,7 +1123,7 @@ export default function AdminPanel() {
     setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
     setCurrentItem(firstQ);
     broadcastStateChange(nextState);
-    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+    await supabase.from('event_state').update(nextState).eq('id', eventState.id);
 
     showNotification('Round 3 has officially started with confirmed budgets!', 'success');
     addHistory('Round 3 Started', 'Round 3 auction begins.');
@@ -1627,12 +1704,13 @@ export default function AdminPanel() {
       t.id === winningTeam.id ? { ...t, budget: newBudget, score: newScore } : t
     );
     setTeams(updatedTeams);
-    broadcastTeamsChange(updatedTeams);
-    supabase.from('teams').update({ budget: newBudget, score: newScore }).eq('id', winningTeam.id).then();
+    broadcastTeamsChange(updatedTeams, edition.id);
+    await supabase.from('teams').update({ budget: newBudget, score: newScore }).eq('id', winningTeam.id);
 
     // 2. Insert into team_items locally & sync
+    const newItemId = crypto.randomUUID();
     const newItem: TeamItem = {
-      id: 'item_' + Date.now(),
+      id: newItemId,
       edition_id: edition.id,
       team_id: winningTeam.id,
       item_name: currentItem,
@@ -1645,8 +1723,9 @@ export default function AdminPanel() {
     };
     const updatedItems = [newItem, ...items];
     setItems(updatedItems);
-    broadcastItemsChange(updatedItems);
-    supabase.from('team_items').insert({
+    broadcastItemsChange(updatedItems, edition.id);
+    await supabase.from('team_items').insert({
+      id: newItemId,
       edition_id: edition.id,
       team_id: winningTeam.id,
       item_name: currentItem,
@@ -1655,7 +1734,7 @@ export default function AdminPanel() {
       round_index: rIdx,
       question_index: qIdx,
       question_ref: qRef,
-    }).then();
+    });
 
     // 3. Log transaction
     const resText = isAnswerCorrect ? 'CORRECT (+1 Pt)' : 'WRONG (0 Pt)';
@@ -1692,7 +1771,7 @@ export default function AdminPanel() {
       setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
       setCurrentItem(nextItemText);
       broadcastStateChange(nextState);
-      if (eventState?.id) supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+      if (eventState?.id) await supabase.from('event_state').update(nextState).eq('id', eventState.id);
 
       showNotification(`Sold to ${winningTeam.name}! Question ${nextQuestionIdx + 1} ready (hidden until timer starts).`, 'success');
     }
@@ -1726,14 +1805,14 @@ export default function AdminPanel() {
       t.id === teamToRefund.id ? { ...t, budget: refundedBudget, score: revertedScore } : t
     );
     setTeams(updatedTeams);
-    broadcastTeamsChange(updatedTeams);
-    supabase.from('teams').update({ budget: refundedBudget, score: revertedScore }).eq('id', teamToRefund.id).then();
+    broadcastTeamsChange(updatedTeams, edition?.id);
+    await supabase.from('teams').update({ budget: refundedBudget, score: revertedScore }).eq('id', teamToRefund.id);
 
     // Delete item record locally & sync
     const updatedItems = items.slice(1);
     setItems(updatedItems);
-    broadcastItemsChange(updatedItems);
-    supabase.from('team_items').delete().eq('id', lastItem.id).then();
+    broadcastItemsChange(updatedItems, edition?.id);
+    await supabase.from('team_items').delete().eq('id', lastItem.id);
 
     // Step back question tracker
     const newQIdx = Math.max(0, (eventState.current_question_index ?? 1) - 1);
@@ -1751,7 +1830,7 @@ export default function AdminPanel() {
     setEventState((prev) => (prev ? { ...prev, ...updates } : null));
     setCurrentItem(lastItem.item_name);
     broadcastStateChange(updates);
-    supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    await supabase.from('event_state').update(updates).eq('id', eventState.id);
 
     showNotification(`Undid sale to ${teamToRefund.name}. Refunded ${formatCurrency(lastItem.cost)}.`, 'success');
     addHistory('UNDO', `Reverted sale to ${teamToRefund.name} (${formatCurrency(lastItem.cost)}).`);
@@ -2285,6 +2364,7 @@ export default function AdminPanel() {
                         type="text"
                         value={team.name}
                         onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                        onBlur={() => handleTeamNameBlur(team.id)}
                         className="gcl-input-inline"
                         placeholder={`Team ${idx + 1}`}
                       />
@@ -3265,7 +3345,9 @@ export default function AdminPanel() {
                       <tbody className="divide-y divide-slate-800/80">
                         {teams.map((t) => {
                           const starting = edition?.starting_budget || 50000000;
-                          const r2Rem = t.budget;
+                          const r2Items = items.filter((it) => it.team_id === t.id && it.round_index === 1);
+                          const r2Spent = r2Items.reduce((acc, it) => acc + (it.cost || 0), 0);
+                          const r2Rem = Math.max(0, starting - r2Spent);
                           const r3Calc = starting + r2Rem;
                           return (
                             <tr key={t.id} className="hover:bg-slate-900/30 font-mono">
@@ -3354,6 +3436,7 @@ export default function AdminPanel() {
                       type="text"
                       value={team.name}
                       onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                      onBlur={() => handleTeamNameBlur(team.id)}
                       className="gcl-input-inline"
                     />
                     <button
