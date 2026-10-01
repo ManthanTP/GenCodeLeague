@@ -7,13 +7,24 @@ interface LiveTeamStatusProps {
   startingBudget: number;
   myTeamId?: string | null;
   items?: TeamItem[];
+  currentRoundIndex?: number;
 }
 
-export default function LiveTeamStatus({ teams, startingBudget, myTeamId, items = [] }: LiveTeamStatusProps) {
+export default function LiveTeamStatus({
+  teams,
+  startingBudget,
+  myTeamId,
+  items = [],
+  currentRoundIndex,
+}: LiveTeamStatusProps) {
   // Sort teams strictly alphabetically A to Z (not rank)
   const sortedTeams = [...teams].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
   );
+
+  const roundNum = currentRoundIndex !== undefined ? currentRoundIndex + 1 : null;
+  const itemsHeader = roundNum ? `ROUND ${roundNum} ITEMS` : 'TOTAL ITEMS';
+  const spentHeader = roundNum ? `ROUND ${roundNum} SPENT` : 'TOTAL SPENT';
 
   return (
     <div className="mt-10 max-w-4xl w-full mx-auto">
@@ -31,8 +42,8 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId, items 
         {/* Header row */}
         <div className="grid-live-status-header">
           <div>TEAM NAME</div>
-          <div className="text-center">TOTAL ITEMS</div>
-          <div className="text-right">TOTAL SPENT</div>
+          <div className="text-center">{itemsHeader}</div>
+          <div className="text-right">{spentHeader}</div>
           <div className="text-right">REMAINING</div>
         </div>
 
@@ -40,7 +51,9 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId, items 
         <div className="space-y-1">
           {sortedTeams.length > 0 ? (
             sortedTeams.map((team) => {
-              const teamItems = items.filter((it) => it.team_id === team.id);
+              const teamItems = currentRoundIndex !== undefined
+                ? items.filter((it) => it.team_id === team.id && it.round_index === currentRoundIndex)
+                : items.filter((it) => it.team_id === team.id);
               const itemsCount = teamItems.length;
               const spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
               const isOutOfBudget = team.budget <= 0;

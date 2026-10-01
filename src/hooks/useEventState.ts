@@ -69,13 +69,10 @@ export function useEventState() {
       }
 
       if (!isCancelled) {
-        setEventState((prev) => {
-          const merged = { ...stData, ...(prev || {}) };
-          try {
-            localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
+        setEventState(stData as EventState);
+        try {
+          localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(stData));
+        } catch {}
         setLoading(false);
       }
 
@@ -140,8 +137,21 @@ export function useEventState() {
 
     setupSubscriptions();
 
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === CACHE_KEY_EVENT_STATE && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === 'object') {
+            setEventState(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     return () => {
       isCancelled = true;
+      window.removeEventListener('storage', handleStorage);
       if (postgresChannel) supabase.removeChannel(postgresChannel);
       if (editionsChannel) supabase.removeChannel(editionsChannel);
     };

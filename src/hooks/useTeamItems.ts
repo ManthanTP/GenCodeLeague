@@ -58,6 +58,15 @@ export function useTeamItems(editionId: string | undefined) {
 
   useEffect(() => {
     if (!editionId) return;
+
+    try {
+      const key = getItemsCacheKey(editionId);
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        setItems(JSON.parse(cached));
+      }
+    } catch {}
+
     loadItems();
 
     const channelName = `team-items-${editionId}-${Math.random().toString(36).slice(2, 7)}`;

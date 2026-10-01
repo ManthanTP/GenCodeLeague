@@ -452,6 +452,7 @@ export default function LiveView() {
             startingBudget={edition?.starting_budget || 50000000}
             myTeamId={myTeamId}
             items={items}
+            currentRoundIndex={eventState?.current_round_index ?? 0}
           />
         </div>
       )}
@@ -620,17 +621,27 @@ export default function LiveView() {
       {gameState === 'intermission' && (
         <div className="live-centered-screen">
           {roundIdx === 1 ? (
-            /* ROUND 2 INTERMISSION — PARTICIPATING TEAMS IN ALPHABETICAL ORDER ONLY */
+            /* ROUND 2 INTERMISSION — COMPLETED STANDINGS & BUDGET CARRYOVER NOTICE */
             <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
               <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 2 COMPLETE</span>
                 </div>
-                <h1 className="intermission-title">PARTICIPATING TEAMS</h1>
-                <p className="intermission-subtitle">PREPARING FOR ROUND 3 — STAND BY...</p>
+                <h1 className="intermission-title">INTERMISSION</h1>
+                <p className="intermission-subtitle">ROUND 3 WILL START SOON — STAND BY...</p>
+                <div className="intermission-warning-banner mt-4">
+                  💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
+                </div>
               </div>
 
               <div className="gcl-table-card">
+                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span>PREVIOUS ROUND TABLE (ROUND 2 RESULTS)</span>
+                  </div>
+                  <span className="text-slate-400">ROUND 2 SUMMARY</span>
+                </div>
                 <div className="gcl-leaderboard-header">
                   <div>#</div>
                   <div>TEAM NAME</div>
@@ -700,6 +711,13 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-card">
+                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span>PREVIOUS ROUND TABLE (ROUND 1 RESULTS)</span>
+                  </div>
+                  <span className="text-slate-400">ROUND 1 SUMMARY</span>
+                </div>
                 <div className="gcl-leaderboard-header">
                   <div>POS</div>
                   <div>TEAM NAME</div>
@@ -808,6 +826,13 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-card">
+                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span>PREVIOUS ROUND TABLE (ROUND 3 RESULTS)</span>
+                  </div>
+                  <span className="text-slate-400">ROUND 3 SUMMARY</span>
+                </div>
                 <div className="gcl-leaderboard-header">
                   <div>#</div>
                   <div>TEAM NAME</div>

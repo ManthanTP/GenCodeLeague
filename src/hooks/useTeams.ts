@@ -58,6 +58,14 @@ export function useTeams(editionId: string | undefined) {
   useEffect(() => {
     if (!editionId) return;
 
+    try {
+      const key = getTeamsCacheKey(editionId);
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        setTeams(JSON.parse(cached));
+      }
+    } catch {}
+
     loadTeams();
 
     const channelName = `teams-${editionId}-${Math.random().toString(36).slice(2, 7)}`;

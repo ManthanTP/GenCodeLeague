@@ -13,11 +13,21 @@ export interface CrossEditionStats {
     itemName: string;
     amount: number;
   } | null;
-  mostEditionsPlayed: {
+  mostQuestionsWon: {
+    teamName: string;
+    editionName: string;
+    count: number;
+  } | null;
+  highestTournamentInvestment: {
+    teamName: string;
+    editionName: string;
+    amount: number;
+  } | null;
+  mostEditionsPlayed?: {
     teamName: string;
     editionsCount: number;
   } | null;
-  mostChampionships: {
+  mostChampionships?: {
     teamName: string;
     championshipCount: number;
   } | null;
@@ -38,6 +48,8 @@ export async function fetchCrossEditionRecords(): Promise<CrossEditionStats> {
   const stats: CrossEditionStats = {
     mostCorrectAnswers: null,
     highestBidWon: null,
+    mostQuestionsWon: null,
+    highestTournamentInvestment: null,
     mostEditionsPlayed: null,
     mostChampionships: null,
   };
@@ -109,75 +121,54 @@ export async function fetchCrossEditionRecords(): Promise<CrossEditionStats> {
       }
     }
 
-    // 4. Most Championships Won: check champion_team_id chains
-    const { data: allTeams } = await supabase
-      .from('teams')
-      .select('id, name, linked_team_id, edition_id')
+    // 4. Most Questions Won & Highest Tournament Investment across team_items
+    const { data: allItemsData } = await supabase
+      .from('team_items')
+      .select('team_id, cost, team:teams(name), edition_id')
       .in('edition_id', editionIds);
 
-    const teamChainRoot = new Map<string, string>(); // teamId -> rootTeamName
-    const teamObjMap = new Map<string, Team>();
-    allTeams?.forEach((t) => teamObjMap.set(t.id, t as Team));
+    if (allItemsData && allItemsData.length > 0) {
+      const itemsCountMap = new Map<string, { count: number; totalCost: number; teamName: string; editionId: string }>();
+      allItemsData.forEach((row) => {
+        const key = `${row.edition_id}_${row.team_id}`;
+        const existing = itemsCountMap.get(key) || {
+          count: 0,
+          totalCost: 0,
+          teamName: (row.team as any)?.name || 'Unknown',
+          editionId: row.edition_id,
+        };
+        existing.count += 1;
+        existing.totalCost += Number(row.cost || 0);
+        itemsCountMap.set(key, existing);
+      });
 
-    allTeams?.forEach((t) => {
-      let root: any = t;
-      const visited = new Set<string>();
-      while (root.linked_team_id && teamObjMap.has(root.linked_team_id) && !visited.has(root.linked_team_id)) {
-        visited.add(root.id);
-        root = teamObjMap.get(root.linked_team_id);
-      }
-      teamChainRoot.set(t.id, root?.name || t.name);
-    });
+      let topQuestionsTeam: { count: number; totalCost: number; teamName: string; editionId: string } | null = null;
+      let topInvestmentTeam: { count: number; totalCost: number; teamName: string; editionId: string } | null = null;
 
-    const championshipCounts = new Map<string, number>();
-    archivedEditions?.forEach((ed) => {
-      if (ed.champion_team_id) {
-        const rootName = teamChainRoot.get(ed.champion_team_id) || teamObjMap.get(ed.champion_team_id)?.name;
-        if (rootName) {
-          championshipCounts.set(rootName, (championshipCounts.get(rootName) || 0) + 1);
+      itemsCountMap.forEach((val) => {
+        if (!topQuestionsTeam || val.count > topQuestionsTeam.count) {
+          topQuestionsTeam = val;
         }
+        if (!topInvestmentTeam || val.totalCost > topInvestmentTeam.totalCost) {
+          topInvestmentTeam = val;
+        }
+      });
+
+      if (topQuestionsTeam) {
+        stats.mostQuestionsWon = {
+          teamName: (topQuestionsTeam as any).teamName,
+          editionName: editionMap.get((topQuestionsTeam as any).editionId) || 'GenCode League',
+          count: (topQuestionsTeam as any).count,
+        };
       }
-    });
 
-    let topChampName = '';
-    let topChampCount = 0;
-    championshipCounts.forEach((c, name) => {
-      if (c > topChampCount) {
-        topChampCount = c;
-        topChampName = name;
+      if (topInvestmentTeam) {
+        stats.highestTournamentInvestment = {
+          teamName: (topInvestmentTeam as any).teamName,
+          editionName: editionMap.get((topInvestmentTeam as any).editionId) || 'GenCode League',
+          amount: (topInvestmentTeam as any).totalCost,
+        };
       }
-    });
-
-    if (topChampName) {
-      stats.mostChampionships = {
-        teamName: topChampName,
-        championshipCount: topChampCount,
-      };
-    }
-
-    // 5. Most Editions Played across linked_team_id chains
-    const editionsPlayed = new Map<string, Set<string>>();
-    allTeams?.forEach((t) => {
-      const rootName = teamChainRoot.get(t.id) || t.name;
-      const set = editionsPlayed.get(rootName) || new Set<string>();
-      set.add(t.edition_id);
-      editionsPlayed.set(rootName, set);
-    });
-
-    let topPlayedName = '';
-    let topPlayedCount = 0;
-    editionsPlayed.forEach((set, name) => {
-      if (set.size > topPlayedCount) {
-        topPlayedCount = set.size;
-        topPlayedName = name;
-      }
-    });
-
-    if (topPlayedName) {
-      stats.mostEditionsPlayed = {
-        teamName: topPlayedName,
-        editionsCount: topPlayedCount,
-      };
     }
 
   } catch (err) {

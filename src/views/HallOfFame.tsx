@@ -163,41 +163,41 @@ export default function HallOfFame() {
               </div>
             </div>
 
-            {/* Record 3: Most Championships Won */}
+            {/* Record 3: Most Questions Won */}
             <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-yellow-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
               <div className="absolute top-3 right-3 text-yellow-500/20">
-                <Crown size={48} />
+                <Layers size={48} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-yellow-400 font-bold block">
-                Most Championships Won
+                Most Questions Won
               </span>
               <div className="text-2xl font-black text-white mt-1">
-                {records?.mostChampionships ? `${records.mostChampionships.championshipCount} Title(s)` : '—'}
+                {records?.mostQuestionsWon ? `${records.mostQuestionsWon.count} Lots Won` : '—'}
               </div>
               <div className="text-xs font-bold text-yellow-300 mt-2 truncate">
-                {records?.mostChampionships?.teamName || 'Dynasty in the making'}
+                {records?.mostQuestionsWon?.teamName || 'Record pending'}
               </div>
               <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                Linked franchise champion titles
+                {records?.mostQuestionsWon?.editionName || 'Single-edition lots secured'}
               </div>
             </div>
 
-            {/* Record 4: Most Editions Played */}
+            {/* Record 4: Highest Tournament Investment */}
             <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-purple-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
               <div className="absolute top-3 right-3 text-purple-500/20">
-                <History size={48} />
+                <Flame size={48} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-purple-400 font-bold block">
-                Franchise Longevity
+                Highest Tournament Investment
               </span>
               <div className="text-2xl font-black text-white mt-1">
-                {records?.mostEditionsPlayed ? `${records.mostEditionsPlayed.editionsCount} Editions` : '—'}
+                {records?.highestTournamentInvestment ? formatCurrency(records.highestTournamentInvestment.amount) : '—'}
               </div>
               <div className="text-xs font-bold text-purple-300 mt-2 truncate">
-                {records?.mostEditionsPlayed?.teamName || 'Veteran contenders'}
+                {records?.highestTournamentInvestment?.teamName || 'Record pending'}
               </div>
               <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                Most tournaments contested
+                {records?.highestTournamentInvestment?.editionName || 'Highest single-edition purse spent'}
               </div>
             </div>
           </div>

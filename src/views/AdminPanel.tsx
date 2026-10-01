@@ -32,6 +32,7 @@ import {
   Award,
   Archive,
   Calculator,
+  Lock,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
@@ -643,6 +644,14 @@ export default function AdminPanel() {
   };
 
   const handleItemNameChange = (text: string) => {
+    const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) {
+      showNotification('This question is already sold and locked. Editing is blocked.', 'error');
+      return;
+    }
+
     setCurrentItem(text);
     isTypingQuestionRef.current = true;
 
@@ -1473,6 +1482,12 @@ export default function AdminPanel() {
   const handleLoadQuestionFromData = () => {
     const rIdx = eventState?.current_round_index ?? 0;
     const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) {
+      const buyer = teams.find((t) => t.id === sold.team_id);
+      showNotification(`Question R${rIdx + 1} - Q${qIdx + 1} is already SOLD to ${buyer?.name || 'a team'}. Loading is blocked.`, 'error');
+      return;
+    }
     const qText = DEFAULT_ROUNDS_DATA[rIdx]?.questions[qIdx] || '';
     if (qText) {
       setCurrentItem(qText);
@@ -1523,10 +1538,40 @@ export default function AdminPanel() {
         .then();
     }
 
+    const sold = items.find((it) => it.round_index === r && it.question_index === q);
+    if (sold) {
+      const buyer = teams.find((t) => t.id === sold.team_id);
+      showNotification(`Round ${r + 1} Question ${q + 1} is already SOLD to ${buyer?.name || 'a team'}. Auction is locked.`, 'error');
+    }
+
     addHistory('Tracker Changed', `Set to Round ${r + 1}, Q${q + 1}`);
   };
 
+  const handleJumpToNextUnsold = () => {
+    const rIdx = eventState?.current_round_index ?? 0;
+    const currentRound = DEFAULT_ROUNDS_DATA[rIdx] || { questions: [] };
+    const totalQ = currentRound.questions.length || 20;
+    for (let q = 0; q < totalQ; q++) {
+      const isSold = items.some((it) => it.round_index === rIdx && it.question_index === q);
+      if (!isSold) {
+        handleManualSetTracker(rIdx, q);
+        showNotification(`Jumped to unsold Question ${q + 1}`, 'success');
+        return;
+      }
+    }
+    showNotification(`All questions in Round ${rIdx + 1} have already been sold!`, 'error');
+  };
+
   const handleStartTimer = () => {
+    const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) {
+      const buyer = teams.find((t) => t.id === sold.team_id);
+      showNotification(`Cannot start auction timer: Question is already SOLD to ${buyer?.name || 'a team'}.`, 'error');
+      return;
+    }
+
     const now = new Date().toISOString();
     let updates: Partial<EventState>;
 
@@ -1601,6 +1646,13 @@ export default function AdminPanel() {
 
   const handleTeamSelection = (id: string) => {
     const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) {
+      showNotification('This question is already SOLD and locked. Bidding is blocked.', 'error');
+      return;
+    }
+
     const roundBase = getRoundBasePrice(rIdx);
     const amount = parseFloat(bidAmount) || roundBase;
     const team = teams.find((t) => t.id === id);
@@ -1612,36 +1664,44 @@ export default function AdminPanel() {
       return;
     }
     setSelectedTeamId(id);
-    const qIdx = eventState?.current_question_index ?? 0;
     broadcastBidPreview(id, amount, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
   const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) return;
+
     let value = e.target.value.replace(/[^0-9.]/g, '');
     const parts = value.split('.');
     if (parts.length > 2) value = parts[0] + '.' + parts.slice(1).join('');
     setBidAmount(value);
-    const rIdx = eventState?.current_round_index ?? 0;
-    const qIdx = eventState?.current_question_index ?? 0;
     broadcastBidPreview(selectedTeamId, parseFloat(value) || 0, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
   const handleQuickAdd = (val: number) => {
     const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) return;
+
     const roundBase = getRoundBasePrice(rIdx);
     const parsed = parseFloat(bidAmount.replace(/[^0-9.]/g, ''));
     // If empty or less than round base price, start at roundBase!
     const cur = isNaN(parsed) || parsed < roundBase ? roundBase : parsed;
     const next = Math.max(roundBase, cur + val);
     setBidAmount(String(next));
-    const qIdx = eventState?.current_question_index ?? 0;
     broadcastBidPreview(selectedTeamId, next, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
   const handleQuickSet = (val: number) => {
-    setBidAmount(String(val));
     const rIdx = eventState?.current_round_index ?? 0;
     const qIdx = eventState?.current_question_index ?? 0;
+    const sold = items.find((it) => it.round_index === rIdx && it.question_index === qIdx);
+    if (sold) return;
+
+    setBidAmount(String(val));
     broadcastBidPreview(selectedTeamId, val, `R${rIdx + 1} - Q${qIdx + 1}`);
   };
 
@@ -1659,6 +1719,19 @@ export default function AdminPanel() {
     }
 
     const rIdx = eventState?.current_round_index ?? 0;
+    const qIdx = eventState?.current_question_index ?? 0;
+    const alreadySold = items.find(
+      (it) => it.round_index === rIdx && it.question_index === qIdx
+    );
+    if (alreadySold) {
+      const buyer = teams.find((t) => t.id === alreadySold.team_id);
+      showNotification(
+        `This question was already SOLD to ${buyer?.name || 'a team'} for ${formatCurrency(alreadySold.cost)}. It cannot be sold again.`,
+        'error'
+      );
+      return;
+    }
+
     const roundBase = getRoundBasePrice(rIdx);
     const amount = parseFloat(bidAmount) || roundBase;
     if (isNaN(amount) || amount < roundBase) {
@@ -1683,6 +1756,16 @@ export default function AdminPanel() {
   const handleExecuteBidSubmit = async () => {
     if (!eventState?.id || !edition?.id) return;
     const rIdx = eventState.current_round_index ?? 0;
+    const qIdx = eventState.current_question_index ?? 0;
+
+    const alreadySold = items.find(
+      (it) => it.round_index === rIdx && it.question_index === qIdx
+    );
+    if (alreadySold) {
+      showNotification('Cannot execute bid: This question is already sold and locked.', 'error');
+      return;
+    }
+
     const roundBase = getRoundBasePrice(rIdx);
     const amount = parseFloat(bidAmount) || roundBase;
     const winningTeam = teams.find((t) => t.id === selectedTeamId);
@@ -1693,7 +1776,6 @@ export default function AdminPanel() {
       return;
     }
 
-    const qIdx = eventState.current_question_index ?? 0;
     const currentRoundData = DEFAULT_ROUNDS_DATA[rIdx] || { name: `Round ${rIdx + 1}`, questions: [] };
     const qRef = `R${rIdx + 1} - Q${qIdx + 1}`;
 
@@ -1927,6 +2009,17 @@ export default function AdminPanel() {
   const isRoundEnd = roundIdx >= DEFAULT_ROUNDS_DATA.length;
   const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
   const roundBasePrice = getRoundBasePrice(roundIdx);
+
+  const alreadySoldItem = useMemo(() => {
+    return items.find(
+      (item) => item.round_index === roundIdx && item.question_index === questionIdx
+    );
+  }, [items, roundIdx, questionIdx]);
+
+  const buyerTeam = useMemo(() => {
+    if (!alreadySoldItem) return null;
+    return teams.find((t) => t.id === alreadySoldItem.team_id) || null;
+  }, [alreadySoldItem, teams]);
 
   // --- REUSABLE SCOREBOARDS (RENDERED IN BOTH ACTIVE & INTERMISSION MODES) ---
   const renderOverallScoreboard = () => (
@@ -2495,10 +2588,28 @@ export default function AdminPanel() {
                         <ChevronLeft size={20} />
                       </button>
                       <div className="flex-grow text-center">
-                        <span className="font-mono text-xl font-bold text-yellow-300">
-                          {questionIdx + 1}
-                        </span>
-                        <span className="text-slate-400 text-sm"> of {totalQuestions}</span>
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                          <span className="font-mono text-xl font-bold text-yellow-300">
+                            {questionIdx + 1}
+                          </span>
+                          <span className="text-slate-400 text-sm"> of {totalQuestions}</span>
+                          {alreadySoldItem && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-950/90 text-red-400 border border-red-700/60 uppercase tracking-wider">
+                              <Lock size={11} /> Sold
+                            </span>
+                          )}
+                        </div>
+                        {alreadySoldItem && (
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={handleJumpToNextUnsold}
+                              className="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-semibold transition-colors"
+                            >
+                              Jump to next unsold →
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -2566,19 +2677,48 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
+                {alreadySoldItem && (
+                  <div className="p-3 mb-4 bg-red-950/80 border-2 border-red-500/70 rounded-xl text-red-200 text-xs font-semibold flex items-center justify-between gap-3 shadow-inner">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-red-900/60 border border-red-600/60 flex items-center justify-center text-red-300 shrink-0">
+                        <Lock size={16} />
+                      </div>
+                      <div>
+                        <span className="font-extrabold uppercase tracking-wide text-red-300 block">
+                          Question Locked & Already Sold
+                        </span>
+                        <span className="text-slate-300">
+                          Purchased by <strong className="text-yellow-300 font-bold">{buyerTeam?.name || 'a team'}</strong> for <strong>{formatCurrency(alreadySoldItem.cost)}</strong> ({alreadySoldItem.is_correct ? 'Correct (+1 pt)' : 'Incorrect (0 pt)'}).
+                        </span>
+                      </div>
+                    </div>
+                    <div className="gcl-tech-tag gcl-tech-tag-red shrink-0">
+                      <span className="gcl-tag-dot bg-red-400"></span>
+                      BLOCKED
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="input-label mb-0">Item / Question Name</label>
-                    <button type="button" onClick={handleLoadQuestionFromData} className="btn-secondary-load">
+                    <button
+                      type="button"
+                      onClick={handleLoadQuestionFromData}
+                      disabled={Boolean(alreadySoldItem)}
+                      className={`btn-secondary-load ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
                       <FileText size={15} /> Load Q{questionIdx + 1} from Data
                     </button>
                   </div>
                   <textarea
                     value={currentItem}
                     onChange={(e) => handleItemNameChange(e.target.value)}
+                    disabled={Boolean(alreadySoldItem)}
+                    readOnly={Boolean(alreadySoldItem)}
                     placeholder={`Enter question for Round ${roundIdx + 1} - Q${questionIdx + 1}...`}
                     rows={4}
-                    className="gcl-textarea"
+                    className={`gcl-textarea ${alreadySoldItem ? 'opacity-60 cursor-not-allowed bg-slate-900/60 border-red-900/40 text-slate-400' : ''}`}
                   />
                 </div>
               </div>
@@ -2602,7 +2742,8 @@ export default function AdminPanel() {
                     <button
                       type="button"
                       onClick={handleStartTimer}
-                      className="btn-timer-start"
+                      disabled={Boolean(alreadySoldItem)}
+                      className={`btn-timer-start ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
                       <Play size={18} fill="currentColor" /> {isTimerPaused ? 'Resume Timer' : 'Start (Reveals Q)'}
                     </button>
@@ -2642,6 +2783,23 @@ export default function AdminPanel() {
               )}
             </div>
 
+            {alreadySoldItem && (
+              <div className="p-4 bg-red-950/90 border-2 border-red-600 rounded-xl text-red-200 text-sm font-semibold flex items-center gap-3 shadow-lg">
+                <Lock size={26} className="text-red-400 shrink-0" />
+                <div>
+                  <div className="font-extrabold text-red-300 uppercase tracking-wide flex items-center gap-2">
+                    AUCTION BLOCKED — QUESTION ALREADY SOLD
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-red-800 text-white font-mono">
+                      R{roundIdx + 1} - Q{questionIdx + 1}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-300 mt-1">
+                    This question has already been purchased by <strong className="text-yellow-300 font-bold">{buyerTeam?.name || 'Unknown Team'}</strong> for {formatCurrency(alreadySoldItem.cost)} ({alreadySoldItem.is_correct ? 'Correct (+1 Point)' : 'Incorrect (0 Points)'}). It cannot be accessed or auctioned again.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Team Selection: Full Width Grid - ALL teams visible without scrolling */}
             <div>
               <div className="flex justify-between items-center mb-2.5">
@@ -2654,7 +2812,7 @@ export default function AdminPanel() {
                   const currentBidVal = parseFloat(bidAmount) || roundBasePrice;
                   const isExhausted = t.budget <= 0;
                   const cannotAfford = t.budget < currentBidVal;
-                  const isLocked = isExhausted || cannotAfford;
+                  const isLocked = isExhausted || cannotAfford || Boolean(alreadySoldItem);
                   const isLow = !isExhausted && !cannotAfford && t.budget <= 5000000;
                   return (
                     <button
@@ -2706,35 +2864,40 @@ export default function AdminPanel() {
                       inputMode="numeric"
                       value={bidAmount}
                       onChange={handleBidAmountChange}
+                      disabled={Boolean(alreadySoldItem)}
                       placeholder={String(roundBasePrice)}
-                      className="gcl-input font-mono text-xl"
+                      className={`gcl-input font-mono text-xl ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                     />
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         type="button"
                         onClick={() => handleQuickSet(roundBasePrice)}
-                        className="quick-btn-base"
+                        disabled={Boolean(alreadySoldItem)}
+                        className={`quick-btn-base ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         Base ({formatCurrency(roundBasePrice)})
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(MIN_INCREMENT)}
-                        className="quick-btn-inc"
+                        disabled={Boolean(alreadySoldItem)}
+                        className={`quick-btn-inc ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         + 10 L
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(5000000)}
-                        className="quick-btn-green"
+                        disabled={Boolean(alreadySoldItem)}
+                        className={`quick-btn-green ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         + 50 L
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(-1000000)}
-                        className="quick-btn-red"
+                        disabled={Boolean(alreadySoldItem)}
+                        className={`quick-btn-red ${alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         - 10 L
                       </button>
@@ -2785,7 +2948,10 @@ export default function AdminPanel() {
                     <button
                       type="button"
                       onClick={() => setIsAnswerCorrect(false)}
+                      disabled={Boolean(alreadySoldItem)}
                       className={`answer-eval-card ${
+                        alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''
+                      } ${
                         !isAnswerCorrect
                           ? 'answer-eval-incorrect-active'
                           : 'answer-eval-incorrect-inactive'
@@ -2816,7 +2982,10 @@ export default function AdminPanel() {
                     <button
                       type="button"
                       onClick={() => setIsAnswerCorrect(true)}
+                      disabled={Boolean(alreadySoldItem)}
                       className={`answer-eval-card ${
+                        alreadySoldItem ? 'opacity-40 cursor-not-allowed' : ''
+                      } ${
                         isAnswerCorrect
                           ? 'answer-eval-correct-active'
                           : 'answer-eval-correct-inactive'
@@ -2856,7 +3025,7 @@ export default function AdminPanel() {
 
               return (
                 <div className="space-y-3">
-                  {cannotAfford && selectedTeam && (
+                  {cannotAfford && selectedTeam && !alreadySoldItem && (
                     <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-lg text-red-300 text-xs font-semibold flex items-center gap-2">
                       <AlertCircle size={16} className="text-red-400 shrink-0" />
                       <span>
@@ -2868,12 +3037,14 @@ export default function AdminPanel() {
                   <button
                     type="submit"
                     disabled={
+                      Boolean(alreadySoldItem) ||
                       !selectedTeamId ||
                       !currentItem.trim() ||
                       parseFloat(bidAmount || '0') < roundBasePrice ||
                       cannotAfford
                     }
                     className={`btn-sold-action ${
+                      Boolean(alreadySoldItem) ||
                       !selectedTeamId ||
                       !currentItem.trim() ||
                       parseFloat(bidAmount || '0') < roundBasePrice ||
@@ -2883,7 +3054,9 @@ export default function AdminPanel() {
                     }`}
                   >
                     <CheckCircle2 size={22} fill="currentColor" />
-                    {cannotAfford
+                    {alreadySoldItem
+                      ? `QUESTION ALREADY SOLD TO ${buyerTeam?.name?.toUpperCase() || 'TEAM'} (BLOCKED)`
+                      : cannotAfford
                       ? 'INSUFFICIENT BUDGET TO BID'
                       : isAnswerCorrect
                       ? 'SOLD! (Correct Answer +1 Score)'
