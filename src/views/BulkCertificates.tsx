@@ -55,14 +55,16 @@ export default function BulkCertificates() {
 
   // Authentication check
   const isMasterAuthed =
-    sessionStorage.getItem('gcl_admin_authenticated') === 'true';
+    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
+    localStorage.getItem('gcl_admin_authenticated') === 'true';
   const isAdmin = isMasterAuthed || profile?.role === 'admin';
 
   useEffect(() => {
+    if (isMasterAuthed) return;
     if (!authLoading && !isAdmin) {
       navigate('/123456789/GCL-0321/admin/login');
     }
-  }, [authLoading, isAdmin, navigate]);
+  }, [authLoading, isAdmin, isMasterAuthed, navigate]);
 
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [editions, setEditions] = useState<Edition[]>([]);

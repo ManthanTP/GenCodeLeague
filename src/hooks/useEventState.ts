@@ -41,101 +41,111 @@ export function useEventState() {
     let editionsChannel: ReturnType<typeof supabase.channel> | null = null;
 
     async function setupSubscriptions() {
-      // 1. Get current edition
-      const { data: edData, error: edErr } = await supabase
-        .from('editions')
-        .select('*')
-        .eq('is_current', true)
-        .single();
+      try {
+        // 1. Get current edition
+        const { data: edData, error: edErr } = await supabase
+          .from('editions')
+          .select('*')
+          .eq('is_current', true)
+          .single();
 
-      if (edErr || !edData) {
-        console.warn('Error loading edition:', edErr?.message);
-        if (!isCancelled) setLoading(false);
-        return;
-      }
-      if (!isCancelled) setEdition(edData);
+        if (edErr || !edData) {
+          console.warn('Error loading edition:', edErr?.message);
+          if (!isCancelled) setLoading(false);
+          return;
+        }
+        if (!isCancelled) setEdition(edData);
 
-      // 2. Get event state for this edition
-      const { data: stData, error: stErr } = await supabase
-        .from('event_state')
-        .select('*')
-        .eq('edition_id', edData.id)
-        .single();
+        // 2. Get event state for this edition
+        const { data: stData, error: stErr } = await supabase
+          .from('event_state')
+          .select('*')
+          .eq('edition_id', edData.id)
+          .single();
 
-      if (stErr || !stData) {
-        console.warn('Error loading event state:', stErr?.message);
-        if (!isCancelled) setLoading(false);
-        return;
-      }
+        if (stErr || !stData) {
+          console.warn('Error loading event state:', stErr?.message);
+          if (!isCancelled) setLoading(false);
+          return;
+        }
 
-      if (!isCancelled) {
-        setEventState(stData as EventState);
-        try {
-          localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(stData));
-        } catch {}
-        setLoading(false);
-      }
+        if (!isCancelled) {
+          setEventState(stData as EventState);
+          try {
+            localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(stData));
+          } catch {}
+          setLoading(false);
+        }
 
-      if (isCancelled) return;
+        if (isCancelled) return;
 
-      // 3. Subscribe to postgres_changes
-      postgresChannel = supabase
-        .channel(`event-state-changes-${edData.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'event_state',
-            filter: `edition_id=eq.${edData.id}`,
-          },
-          (payload) => {
-            if (payload.new) {
-              setEventState(payload.new as EventState);
-              try {
-                localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(payload.new));
-              } catch {}
+        // 3. Subscribe to postgres_changes
+        postgresChannel = supabase
+          .channel(`event-state-changes-${edData.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'event_state',
+              filter: `edition_id=eq.${edData.id}`,
+            },
+            (payload) => {
+              if (payload.new) {
+                setEventState(payload.new as EventState);
+                try {
+                  localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(payload.new));
+                } catch {}
+              }
             }
-          }
-        )
-        .subscribe();
+          )
+          .subscribe();
 
-      // 4. Subscribe to broadcast sync (instant across tabs with zero RLS restrictions)
-      syncChannel
-        .on('broadcast', { event: 'STATE_CHANGED' }, (payload) => {
-          if (payload?.payload) {
-            setEventState((prev) => {
-              const next = prev ? { ...prev, ...payload.payload } : (payload.payload as EventState);
-              try {
-                localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(next));
-              } catch {}
-              return next;
-            });
-          }
-        })
-        .subscribe();
-
-      // 5. Subscribe to editions table changes
-      editionsChannel = supabase
-        .channel(`editions-changes-${edData.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'editions',
-            filter: `id=eq.${edData.id}`,
-          },
-          (payload) => {
-            if (payload.new) {
-              setEdition(payload.new as Edition);
+        // 4. Subscribe to broadcast sync (instant across tabs with zero RLS restrictions)
+        syncChannel
+          .on('broadcast', { event: 'STATE_CHANGED' }, (payload) => {
+            if (payload?.payload) {
+              setEventState((prev) => {
+                const next = prev ? { ...prev, ...payload.payload } : (payload.payload as EventState);
+                try {
+                  localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(next));
+                } catch {}
+                return next;
+              });
             }
-          }
-        )
-        .subscribe();
+          })
+          .subscribe();
+
+        // 5. Subscribe to editions table changes
+        editionsChannel = supabase
+          .channel(`editions-changes-${edData.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'editions',
+              filter: `id=eq.${edData.id}`,
+            },
+            (payload) => {
+              if (payload.new) {
+                setEdition(payload.new as Edition);
+              }
+            }
+          )
+          .subscribe();
+      } catch (err) {
+        console.error('Error in setupSubscriptions:', err);
+        if (!isCancelled) setLoading(false);
+      }
     }
 
     setupSubscriptions();
+
+    // Safety timeout: never hang loading indefinitely
+    const safetyTimer = setTimeout(() => {
+      if (!isCancelled) setLoading(false);
+    }, 3500);
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === CACHE_KEY_EVENT_STATE && e.newValue) {
@@ -151,6 +161,7 @@ export function useEventState() {
 
     return () => {
       isCancelled = true;
+      clearTimeout(safetyTimer);
       window.removeEventListener('storage', handleStorage);
       if (postgresChannel) supabase.removeChannel(postgresChannel);
       if (editionsChannel) supabase.removeChannel(editionsChannel);

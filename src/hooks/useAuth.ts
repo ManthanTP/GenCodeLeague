@@ -7,36 +7,58 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function getProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
+    let isCancelled = false;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    async function getProfile() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         
-      if (error) {
-        console.error('Error fetching profile', error);
-      } else {
-        setProfile(data);
+        if (!session) {
+          if (!isCancelled) {
+            setProfile(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (!isCancelled) {
+          if (error) {
+            console.error('Error fetching profile', error);
+          } else {
+            setProfile(data);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error in useAuth getProfile:', err);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     }
 
     getProfile();
+
+    // Safety timeout: never hang loading for more than 3 seconds
+    const safetyTimer = setTimeout(() => {
+      if (!isCancelled) {
+        setLoading(false);
+      }
+    }, 3000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       getProfile();
     });
 
     return () => {
+      isCancelled = true;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, []);

@@ -65,15 +65,18 @@ export default function AdminPanel() {
     isExpired,
   } = useTimer(eventState);
 
-  // Authentication check (allows session profile OR local session flag)
-  const isMasterAuthed = sessionStorage.getItem('gcl_admin_authenticated') === 'true';
+  // Authentication check (allows session profile OR local/session storage flag)
+  const isMasterAuthed =
+    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
+    localStorage.getItem('gcl_admin_authenticated') === 'true';
   const isAdmin = isMasterAuthed || profile?.role === 'admin';
 
   useEffect(() => {
+    if (isMasterAuthed) return;
     if (!authLoading && !isAdmin) {
       navigate('/123456789/GCL-0321/admin/login');
     }
-  }, [authLoading, isAdmin, navigate]);
+  }, [authLoading, isAdmin, isMasterAuthed, navigate]);
 
   // UI States & URL Tab Sync
   const [searchParams, setSearchParams] = useSearchParams();
@@ -431,6 +434,18 @@ export default function AdminPanel() {
     () => (lastItem ? teams.find((t) => t.id === lastItem.team_id) : null),
     [teams, lastItem]
   );
+
+  const currentQIndex = eventState?.current_question_index ?? 0;
+  const alreadySoldItem = useMemo(() => {
+    return items.find(
+      (item) => item.round_index === currentRoundIndex && item.question_index === currentQIndex
+    );
+  }, [items, currentRoundIndex, currentQIndex]);
+
+  const buyerTeam = useMemo(() => {
+    if (!alreadySoldItem) return null;
+    return teams.find((t) => t.id === alreadySoldItem.team_id) || null;
+  }, [alreadySoldItem, teams]);
 
   const previewUpdateTimeout = useRef<any>(null);
 
@@ -1983,11 +1998,12 @@ export default function AdminPanel() {
 
   const handleLogout = async () => {
     sessionStorage.removeItem('gcl_admin_authenticated');
+    localStorage.removeItem('gcl_admin_authenticated');
     await supabase.auth.signOut();
     navigate('/');
   };
 
-  if (stateLoading || authLoading) {
+  if (stateLoading || (!isMasterAuthed && authLoading)) {
     return (
       <div className="gcl-loading-screen">
         <div className="loading-spinner"></div>
@@ -2009,17 +2025,6 @@ export default function AdminPanel() {
   const isRoundEnd = roundIdx >= DEFAULT_ROUNDS_DATA.length;
   const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
   const roundBasePrice = getRoundBasePrice(roundIdx);
-
-  const alreadySoldItem = useMemo(() => {
-    return items.find(
-      (item) => item.round_index === roundIdx && item.question_index === questionIdx
-    );
-  }, [items, roundIdx, questionIdx]);
-
-  const buyerTeam = useMemo(() => {
-    if (!alreadySoldItem) return null;
-    return teams.find((t) => t.id === alreadySoldItem.team_id) || null;
-  }, [alreadySoldItem, teams]);
 
   // --- REUSABLE SCOREBOARDS (RENDERED IN BOTH ACTIVE & INTERMISSION MODES) ---
   const renderOverallScoreboard = () => (

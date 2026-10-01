@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import LiveView from './views/LiveView';
 import AdminPanel from './views/AdminPanel';
 import AdminLogin from './views/AdminLogin';
@@ -28,6 +28,9 @@ function App() {
       <Route path="/gallery" element={<GalleryView />} />
       <Route path="/announcements" element={<AnnouncementsView />} />
       <Route path="/faq" element={<FaqView />} />
+      <Route path="/admin" element={<Navigate to="/123456789/GCL-0321/admin" replace />} />
+      <Route path="/admin/login" element={<Navigate to="/123456789/GCL-0321/admin/login" replace />} />
+      <Route path="/admin/certificates/bulk" element={<Navigate to="/123456789/GCL-0321/admin/certificates/bulk" replace />} />
       <Route path="/123456789/GCL-0321/admin/login" element={<AdminLogin />} />
       <Route path="/123456789/GCL-0321/admin" element={<AdminPanel />} />
       <Route

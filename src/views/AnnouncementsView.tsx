@@ -23,7 +23,8 @@ export default function AnnouncementsView() {
 
   // Admin state
   const isMasterAuthed =
-    sessionStorage.getItem('gcl_admin_authenticated') === 'true';
+    sessionStorage.getItem('gcl_admin_authenticated') === 'true' ||
+    localStorage.getItem('gcl_admin_authenticated') === 'true';
 
   // New announcement modal
   const [isCreating, setIsCreating] = useState(false);
