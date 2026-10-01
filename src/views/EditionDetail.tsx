@@ -346,10 +346,10 @@ export default function EditionDetail() {
             <div>
               <h2 className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2">
                 <Trophy size={20} className="text-yellow-400" />
-                Final Standings & Team Scores
+                Final Standings
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Official final point scores across all auction questions
+                Official final competition standings across all rounds
               </p>
             </div>
             <span className="text-xs font-mono text-slate-400">
@@ -363,7 +363,6 @@ export default function EditionDetail() {
                 <tr className="border-b border-slate-800 text-slate-400 font-mono uppercase">
                   <th className="py-3 px-3">Rank</th>
                   <th className="py-3 px-3">Team Name</th>
-                  <th className="py-3 px-3 text-center">Final Score</th>
                   <th className="py-3 px-3 text-right">Budget Left</th>
                   <th className="py-3 px-3 text-right">Profile</th>
                 </tr>
@@ -378,9 +377,6 @@ export default function EditionDetail() {
                       <Link to={`/teams/${t.id}`} className="hover:text-cyan-400 transition-colors">
                         {t.name}
                       </Link>
-                    </td>
-                    <td className="py-3 px-3 text-center font-mono font-black text-yellow-400 text-base">
-                      ★ {t.score || 0}
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-green-400 font-semibold">
                       {formatCurrency(t.budget)}

@@ -20,9 +20,13 @@ import {
   ToggleRight,
   ExternalLink,
   HelpCircle,
+  Edit3,
+  Radio,
+  X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { logAdminAction } from '../utils/certificateUtils';
+import { formatCurrency } from '../utils/formatters';
 import type { Edition, Team, Sponsor, GalleryPhoto, FaqEntry } from '../types/database';
 
 interface AdminArchiveManagerProps {
@@ -30,6 +34,8 @@ interface AdminArchiveManagerProps {
   teams: Team[];
   onShowToast: (msg: string, type?: 'success' | 'error') => void;
   onEditionUpdated?: () => void;
+  autoOpenCreate?: boolean;
+  onCloseAutoCreate?: () => void;
 }
 
 const SEGMENTS = [
@@ -49,11 +55,51 @@ export default function AdminArchiveManager({
   teams,
   onShowToast,
   onEditionUpdated,
+  autoOpenCreate,
+  onCloseAutoCreate,
 }: AdminArchiveManagerProps) {
   const [editions, setEditions] = useState<Edition[]>([]);
   const [selectedEditionId, setSelectedEditionId] = useState<string>(
     currentEdition?.id || ''
   );
+
+  // Edition CRUD Modal States
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSubmittingEdition, setIsSubmittingEdition] = useState(false);
+
+  // New Edition Form State
+  const [newEditionForm, setNewEditionForm] = useState({
+    name: '',
+    year: new Date().getFullYear(),
+    startingBudget: '50000000',
+    totalRounds: '3',
+    questionsPerRound: '20',
+    basePrice: '2000000',
+    minIncrement: '1000000',
+    isCurrent: false,
+    isArchived: false,
+  });
+
+  // Edit Edition Form State
+  const [editEditionForm, setEditEditionForm] = useState({
+    name: '',
+    year: new Date().getFullYear(),
+    startingBudget: '50000000',
+    totalRounds: '3',
+    questionsPerRound: '20',
+    basePrice: '2000000',
+    minIncrement: '1000000',
+    isArchived: false,
+  });
+
+  // Open create modal if autoOpenCreate prop is triggered
+  useEffect(() => {
+    if (autoOpenCreate) {
+      setIsCreateModalOpen(true);
+      if (onCloseAutoCreate) onCloseAutoCreate();
+    }
+  }, [autoOpenCreate, onCloseAutoCreate]);
 
   // Archive Form States
   const [championId, setChampionId] = useState<string>('');
@@ -116,6 +162,230 @@ export default function AdminArchiveManager({
   useEffect(() => {
     loadEditions();
   }, []);
+
+  // Open Edit Edition Modal with active edition values
+  const handleOpenEditModal = () => {
+    if (!activeEdition) return;
+    setEditEditionForm({
+      name: activeEdition.name || '',
+      year: activeEdition.year || new Date().getFullYear(),
+      startingBudget: String(activeEdition.starting_budget || 50000000),
+      totalRounds: String(activeEdition.total_rounds || 3),
+      questionsPerRound: String(activeEdition.questions_per_round || 20),
+      basePrice: String(activeEdition.base_price || 2000000),
+      minIncrement: String(activeEdition.min_increment || 1000000),
+      isArchived: Boolean(activeEdition.is_archived),
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Create New Edition / Archive
+  const handleCreateEdition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEditionForm.name.trim()) {
+      onShowToast('Please enter an edition name', 'error');
+      return;
+    }
+
+    setIsSubmittingEdition(true);
+    try {
+      const budget = parseInt(newEditionForm.startingBudget) || 50000000;
+      const rounds = parseInt(newEditionForm.totalRounds) || 3;
+      const qPerRound = parseInt(newEditionForm.questionsPerRound) || 20;
+      const basePr = parseInt(newEditionForm.basePrice) || 2000000;
+      const minInc = parseInt(newEditionForm.minIncrement) || 1000000;
+      const yr = newEditionForm.year || new Date().getFullYear();
+
+      // If set as current, unset others first
+      if (newEditionForm.isCurrent) {
+        await supabase.from('editions').update({ is_current: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      const { data: newEd, error } = await supabase
+        .from('editions')
+        .insert({
+          name: newEditionForm.name.trim(),
+          year: yr,
+          starting_budget: budget,
+          total_rounds: rounds,
+          questions_per_round: qPerRound,
+          base_price: basePr,
+          min_increment: minInc,
+          is_current: newEditionForm.isCurrent,
+          is_archived: newEditionForm.isArchived,
+          archived_at: newEditionForm.isArchived ? new Date().toISOString() : null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create initial event_state for this new edition
+      await supabase.from('event_state').insert({
+        edition_id: newEd.id,
+        game_state: 'setup',
+        round_state: 'ROUND_SETUP',
+        current_round_index: 0,
+        current_question_index: 0,
+        timer_duration_seconds: 180,
+        timer_remaining_seconds: 180,
+        timer_state: 'stopped',
+      });
+
+      await logAdminAction('EDITION_CREATED', {
+        edition_id: newEd.id,
+        name: newEd.name,
+        is_current: newEd.is_current,
+        is_archived: newEd.is_archived,
+      });
+
+      onShowToast(`Edition "${newEd.name}" created successfully!`, 'success');
+      setIsCreateModalOpen(false);
+      setNewEditionForm({
+        name: '',
+        year: new Date().getFullYear() + 1,
+        startingBudget: '50000000',
+        totalRounds: '3',
+        questionsPerRound: '20',
+        basePrice: '2000000',
+        minIncrement: '1000000',
+        isCurrent: false,
+        isArchived: false,
+      });
+
+      await loadEditions();
+      setSelectedEditionId(newEd.id);
+      if (onEditionUpdated) onEditionUpdated();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to create edition', 'error');
+    } finally {
+      setIsSubmittingEdition(false);
+    }
+  };
+
+  // Edit / Update Edition
+  const handleUpdateEdition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEditionId || !editEditionForm.name.trim()) return;
+
+    setIsSubmittingEdition(true);
+    try {
+      const budget = parseInt(editEditionForm.startingBudget) || 50000000;
+      const rounds = parseInt(editEditionForm.totalRounds) || 3;
+      const qPerRound = parseInt(editEditionForm.questionsPerRound) || 20;
+      const basePr = parseInt(editEditionForm.basePrice) || 2000000;
+      const minInc = parseInt(editEditionForm.minIncrement) || 1000000;
+      const yr = editEditionForm.year || new Date().getFullYear();
+
+      const { error } = await supabase
+        .from('editions')
+        .update({
+          name: editEditionForm.name.trim(),
+          year: yr,
+          starting_budget: budget,
+          total_rounds: rounds,
+          questions_per_round: qPerRound,
+          base_price: basePr,
+          min_increment: minInc,
+          is_archived: editEditionForm.isArchived,
+          archived_at: editEditionForm.isArchived
+            ? activeEdition?.archived_at || new Date().toISOString()
+            : null,
+        })
+        .eq('id', selectedEditionId);
+
+      if (error) throw error;
+
+      await logAdminAction('EDITION_UPDATED', {
+        edition_id: selectedEditionId,
+        name: editEditionForm.name.trim(),
+      });
+
+      onShowToast(`Edition "${editEditionForm.name}" updated successfully!`, 'success');
+      setIsEditModalOpen(false);
+      await loadEditions();
+      if (onEditionUpdated) onEditionUpdated();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to update edition', 'error');
+    } finally {
+      setIsSubmittingEdition(false);
+    }
+  };
+
+  // Delete Edition
+  const handleDeleteEdition = async () => {
+    if (!selectedEditionId || !activeEdition) return;
+    if (editions.length <= 1) {
+      onShowToast('Cannot delete the only existing edition in the database.', 'error');
+      return;
+    }
+
+    const confirmMsg = activeEdition.is_current
+      ? `WARNING: "${activeEdition.name}" is currently the ACTIVE live edition!\n\nAre you sure you want to permanently delete it? All associated teams, scores, item auctions, and gallery assets will be deleted.`
+      : `Are you sure you want to permanently delete "${activeEdition.name}"? All associated teams, scores, item auctions, and gallery assets will be deleted.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      // Find fallback edition
+      const fallback = editions.find((e) => e.id !== selectedEditionId);
+
+      // If active edition is being deleted, set fallback to is_current
+      if (activeEdition.is_current && fallback) {
+        await supabase.from('editions').update({ is_current: true }).eq('id', fallback.id);
+      }
+
+      const { error } = await supabase.from('editions').delete().eq('id', selectedEditionId);
+      if (error) throw error;
+
+      await logAdminAction('EDITION_DELETED', {
+        edition_id: selectedEditionId,
+        name: activeEdition.name,
+      });
+
+      onShowToast(`Edition "${activeEdition.name}" deleted.`, 'success');
+
+      if (fallback) {
+        setSelectedEditionId(fallback.id);
+      }
+      await loadEditions();
+      if (onEditionUpdated) onEditionUpdated();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to delete edition', 'error');
+    }
+  };
+
+  // Set as Active Live Event
+  const handleSetActiveEdition = async () => {
+    if (!selectedEditionId || !activeEdition) return;
+    if (activeEdition.is_current) {
+      onShowToast('This edition is already the active live event.', 'success');
+      return;
+    }
+
+    if (!window.confirm(`Switch the active live event to "${activeEdition.name}"? Live screens and leaderboards will switch to this tournament.`)) {
+      return;
+    }
+
+    try {
+      // Set all other editions to is_current = false
+      await supabase.from('editions').update({ is_current: false }).neq('id', selectedEditionId);
+      // Set selected to is_current = true
+      const { error } = await supabase.from('editions').update({ is_current: true }).eq('id', selectedEditionId);
+      if (error) throw error;
+
+      await logAdminAction('EDITION_ACTIVATED', {
+        edition_id: selectedEditionId,
+        name: activeEdition.name,
+      });
+
+      onShowToast(`"${activeEdition.name}" is now the active live event!`, 'success');
+      await loadEditions();
+      if (onEditionUpdated) onEditionUpdated();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to activate edition', 'error');
+    }
+  };
 
   // Sync selected edition archive properties
   useEffect(() => {
@@ -568,19 +838,63 @@ export default function AdminArchiveManager({
           </div>
         </div>
 
-        {/* Edition Selector */}
-        <div className="sm:w-64">
-          <select
-            value={selectedEditionId}
-            onChange={(e) => setSelectedEditionId(e.target.value)}
-            className="gcl-input w-full font-mono text-xs"
-          >
-            {editions.map((ed) => (
-              <option key={ed.id} value={ed.id}>
-                {ed.name} {ed.is_archived ? '— [ARCHIVED]' : '— [ACTIVE]'}
-              </option>
-            ))}
-          </select>
+        {/* Edition Selector & Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-60">
+            <select
+              value={selectedEditionId}
+              onChange={(e) => setSelectedEditionId(e.target.value)}
+              className="gcl-input w-full font-mono text-xs"
+            >
+              {editions.map((ed) => (
+                <option key={ed.id} value={ed.id}>
+                  {ed.name} {ed.is_current ? '★ [CURRENT]' : ed.is_archived ? '— [ARCHIVED]' : '— [STANDBY]'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer"
+              title="Create New Edition / Archive"
+            >
+              <Plus size={14} /> New Edition
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenEditModal}
+              disabled={!activeEdition}
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold font-mono rounded-xl border border-slate-700 transition flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-50"
+              title="Edit Selected Edition"
+            >
+              <Edit3 size={14} /> Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteEdition}
+              disabled={!activeEdition || editions.length <= 1}
+              className="px-3 py-2 bg-red-950/60 hover:bg-red-900/80 text-red-300 hover:text-white text-xs font-bold font-mono rounded-xl border border-red-800/60 transition flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-40"
+              title="Delete Selected Edition"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+
+            {activeEdition && !activeEdition.is_current && (
+              <button
+                type="button"
+                onClick={handleSetActiveEdition}
+                className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-black text-xs font-bold font-mono rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer"
+                title="Make this edition the active live event"
+              >
+                <Radio size={14} /> Set Active
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1307,6 +1621,290 @@ export default function AdminArchiveManager({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* CREATE NEW EDITION MODAL */}
+      {isCreateModalOpen && (
+        <div className="gcl-modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
+          <div className="gcl-modal-box max-w-lg border-emerald-500/50" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+              <h3 className="gcl-modal-title text-emerald-400 flex items-center gap-2 m-0">
+                <Plus size={22} />
+                Create New Edition / Archive
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateEdition} className="space-y-4">
+              <div>
+                <label className="input-label">Edition Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. GenCode League 2026"
+                  value={newEditionForm.name}
+                  onChange={(e) => setNewEditionForm((p) => ({ ...p, name: e.target.value }))}
+                  className="gcl-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Year</label>
+                  <input
+                    type="number"
+                    required
+                    value={newEditionForm.year}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, year: parseInt(e.target.value) || new Date().getFullYear() }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Starting Budget</label>
+                  <input
+                    type="number"
+                    required
+                    value={newEditionForm.startingBudget}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, startingBudget: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-emerald-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(newEditionForm.startingBudget) || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Total Rounds</label>
+                  <input
+                    type="number"
+                    value={newEditionForm.totalRounds}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, totalRounds: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Questions Per Round</label>
+                  <input
+                    type="number"
+                    value={newEditionForm.questionsPerRound}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, questionsPerRound: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Base Price</label>
+                  <input
+                    type="number"
+                    value={newEditionForm.basePrice}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, basePrice: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(newEditionForm.basePrice) || 0)}
+                  </span>
+                </div>
+                <div>
+                  <label className="input-label">Min Increment</label>
+                  <input
+                    type="number"
+                    value={newEditionForm.minIncrement}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, minIncrement: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(newEditionForm.minIncrement) || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={newEditionForm.isCurrent}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, isCurrent: e.target.checked }))}
+                    className="w-4 h-4 rounded text-emerald-500 focus:ring-0 bg-slate-900 border-slate-700"
+                  />
+                  <span>Set as Active Live Event immediately</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={newEditionForm.isArchived}
+                    onChange={(e) => setNewEditionForm((p) => ({ ...p, isArchived: e.target.checked }))}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-700"
+                  />
+                  <span>Mark as Archived (Historical Record)</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdition}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm"
+                >
+                  {isSubmittingEdition ? 'Creating...' : 'Create Edition'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT EDITION MODAL */}
+      {isEditModalOpen && activeEdition && (
+        <div className="gcl-modal-overlay" onClick={() => setIsEditModalOpen(false)}>
+          <div className="gcl-modal-box max-w-lg border-blue-500/50" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+              <h3 className="gcl-modal-title text-cyan-400 flex items-center gap-2 m-0">
+                <Edit3 size={22} />
+                Edit Edition: {activeEdition.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEdition} className="space-y-4">
+              <div>
+                <label className="input-label">Edition Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editEditionForm.name}
+                  onChange={(e) => setEditEditionForm((p) => ({ ...p, name: e.target.value }))}
+                  className="gcl-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Year</label>
+                  <input
+                    type="number"
+                    required
+                    value={editEditionForm.year}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, year: parseInt(e.target.value) || new Date().getFullYear() }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Starting Budget</label>
+                  <input
+                    type="number"
+                    required
+                    value={editEditionForm.startingBudget}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, startingBudget: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-emerald-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(editEditionForm.startingBudget) || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Total Rounds</label>
+                  <input
+                    type="number"
+                    value={editEditionForm.totalRounds}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, totalRounds: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Questions Per Round</label>
+                  <input
+                    type="number"
+                    value={editEditionForm.questionsPerRound}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, questionsPerRound: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Base Price</label>
+                  <input
+                    type="number"
+                    value={editEditionForm.basePrice}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, basePrice: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(editEditionForm.basePrice) || 0)}
+                  </span>
+                </div>
+                <div>
+                  <label className="input-label">Min Increment</label>
+                  <input
+                    type="number"
+                    value={editEditionForm.minIncrement}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, minIncrement: e.target.value }))}
+                    className="gcl-input font-mono"
+                  />
+                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                    {formatCurrency(parseInt(editEditionForm.minIncrement) || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={editEditionForm.isArchived}
+                    onChange={(e) => setEditEditionForm((p) => ({ ...p, isArchived: e.target.checked }))}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-700"
+                  />
+                  <span>Mark as Archived (Read-Only)</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdition}
+                  className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm"
+                >
+                  {isSubmittingEdition ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

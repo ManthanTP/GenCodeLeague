@@ -98,6 +98,8 @@ export default function AdminPanel() {
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const [isFinalizingArchive, setIsFinalizingArchive] = useState(false);
+  const [isNewEditionModalOpen, setIsNewEditionModalOpen] = useState(false);
 
   // 4 Confirmation Dialog States (Point 7)
   const [isConfirmingSold, setIsConfirmingSold] = useState(false);
@@ -554,6 +556,7 @@ export default function AdminPanel() {
 
     const nextState: Partial<EventState> = {
       game_state: 'waiting_start',
+      round_state: 'ROUND_SETUP',
       current_round_index: 0,
       current_question_index: 0,
       current_item_name: '',
@@ -1101,8 +1104,42 @@ export default function AdminPanel() {
     }
   };
 
-  // Legacy alias for starting rounds from generic buttons
+  // 1b. Start Round 1 directly from waiting_start
+  const handleStartRound1 = async () => {
+    if (!eventState?.id) return;
+    const roundData = DEFAULT_ROUNDS_DATA[0] || { name: 'Round 1', questions: [] };
+    const firstQ = roundData.questions[0] || '';
+
+    const nextState: Partial<EventState> = {
+      game_state: 'active',
+      round_state: 'ROUND_ACTIVE',
+      current_round_index: 0,
+      current_question_index: 0,
+      current_item_name: firstQ,
+      current_bid_preview: null,
+      timer_state: 'stopped',
+      timer_duration_seconds: 180,
+      timer_remaining_seconds: 180,
+      timer_started_at: null,
+      timer_paused_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setEventState((prev) => (prev ? { ...prev, ...nextState } : null));
+    setCurrentItem(firstQ);
+    broadcastStateChange(nextState);
+    supabase.from('event_state').update(nextState).eq('id', eventState.id).then();
+
+    showNotification('Round 1 has officially started!', 'success');
+    addHistory('Round 1 Started', 'Round 1 auction begins.');
+  };
+
+  // Centralized starting handler from generic buttons
   const handleStartNextRound = async () => {
+    if (eventState?.game_state === 'waiting_start') {
+      await handleStartRound1();
+      return;
+    }
     const rIdx = eventState?.current_round_index || 0;
     if (rIdx === 0) {
       await handleStartRound2WithReset();
@@ -1110,6 +1147,36 @@ export default function AdminPanel() {
       await handleStartRound3();
     } else {
       await handleStartTieBreaker();
+    }
+  };
+
+  // Finalize & Archive Current Event handler
+  const handleFinalizeAndArchiveCurrentEvent = async () => {
+    if (!edition?.id) return;
+    setIsFinalizingArchive(true);
+    try {
+      const updates = {
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        champion_team_id: podiumState.firstTeamId || null,
+        runner_up_team_id: podiumState.secondTeamId || null,
+        third_place_team_id: podiumState.thirdTeamId || null,
+      };
+
+      const { error } = await supabase
+        .from('editions')
+        .update(updates)
+        .eq('id', edition.id);
+
+      if (error) throw error;
+
+      setEdition((prev) => (prev ? { ...prev, ...updates } : null));
+      showNotification(`"${edition.name}" successfully finalized and saved to Archive!`, 'success');
+      addHistory('Edition Archived', `Edition "${edition.name}" permanently archived.`);
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to archive edition', 'error');
+    } finally {
+      setIsFinalizingArchive(false);
     }
   };
 
@@ -1661,6 +1728,7 @@ export default function AdminPanel() {
 
     const resetUpdates: Partial<EventState> = {
       game_state: 'setup',
+      round_state: 'ROUND_SETUP',
       current_round_index: 0,
       current_question_index: 0,
       current_item_name: '',
@@ -1756,14 +1824,34 @@ export default function AdminPanel() {
         <div className="space-y-1">
           {overallStats.map((team, idx) => {
             const isGrandChampion = idx === 0 && team.totalScore > 0;
+            const isRunnerUp = idx === 1 && team.totalScore > 0;
+            const isThirdPlace = idx === 2 && team.totalScore > 0;
             const isOutOfBudget = team.totalRemaining <= 0;
             return (
               <div
                 key={team.id}
-                className={`grid-overall-row ${isGrandChampion ? 'gcl-row-champion' : ''}`}
+                className={`grid-overall-row ${
+                  isGrandChampion
+                    ? 'gcl-row-champion'
+                    : isRunnerUp
+                    ? 'gcl-row-runnerup'
+                    : isThirdPlace
+                    ? 'gcl-row-third'
+                    : ''
+                }`}
               >
                 <div className="flex items-center gap-3 min-w-0 pr-2">
-                  <span className={`font-mono font-bold text-lg ${isGrandChampion ? 'text-yellow-400' : 'text-blue-400'}`}>
+                  <span
+                    className={`font-mono font-bold text-lg ${
+                      isGrandChampion
+                        ? 'text-yellow-400'
+                        : isRunnerUp
+                        ? 'text-slate-300'
+                        : isThirdPlace
+                        ? 'text-amber-500'
+                        : 'text-blue-400'
+                    }`}
+                  >
                     {idx + 1}.
                   </span>
                   <div className="min-w-0">
@@ -1776,6 +1864,16 @@ export default function AdminPanel() {
                     {isGrandChampion && (
                       <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase block mt-0.5">
                         GRAND CHAMPION
+                      </span>
+                    )}
+                    {isRunnerUp && (
+                      <span className="text-[10px] font-black tracking-widest text-slate-200 uppercase block mt-0.5">
+                        RUNNER-UP
+                      </span>
+                    )}
+                    {isThirdPlace && (
+                      <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase block mt-0.5">
+                        3RD PLACE
                       </span>
                     )}
                   </div>
@@ -2055,16 +2153,28 @@ export default function AdminPanel() {
             currentEdition={edition}
             teams={teams}
             onShowToast={showNotification}
-            onEditionUpdated={() => {
-              if (edition?.id) {
-                supabase
-                  .from('editions')
+            autoOpenCreate={isNewEditionModalOpen}
+            onCloseAutoCreate={() => setIsNewEditionModalOpen(false)}
+            onEditionUpdated={async () => {
+              const { data: curEd } = await supabase
+                .from('editions')
+                .select('*')
+                .eq('is_current', true)
+                .single();
+              if (curEd) {
+                setEdition(curEd);
+                const { data: st } = await supabase
+                  .from('event_state')
                   .select('*')
-                  .eq('id', edition.id)
-                  .single()
-                  .then(({ data }) => {
-                    if (data) setEdition(data);
-                  });
+                  .eq('edition_id', curEd.id)
+                  .single();
+                if (st) setEventState(st);
+                const { data: tm } = await supabase
+                  .from('teams')
+                  .select('*')
+                  .eq('edition_id', curEd.id)
+                  .order('created_at', { ascending: true });
+                if (tm) setTeams(tm);
               }
             }}
           />
@@ -2187,7 +2297,7 @@ export default function AdminPanel() {
             </div>
             <button
               type="button"
-              onClick={handleStartNextRound}
+              onClick={handleStartRound1}
               className="btn-start-round"
               style={{ cursor: 'pointer', position: 'relative', zIndex: 30 }}
             >
@@ -3468,7 +3578,7 @@ export default function AdminPanel() {
 
             {/* Actions: Force Tie Breaker & End Event */}
             <div className="admin-card">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 flex-wrap">
                 <button
                   type="button"
                   onClick={handleStartTieBreaker}
@@ -3477,13 +3587,35 @@ export default function AdminPanel() {
                   <Flag size={18} /> Force Tie Breaker (R4)
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingReset(true)}
-                  className="btn-end-reset w-full sm:w-auto"
-                >
-                  <RefreshCw size={18} /> End Event & Reset
-                </button>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleFinalizeAndArchiveCurrentEvent}
+                    disabled={isFinalizingArchive}
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black font-extrabold text-sm rounded-xl transition-all shadow-glow-gold flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    {isFinalizingArchive ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" /> Saving Archive...
+                      </>
+                    ) : (
+                      <>
+                        <Archive size={18} /> Save & Finalize to Archive
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTabChange('archive');
+                      setIsNewEditionModalOpen(true);
+                    }}
+                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-sm rounded-xl transition-all shadow-glow-emerald flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <Plus size={18} /> Create New Archive / Edition
+                  </button>
+                </div>
               </div>
             </div>
 

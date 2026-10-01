@@ -1,14 +1,15 @@
 import React from 'react';
-import type { Team } from '../types/database';
+import type { Team, TeamItem } from '../types/database';
 import { formatCurrency } from '../utils/formatters';
 
 interface LiveTeamStatusProps {
   teams: Team[];
   startingBudget: number;
   myTeamId?: string | null;
+  items?: TeamItem[];
 }
 
-export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: LiveTeamStatusProps) {
+export default function LiveTeamStatus({ teams, startingBudget, myTeamId, items = [] }: LiveTeamStatusProps) {
   // Sort teams strictly alphabetically A to Z (not rank)
   const sortedTeams = [...teams].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
@@ -30,6 +31,7 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
         {/* Header row */}
         <div className="grid-live-status-header">
           <div>TEAM NAME</div>
+          <div className="text-center">TOTAL ITEMS</div>
           <div className="text-right">TOTAL SPENT</div>
           <div className="text-right">REMAINING</div>
         </div>
@@ -38,7 +40,10 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
         <div className="space-y-1">
           {sortedTeams.length > 0 ? (
             sortedTeams.map((team) => {
-              const spent = Math.max(0, startingBudget - team.budget);
+              const teamItems = items.filter((it) => it.team_id === team.id);
+              const itemsCount = teamItems.length;
+              const calculatedSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+              const spent = calculatedSpent > 0 ? calculatedSpent : Math.max(0, startingBudget - team.budget);
               const isOutOfBudget = team.budget <= 0;
               const isLowBudget = !isOutOfBudget && team.budget <= 5000000;
               const isMyTeam = team.id === myTeamId;
@@ -61,6 +66,12 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
                     )}
                   </div>
 
+                  <div className="text-center font-mono">
+                    <span className="badge-items-sm">
+                      {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+
                   <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
                     {formatCurrency(spent)}
                   </div>
@@ -81,4 +92,3 @@ export default function LiveTeamStatus({ teams, startingBudget, myTeamId }: Live
     </div>
   );
 }
-

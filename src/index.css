@@ -3977,10 +3977,22 @@ select.gcl-input option {
   box-shadow: 0 0 25px rgba(234, 179, 8, 0.25);
 }
 
-/* 3-column grid for Live Team Status & Intermission: TEAM NAME | TOTAL SPENT | REMAINING */
+.gcl-row-runnerup {
+  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%) !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 0 20px rgba(203, 213, 225, 0.2);
+}
+
+.gcl-row-third {
+  background: linear-gradient(90deg, #2a1b12 0%, #17100b 100%) !important;
+  border: 1.5px solid #d97706 !important;
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+/* 4-column grid for Live Team Status: TEAM NAME | TOTAL ITEMS | TOTAL SPENT | REMAINING */
 .grid-live-status-header {
   display: grid;
-  grid-template-columns: minmax(180px, 2fr) 1fr 1fr;
+  grid-template-columns: minmax(180px, 2fr) 110px 1.2fr 1.2fr;
   align-items: center;
   font-family: var(--font-body);
   font-weight: 700;
@@ -3995,7 +4007,7 @@ select.gcl-input option {
 
 .grid-live-status-row {
   display: grid;
-  grid-template-columns: minmax(180px, 2fr) 1fr 1fr;
+  grid-template-columns: minmax(180px, 2fr) 110px 1.2fr 1.2fr;
   align-items: center;
   background: #0e172e;
   border: 1px solid rgba(59, 130, 246, 0.25);

@@ -10,6 +10,7 @@ import {
   Zap,
   History,
   Medal,
+  Award,
   Crown,
   Clock,
   AlertTriangle,
@@ -427,13 +428,12 @@ export default function LiveView() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Live Team Status (Strictly Budget & Spent Only - Scores Hidden from Live View) */}
+          )}          {/* Live Team Status (Strictly Budget & Spent Only - Scores Hidden from Live View) */}
           <LiveTeamStatus
             teams={teams}
             startingBudget={edition?.starting_budget || 50000000}
             myTeamId={myTeamId}
+            items={items}
           />
         </div>
       )}
@@ -456,11 +456,14 @@ export default function LiveView() {
             </p>
           </div>
 
-          <div className="max-w-4xl w-full mx-auto px-2">
+          <div className="max-w-5xl w-full mx-auto px-2">
             <div className="gcl-table-container">
-              <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                <div className="col-span-3 sm:col-span-2">POS</div>
-                <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+              <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                <div className="col-span-2 sm:col-span-1">POS</div>
+                <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
+                <div className="col-span-2 text-center">TOTAL ITEMS</div>
+                <div className="col-span-2 text-right">TOTAL SPENT</div>
+                <div className="col-span-2 text-right">REMAINING</div>
               </div>
 
               <div className="space-y-2 p-2">
@@ -469,11 +472,16 @@ export default function LiveView() {
                   const reveal = r1Reveals.find((r) => r.position === position);
                   const isRevealed = Boolean(reveal?.is_revealed);
                   const isMyTeam = isRevealed && reveal?.team_id === myTeamId;
+                  const teamObj = teams.find((t) => t.id === reveal?.team_id);
+                  const teamItems = items.filter((it) => it.team_id === reveal?.team_id && it.round_index === 0);
+                  const r1ItemsCount = teamItems.length;
+                  const r1Spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                  const r1Remaining = teamObj?.budget ?? (edition?.starting_budget || 50000000) - r1Spent;
 
                   return (
                     <div
                       key={position}
-                      className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl transition-all duration-500 ${
+                      className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl transition-all duration-500 ${
                         isRevealed
                           ? isMyTeam
                             ? 'bg-cyan-950/40 border border-cyan-500/60 shadow-lg'
@@ -481,7 +489,7 @@ export default function LiveView() {
                           : 'bg-slate-950/60 border border-dashed border-slate-800/60 opacity-60'
                       }`}
                     >
-                      <div className="col-span-3 sm:col-span-2">
+                      <div className="col-span-2 sm:col-span-1">
                         <span
                           className={`font-mono text-xl sm:text-2xl font-black ${
                             position === 1 && isRevealed
@@ -498,22 +506,40 @@ export default function LiveView() {
                           {String(position).padStart(2, '0')}
                         </span>
                       </div>
-                      <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                      <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
                         {isRevealed ? (
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-extrabold text-white text-lg sm:text-xl truncate">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-extrabold text-white text-base sm:text-lg truncate">
                               {reveal?.team_name}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                             {position === 1 && (
-                              <Crown size={20} className="text-yellow-400 shrink-0 animate-bounce" />
+                              <Crown size={18} className="text-yellow-400 shrink-0 animate-bounce" />
                             )}
                           </div>
                         ) : (
-                          <span className="font-mono text-xl sm:text-2xl font-bold text-slate-600 tracking-widest">
+                          <span className="font-mono text-xl font-bold text-slate-600 tracking-widest">
                             ???
                           </span>
                         )}
+                      </div>
+
+                      <div className="col-span-2 text-center font-mono">
+                        {isRevealed ? (
+                          <span className="badge-items-sm">
+                            {r1ItemsCount} {r1ItemsCount === 1 ? 'item' : 'items'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 font-bold">???</span>
+                        )}
+                      </div>
+
+                      <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                        {isRevealed ? formatCurrency(r1Spent) : <span className="text-slate-600">???</span>}
+                      </div>
+
+                      <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                        {isRevealed ? formatCurrency(r1Remaining) : <span className="text-slate-600">???</span>}
                       </div>
                     </div>
                   );
@@ -529,7 +555,7 @@ export default function LiveView() {
         <div className="live-centered-screen">
           {roundIdx === 1 ? (
             /* ROUND 2 INTERMISSION — PARTICIPATING TEAMS IN ALPHABETICAL ORDER ONLY */
-            <div className="max-w-4xl w-full mx-auto px-4 space-y-8">
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
               <div className="text-center mb-8">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 2 COMPLETE</span>
@@ -539,9 +565,12 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-container">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                  <div className="col-span-3 sm:col-span-2">#</div>
-                  <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-2 sm:col-span-1">#</div>
+                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
+                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
+                  <div className="col-span-2 text-right">TOTAL SPENT</div>
+                  <div className="col-span-2 text-right">REMAINING</div>
                 </div>
 
                 <div className="space-y-1.5 p-2">
@@ -549,23 +578,37 @@ export default function LiveView() {
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
                       const isMyTeam = team.id === myTeamId;
+                      const teamItems = items.filter((it) => it.team_id === team.id);
+                      const totalItems = teamItems.length;
+                      const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
                       return (
                         <div
                           key={team.id}
-                          className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
+                          className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
                             isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
                           }`}
                         >
-                          <div className="col-span-3 sm:col-span-2">
+                          <div className="col-span-2 sm:col-span-1">
                             <span className="font-mono text-lg font-bold text-cyan-400">
                               {String(idx + 1).padStart(2, '0')}
                             </span>
                           </div>
-                          <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                          <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
                             <span className="font-bold text-white text-base sm:text-lg truncate">
                               {team.name}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          </div>
+                          <div className="col-span-2 text-center font-mono">
+                            <span className="badge-items-sm">
+                              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                            {formatCurrency(totalSpent)}
+                          </div>
+                          <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                            {formatCurrency(team.budget)}
                           </div>
                         </div>
                       );
@@ -575,7 +618,7 @@ export default function LiveView() {
             </div>
           ) : roundIdx === 0 ? (
             /* ROUND 1 INTERMISSION — COMPLETED STANDINGS & BUDGET RESET NOTICE */
-            <div className="max-w-4xl w-full mx-auto px-4 space-y-8">
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
               <div className="text-center mb-8">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 1 COMPLETE</span>
@@ -588,26 +631,34 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-container">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
-                  <div className="col-span-3 sm:col-span-2">POS</div>
-                  <div className="col-span-9 sm:col-span-10">TEAM NAME</div>
+                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-2 sm:col-span-1">POS</div>
+                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
+                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
+                  <div className="col-span-2 text-right">TOTAL SPENT</div>
+                  <div className="col-span-2 text-right">REMAINING</div>
                 </div>
 
                 <div className="space-y-1.5 p-2">
                   {Array.from({ length: Math.max(teams.length, r1Reveals.length) }, (_, i) => {
                     const position = i + 1;
                     const reveal = r1Reveals.find((r) => r.position === position);
-                    const teamName = reveal?.team_name || teams[i]?.name || 'Unknown Team';
-                    const isMyTeam = reveal?.team_id === myTeamId;
+                    const teamObj = teams.find((t) => t.id === reveal?.team_id) || teams[i];
+                    const teamName = reveal?.team_name || teamObj?.name || 'Unknown Team';
+                    const isMyTeam = (reveal?.team_id || teamObj?.id) === myTeamId;
+                    const teamItems = items.filter((it) => it.team_id === (reveal?.team_id || teamObj?.id));
+                    const totalItems = teamItems.length;
+                    const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                    const remaining = teamObj?.budget ?? 0;
 
                     return (
                       <div
                         key={position}
-                        className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
+                        className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
                           isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
                         }`}
                       >
-                        <div className="col-span-3 sm:col-span-2">
+                        <div className="col-span-2 sm:col-span-1">
                           <span
                             className={`font-mono text-lg font-black ${
                               position === 1
@@ -622,7 +673,7 @@ export default function LiveView() {
                             {String(position).padStart(2, '0')}
                           </span>
                         </div>
-                        <div className="col-span-9 sm:col-span-10 flex items-center gap-3">
+                        <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
                           <span className="font-bold text-white text-base sm:text-lg truncate">
                             {teamName}
                           </span>
@@ -630,6 +681,17 @@ export default function LiveView() {
                           {position === 1 && (
                             <Crown size={18} className="text-yellow-400 shrink-0" />
                           )}
+                        </div>
+                        <div className="col-span-2 text-center font-mono">
+                          <span className="badge-items-sm">
+                            {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                          {formatCurrency(totalSpent)}
+                        </div>
+                        <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                          {formatCurrency(remaining)}
                         </div>
                       </div>
                     );
@@ -639,11 +701,68 @@ export default function LiveView() {
             </div>
           ) : (
             /* AFTER ROUND 3 OR TIE BREAKER INTERMISSION */
-            <div className="text-center mb-8">
-              <h1 className="intermission-title">
-                {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
-              </h1>
-              <p className="intermission-subtitle">STAND BY...</p>
+            <div className="max-w-5xl w-full mx-auto px-4 space-y-8">
+              <div className="text-center mb-8">
+                <div className="inline-block mb-3">
+                  <span className="badge-official">ROUND 3 COMPLETE</span>
+                </div>
+                <h1 className="intermission-title">
+                  {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
+                </h1>
+                <p className="intermission-subtitle">STAND BY...</p>
+              </div>
+
+              <div className="gcl-table-container">
+                <div className="grid grid-cols-12 gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-2 sm:col-span-1">#</div>
+                  <div className="col-span-4 sm:col-span-5">TEAM NAME</div>
+                  <div className="col-span-2 text-center">TOTAL ITEMS</div>
+                  <div className="col-span-2 text-right">TOTAL SPENT</div>
+                  <div className="col-span-2 text-right">REMAINING</div>
+                </div>
+
+                <div className="space-y-1.5 p-2">
+                  {[...teams]
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                    .map((team, idx) => {
+                      const isMyTeam = team.id === myTeamId;
+                      const teamItems = items.filter((it) => it.team_id === team.id);
+                      const totalItems = teamItems.length;
+                      const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                      return (
+                        <div
+                          key={team.id}
+                          className={`grid grid-cols-12 gap-3 items-center px-6 py-4 rounded-xl bg-slate-900/90 border border-slate-800 ${
+                            isMyTeam ? 'bg-cyan-950/30 border-cyan-500/50' : ''
+                          }`}
+                        >
+                          <div className="col-span-2 sm:col-span-1">
+                            <span className="font-mono text-lg font-bold text-cyan-400">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <div className="col-span-4 sm:col-span-5 flex items-center gap-2 min-w-0">
+                            <span className="font-bold text-white text-base sm:text-lg truncate">
+                              {team.name}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          </div>
+                          <div className="col-span-2 text-center font-mono">
+                            <span className="badge-items-sm">
+                              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                            {formatCurrency(totalSpent)}
+                          </div>
+                          <div className="col-span-2 text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                            {formatCurrency(team.budget)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -708,7 +827,7 @@ export default function LiveView() {
                 </div>
 
                 {/* 3rd Place Pedestal (Right) */}
-                <div className="podium-col order-3">
+                <div className="podium-col order-3 md:order-3">
                   <div className="podium-badge mb-4">
                     {podiumState.thirdRevealed && thirdTeam ? (
                       <div className="animate-reveal-up">
@@ -751,6 +870,8 @@ export default function LiveView() {
               <div className="space-y-1">
                 {overallStats.map((team) => {
                   const isGrandChampion = team.id === podiumState.firstTeamId && podiumState.firstRevealed;
+                  const isRunnerUp = team.id === podiumState.secondTeamId && podiumState.secondRevealed;
+                  const isThirdPlace = team.id === podiumState.thirdTeamId && podiumState.thirdRevealed;
                   const isOutOfBudget = team.totalRemaining <= 0;
                   const isMyTeam = team.id === myTeamId;
 
@@ -760,6 +881,10 @@ export default function LiveView() {
                       className={`grid-live-final-row ${
                         isGrandChampion
                           ? 'gcl-row-champion'
+                          : isRunnerUp
+                          ? 'gcl-row-runnerup'
+                          : isThirdPlace
+                          ? 'gcl-row-third'
                           : isMyTeam
                           ? 'grid-live-status-me'
                           : ''
@@ -768,6 +893,12 @@ export default function LiveView() {
                       <div className="flex items-center gap-2 min-w-0 pr-2">
                         {isGrandChampion && (
                           <Crown size={20} className="text-yellow-400 shrink-0 animate-bounce" />
+                        )}
+                        {isRunnerUp && (
+                          <Medal size={20} className="text-slate-300 shrink-0 animate-pulse" />
+                        )}
+                        {isThirdPlace && (
+                          <Award size={20} className="text-amber-500 shrink-0 animate-pulse" />
                         )}
                         <span className="font-bold text-white text-base md:text-lg truncate">
                           {team.name}
@@ -779,6 +910,16 @@ export default function LiveView() {
                         {isGrandChampion && (
                           <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 rounded-full ml-1">
                             GRAND CHAMPION
+                          </span>
+                        )}
+                        {isRunnerUp && (
+                          <span className="text-[10px] font-black tracking-widest text-slate-200 uppercase bg-slate-400/20 border border-slate-300/40 px-2 py-0.5 rounded-full ml-1">
+                            RUNNER-UP
+                          </span>
+                        )}
+                        {isThirdPlace && (
+                          <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-amber-600/20 border border-amber-600/40 px-2 py-0.5 rounded-full ml-1">
+                            3RD PLACE
                           </span>
                         )}
                       </div>
