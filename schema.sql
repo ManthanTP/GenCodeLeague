@@ -177,6 +177,7 @@ ALTER TABLE round_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE winner_reveals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE round_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leaderboard_reveals ENABLE ROW LEVEL SECURITY;
 
 -- ----------------------------------------------------
 -- CLEAN DROP POLICIES (Guarantees zero 42710 collisions)
@@ -189,6 +190,8 @@ DROP POLICY IF EXISTS "Public read teams" ON teams;
 DROP POLICY IF EXISTS "Admin all teams" ON teams;
 DROP POLICY IF EXISTS "Public read team_items" ON team_items;
 DROP POLICY IF EXISTS "Admin all team_items" ON team_items;
+DROP POLICY IF EXISTS "Public read leaderboard_reveals" ON leaderboard_reveals;
+DROP POLICY IF EXISTS "Admin all leaderboard_reveals" ON leaderboard_reveals;
 DROP POLICY IF EXISTS "Public read transaction_history" ON transaction_history;
 DROP POLICY IF EXISTS "Admin all transaction_history" ON transaction_history;
 DROP POLICY IF EXISTS "Public read round_snapshots" ON round_snapshots;
