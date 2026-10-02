@@ -9,7 +9,7 @@ import {
   Radio,
   Star,
   Award,
-  BarChart3,
+  Image as ImageIcon,
   Megaphone,
   HelpCircle,
   Wallet,
@@ -56,7 +56,7 @@ export default function Header({
     { label: 'Teams', path: '#teams', icon: Users },
     { label: 'Hall of Fame', path: '/hall-of-fame', icon: Star },
     { label: 'Certificates', path: '/my-certificates', icon: Award },
-    { label: 'Gallery', path: '/gallery', icon: BarChart3 },
+    { label: 'Gallery', path: '/gallery', icon: ImageIcon },
     { label: 'Updates', path: '/announcements', icon: Megaphone },
     { label: 'FAQ', path: '/faq', icon: HelpCircle },
   ];
@@ -83,170 +83,77 @@ export default function Header({
   const displayTeams = teamCount || 0;
 
   return (
-    <header
-      style={{
-        width: '100%',
-        backgroundColor: '#0c0d12',
-        borderBottom: '1px solid #1c1d25',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-      }}
-    >
+    <header className="gcl-header-glass" style={{ width: '100%', position: 'sticky', top: 0, zIndex: 50 }}>
       <div
         style={{
-          maxWidth: '1720px',
+          maxWidth: '1600px',
           margin: '0 auto',
-          padding: '0.55rem 1.5rem',
+          padding: '0 32px',
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '1rem',
+          height: '100%',
         }}
       >
-        {/* Brand identity: GCL bold stylized */}
+        {/* Brand identity */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.75rem',
+            gap: '0.85rem',
             cursor: 'pointer',
             userSelect: 'none',
             flexShrink: 0,
           }}
           onClick={() => navigate('/')}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              letterSpacing: '-0.04em',
-              fontWeight: 900,
-              fontSize: '1.85rem',
-              lineHeight: 1,
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            <span style={{ color: '#ffffff' }}>GC</span>
-            <span style={{ color: '#e0263f' }}>L</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-3px', fontWeight: 700, fontSize: '72px', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
+            <span style={{ color: '#fff' }}>GC</span>
+            <span style={{ color: '#e8212e' }}>L</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #272832', paddingLeft: '0.75rem', paddingTop: '0.1rem', paddingBottom: '0.1rem' }}>
-            <span
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 900,
-                letterSpacing: '0.1em',
-                color: '#ffffff',
-                textTransform: 'uppercase',
-                lineHeight: 1.1,
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '1rem', marginLeft: '0.25rem' }}>
+            <span style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
               GENCODE LEAGUE
             </span>
-            <span
-              style={{
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                color: '#ef4444',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                textTransform: 'uppercase',
-                marginTop: '0.2rem',
-              }}
-            >
-              <span
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  backgroundColor: '#e0263f',
-                  boxShadow: '0 0 6px #e0263f',
-                }}
-              />
+            <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.25rem' }}>
+              <span className="dot" style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
               LIVE AUCTION
             </span>
           </div>
         </div>
 
-        {/* Center: Navigation Pills (Hidden in Fullscreen Presentation Mode) */}
+        {/* Center: Glass Navigation Buttons */}
         {!isFullscreen && (
           <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {viewMode === 'admin' && (
               <div className="header-role-badge header-role-admin">
-                <Shield size={14} />
+                <Shield size={18} />
                 <span>ADMIN</span>
               </div>
             )}
 
             {viewMode === 'live' && (
-              <nav
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: '#121319',
-                  border: '1px solid #20212b',
-                  padding: '0.25rem',
-                  borderRadius: '12px',
-                }}
-              >
+              <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
                 {navLinks.map((link) => {
                   const IconComponent = link.icon;
                   const active = isLinkActive(link.path, link.altPath);
-
-                  if (link.isLive) {
-                    return (
-                      <button
-                        key={link.label}
-                        type="button"
-                        onClick={() => handleNavClick(link.path)}
-                        style={{
-                          padding: '0.38rem 0.85rem',
-                          borderRadius: '8px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                          transition: 'all 0.15s ease',
-                          cursor: 'pointer',
-                          border: active ? '1px solid #e0263f' : '1px solid transparent',
-                          background: active ? 'rgba(224, 38, 63, 0.18)' : 'transparent',
-                          color: active ? '#ffffff' : '#94a3b8',
-                          boxShadow: active ? '0 0 16px rgba(224, 38, 63, 0.35)' : 'none',
-                        }}
-                      >
-                        <IconComponent size={14} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
-                        <span>{link.label}</span>
-                      </button>
-                    );
-                  }
 
                   return (
                     <button
                       key={link.label}
                       type="button"
                       onClick={() => handleNavClick(link.path)}
-                      style={{
-                        padding: '0.38rem 0.85rem',
-                        borderRadius: '8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        transition: 'all 0.15s ease',
-                        cursor: 'pointer',
-                        border: '1px solid transparent',
-                        background: active ? '#22232f' : 'transparent',
-                        color: active ? '#ffffff' : '#94a3b8',
-                      }}
+                      className={active && link.isLive ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}
+                      style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                     >
-                      <IconComponent size={13} style={{ color: '#94a3b8' }} />
-                      <span>{link.label}</span>
+                      <IconComponent
+                        size={22}
+                        fill={link.label === 'Hall of Fame' ? (active && link.isLive ? '#ff4a56' : '#f4f4f6') : 'none'}
+                        style={{ flexShrink: 0 }}
+                      />
+                      <span style={{ whiteSpace: 'nowrap' }}>{link.label}</span>
                     </button>
                   );
                 })}
@@ -255,170 +162,56 @@ export default function Header({
           </div>
         )}
 
-        {/* Center: Competition Status Badge (Shown only in Fullscreen Presentation Mode) */}
+        {/* Center: Fullscreen Status Badge */}
         {isFullscreen && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.35rem 0.85rem',
-              background: '#121319',
-              border: '1px solid #20212b',
-              borderRadius: '8px',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '0.75rem',
-              fontWeight: 700,
-            }}
-          >
-            <span style={{ color: '#ffffff', borderBottom: '2px solid #e0263f', paddingBottom: '1px' }}>
+          <div className="gcl-glass" style={{ padding: '0.5rem 1.25rem', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.75rem', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: '#ffffff', borderBottom: '2px solid #e11d2e', paddingBottom: '1px' }}>
               {(currentRoundName || 'ROUND 1').toUpperCase()}
             </span>
             <span style={{ color: '#475569' }}>|</span>
-            <span style={{ color: '#94a3b8' }}>
+            <span style={{ color: '#9a98a2' }}>
               QUESTION {(questionIdx !== undefined ? questionIdx + 1 : 1)} OF {totalQuestions || 20}
             </span>
           </div>
         )}
 
         {/* Right Stats Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Remaining Budget card */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              background: '#111218',
-              border: '1px solid rgba(224, 38, 63, 0.45)',
-              padding: '0.35rem 0.85rem',
-              borderRadius: '10px',
-              boxShadow: '0 0 15px rgba(224, 38, 63, 0.14)',
-            }}
-          >
-            <div
-              style={{
-                padding: '0.35rem',
-                borderRadius: '8px',
-                background: '#1a1b22',
-                border: '1px solid #282934',
-                color: '#cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Wallet size={15} />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: '0.62rem',
-                  color: '#8e8e99',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  margin: 0,
-                  lineHeight: 1,
-                }}
-              >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexShrink: 0 }}>
+          {/* Remaining Budget glass card */}
+          <div className="panel red" style={{ width: '185px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <Wallet size={32} style={{ strokeWidth: 2.2, color: '#f4f4f6', flexShrink: 0 }} />
+            <div style={{ whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                 Remaining Budget
               </p>
-              <p
-                style={{
-                  fontSize: '0.92rem',
-                  fontWeight: 900,
-                  color: '#e0263f',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  margin: '0.2rem 0 0 0',
-                  lineHeight: 1,
-                }}
-              >
+              <p style={{ fontSize: '24px', fontWeight: 700, color: '#ff4350', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                 {displayBudget}
               </p>
             </div>
           </div>
 
-          {/* Total Teams card */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              background: '#111218',
-              border: '1px solid #22232c',
-              padding: '0.35rem 0.85rem',
-              borderRadius: '10px',
-            }}
-          >
-            <div
-              style={{
-                padding: '0.35rem',
-                borderRadius: '8px',
-                background: '#1a1b22',
-                border: '1px solid #282934',
-                color: '#cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Users size={15} />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: '0.62rem',
-                  color: '#8e8e99',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  margin: 0,
-                  lineHeight: 1,
-                }}
-              >
-                TOTAL TEAMS
+          {/* Total Teams glass card */}
+          <div className="panel" style={{ width: '131px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <Users size={32} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+            <div style={{ whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                Total Teams
               </p>
-              <p
-                style={{
-                  fontSize: '0.92rem',
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  margin: '0.2rem 0 0 0',
-                  lineHeight: 1,
-                }}
-              >
+              <p style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f6', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                 {displayTeams}
               </p>
             </div>
           </div>
 
-          {/* Exit Fullscreen Button in Header (Presentation Mode) */}
+          {/* Exit Fullscreen Button */}
           {isFullscreen && onExitFullscreen && (
             <button
               type="button"
               onClick={onExitFullscreen}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'rgba(224, 38, 63, 0.18)',
-                border: '1.5px solid #e0263f',
-                color: '#ffffff',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                fontFamily: "'JetBrains Mono', monospace",
-                letterSpacing: '0.06em',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                boxShadow: '0 0 15px rgba(224, 38, 63, 0.35)',
-                transition: 'all 0.15s ease',
-              }}
+              className="gcl-nav-btn-active"
               title="Exit Fullscreen Presentation Mode"
             >
-              <Minimize size={13} style={{ color: '#e0263f' }} />
+              <Minimize size={13} style={{ color: '#e11d2e' }} />
               <span>EXIT FULLSCREEN</span>
             </button>
           )}
@@ -429,24 +222,17 @@ export default function Header({
               <Eye size={16} /> Live View
             </button>
           )}
-
           {viewMode === 'admin' && isAdminAuthenticated && onLogout && (
             <button onClick={onLogout} className="btn-header-logout">
               <LogOut size={16} /> Logout
             </button>
           )}
 
-          {/* Mobile hamburger menu (Hidden in Fullscreen) */}
+          {/* Mobile hamburger */}
           {!isFullscreen && viewMode === 'live' && (
             <button
               className="xl:hidden"
-              style={{
-                padding: '0.4rem',
-                color: '#94a3b8',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              style={{ padding: '0.4rem', color: '#8d8b94', background: 'transparent', border: 'none', cursor: 'pointer' }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
             >
@@ -458,7 +244,7 @@ export default function Header({
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && viewMode === 'live' && (
-        <div style={{ background: '#0c0d12', borderBottom: '1px solid #22232e', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ background: 'rgba(18,18,21,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isLinkActive(link.path, link.altPath);
@@ -466,25 +252,11 @@ export default function Header({
               <button
                 key={link.label}
                 type="button"
-                onClick={() => {
-                  handleNavClick(link.path);
-                  setMobileMenuOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.65rem 1rem',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  background: active ? 'rgba(224, 38, 63, 0.2)' : 'transparent',
-                  color: active ? '#ffffff' : '#cbd5e1',
-                  border: active ? '1px solid #e0263f' : '1px solid transparent',
-                  cursor: 'pointer',
-                }}
+                onClick={() => { handleNavClick(link.path); setMobileMenuOpen(false); }}
+                className={active && link.isLive ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}
+                style={{ width: '100%', justifyContent: 'flex-start' }}
               >
-                <Icon size={16} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
+                <Icon size={16} style={{ color: active ? '#e11d2e' : '#8d8b94' }} />
                 <span>{link.label}</span>
               </button>
             );

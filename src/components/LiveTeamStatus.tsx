@@ -31,61 +31,37 @@ export default function LiveTeamStatus({
   return (
     <div
       id="live-team-status-section"
+      className="panel red"
       style={{
-        background: '#0c0d12',
-        border: '1px solid rgba(224, 38, 63, 0.35)',
-        boxShadow: '0 0 20px rgba(224, 38, 63, 0.1)',
-        borderRadius: '16px',
-        padding: '1.25rem 1.5rem',
+        padding: '18px 24px',
+        minHeight: '385px',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Top left corner red glow rim */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '130px',
-          height: '130px',
-          background: 'radial-gradient(circle at top left, rgba(224, 38, 63, 0.25) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
+      {/* Title & Real-time pill */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginBottom: '14px', position: 'relative', zIndex: 10 }}>
+        <h2 style={{ fontSize: '30px', fontWeight: 700, color: '#f4f4f6', letterSpacing: '0.02em', margin: 0, fontFamily: "'Rajdhani', sans-serif" }}>
           Live Team Status
         </h2>
-        <span
+        <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.2rem 0.65rem',
-            borderRadius: '9999px',
-            fontSize: '0.68rem',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontWeight: 800,
-            border: '1px solid rgba(224, 38, 63, 0.45)',
-            background: 'rgba(224, 38, 63, 0.12)',
-            color: '#f87171',
-            letterSpacing: '0.06em',
+            gap: '8px',
+            width: '126px',
+            height: '32px',
+            border: '1.5px solid #e8212e',
+            borderRadius: '6px',
+            background: 'rgba(232, 33, 46, 0.08)',
+            padding: '0 12px',
           }}
         >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: '#e0263f',
-              boxShadow: '0 0 6px #e0263f',
-            }}
-          />
-          REAL-TIME
-        </span>
+          <div className="dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#e8212e', flexShrink: 0 }} />
+          <span style={{ fontSize: '15px', fontWeight: 600, color: '#ff4350', letterSpacing: '0.04em', fontFamily: "'Inter', sans-serif" }}>
+            REAL-TIME
+          </span>
+        </div>
       </div>
 
       {/* Table Container */}
@@ -93,17 +69,27 @@ export default function LiveTeamStatus({
         <table
           style={{
             width: '100%',
-            borderCollapse: 'separate',
-            borderSpacing: '0 4px',
+            borderCollapse: 'collapse',
             textAlign: 'left',
           }}
         >
           <thead>
-            <tr style={{ color: '#64748b', fontSize: '0.72rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: '0.08em' }}>
-              <th style={{ padding: '0.35rem 0.75rem', width: '50px' }}>#</th>
-              <th style={{ padding: '0.35rem 0.75rem' }}>TEAM NAME</th>
-              <th style={{ padding: '0.35rem 0.75rem', textAlign: 'center', width: '140px' }}>TOTAL SPENT</th>
-              <th style={{ padding: '0.35rem 0.75rem', textAlign: 'right', width: '140px' }}>REMAINING</th>
+            <tr
+              style={{
+                height: '34px',
+                background: '#1a1a1f',
+                borderRadius: '6px 6px 0 0',
+                color: '#9a9aa3',
+                fontSize: '15px',
+                fontWeight: 600,
+                letterSpacing: '0.8px',
+                fontFamily: "'Rajdhani', sans-serif",
+              }}
+            >
+              <th style={{ width: '70px', textAlign: 'center', padding: '0 10px', borderTopLeftRadius: '6px' }}>#</th>
+              <th style={{ textAlign: 'left', padding: '0 16px' }}>TEAM NAME</th>
+              <th style={{ width: '220px', textAlign: 'center', padding: '0 16px' }}>TOTAL SPENT</th>
+              <th style={{ width: '220px', textAlign: 'center', padding: '0 16px', borderTopRightRadius: '6px' }}>REMAINING</th>
             </tr>
           </thead>
           <tbody>
@@ -112,11 +98,11 @@ export default function LiveTeamStatus({
                 <td
                   colSpan={4}
                   style={{
-                    padding: '2rem 1rem',
+                    padding: '2.5rem 1rem',
                     textAlign: 'center',
-                    color: '#64748b',
-                    fontSize: '0.85rem',
-                    fontFamily: "'JetBrains Mono', monospace",
+                    color: '#9a9aa3',
+                    fontSize: '15px',
+                    fontFamily: "'Inter', sans-serif",
                   }}
                 >
                   No teams registered yet.
@@ -124,100 +110,115 @@ export default function LiveTeamStatus({
               </tr>
             ) : (
               displayRows.map((row, idx) => {
-              const numStr = String(idx + 1).padStart(2, '0');
-              const isSelected = row.isYou;
+                const numStr = String(idx + 1).padStart(2, '0');
+                const isSelected = row.isYou;
 
-              return (
-                <tr
-                  key={row.id}
-                  style={
-                    isSelected
-                      ? {
-                          background: 'rgba(224, 38, 63, 0.08)',
-                          boxShadow: '0 0 15px rgba(224, 38, 63, 0.18)',
-                        }
-                      : {}
-                  }
-                >
-                  <td
+                return (
+                  <tr
+                    key={row.id}
                     style={{
-                      padding: '0.55rem 0.75rem',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      color: isSelected ? '#ffffff' : '#94a3b8',
-                      borderTopLeftRadius: '8px',
-                      borderBottomLeftRadius: '8px',
-                      borderTop: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderBottom: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderLeft: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
+                      height: isSelected ? '36px' : '35px',
+                      background: isSelected ? '#2b0e13' : 'transparent',
                     }}
                   >
-                    {numStr}
-                  </td>
-                  <td
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      borderTop: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderBottom: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.86rem' }}>
-                        {row.name}
-                      </span>
-                      {isSelected && (
-                        <span
-                          style={{
-                            background: '#e0263f',
-                            color: '#ffffff',
-                            fontSize: '0.62rem',
-                            fontWeight: 900,
-                            padding: '0.12rem 0.4rem',
-                            borderRadius: '4px',
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                          }}
-                        >
-                          YOU
+                    {/* Rank index # */}
+                    <td
+                      style={{
+                        textAlign: 'center',
+                        padding: '0 10px',
+                        height: isSelected ? '36px' : '35px',
+                        borderTop: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderBottom: isSelected ? '1px solid #7a1a22' : '1px solid #202026',
+                        borderLeft: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderTopLeftRadius: isSelected ? '6px' : '0',
+                        borderBottomLeftRadius: isSelected ? '6px' : '0',
+                      }}
+                    >
+                      <div
+                        className="num"
+                        style={{
+                          width: '44px',
+                          height: '24px',
+                          borderRadius: '5px',
+                          fontSize: '16px',
+                          fontWeight: 700,
+                          margin: '0 auto',
+                        }}
+                      >
+                        {numStr}
+                      </div>
+                    </td>
+
+                    {/* Team Name + YOU badge */}
+                    <td
+                      style={{
+                        textAlign: 'left',
+                        padding: '0 16px',
+                        height: isSelected ? '36px' : '35px',
+                        borderTop: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderBottom: isSelected ? '1px solid #7a1a22' : '1px solid #202026',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '16px', color: '#f4f4f6', fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
+                          {row.name}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      textAlign: 'center',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.86rem',
-                      fontWeight: 600,
-                      color: '#cbd5e1',
-                      borderTop: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderBottom: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                    }}
-                  >
-                    {formatCurrency(row.spent)}
-                  </td>
-                  <td
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      textAlign: 'right',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.86rem',
-                      fontWeight: 800,
-                      color: '#10b981',
-                      borderTopRightRadius: '8px',
-                      borderBottomRightRadius: '8px',
-                      borderTop: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderBottom: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                      borderRight: isSelected ? '1px solid rgba(224, 38, 63, 0.65)' : 'none',
-                    }}
-                  >
-                    {formatCurrency(row.budget)}
-                  </td>
-                </tr>
-              );
-            })
+                        {isSelected && (
+                          <div
+                            className="chip"
+                            style={{
+                              width: '38px',
+                              height: '20px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            YOU
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Total Spent */}
+                    <td
+                      style={{
+                        textAlign: 'center',
+                        padding: '0 16px',
+                        fontSize: '16px',
+                        color: '#f4f4f6',
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontVariantNumeric: 'tabular-nums',
+                        height: isSelected ? '36px' : '35px',
+                        borderTop: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderBottom: isSelected ? '1px solid #7a1a22' : '1px solid #202026',
+                      }}
+                    >
+                      {formatCurrency(row.spent)}
+                    </td>
+
+                    {/* Remaining */}
+                    <td
+                      style={{
+                        textAlign: 'center',
+                        padding: '0 16px',
+                        fontSize: '17px',
+                        fontWeight: 600,
+                        color: '#3fe085',
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontVariantNumeric: 'tabular-nums',
+                        height: isSelected ? '36px' : '35px',
+                        borderTop: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderBottom: isSelected ? '1px solid #7a1a22' : '1px solid #202026',
+                        borderRight: isSelected ? '1px solid #7a1a22' : 'none',
+                        borderTopRightRadius: isSelected ? '6px' : '0',
+                        borderBottomRightRadius: isSelected ? '6px' : '0',
+                      }}
+                    >
+                      {formatCurrency(row.budget)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

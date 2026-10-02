@@ -1,0 +1,442 @@
+/* ====================================================================
+   GCL LIVE VIEW — GLASS MORPHISM DESIGN SYSTEM
+   Pixel-matched to reference layout and typography specifications
+   ==================================================================== */
+
+/* === LIVE VIEW PAGE BACKGROUND === */
+.gcl-live-page {
+  background-color: #1d1d21;
+  background-image: radial-gradient(1100px 700px at 30% 20%, #2e2e34 0, #232328 55%, #1b1b1f 100%), #222226;
+  min-height: 100vh;
+  color: #f4f4f6;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* === GLASS PANEL BASE (.panel) === */
+.gcl-glass, .panel {
+  border-radius: 14px;
+  border: 1px solid #3e3e48;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.22) 100%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px),
+    linear-gradient(145deg, #303038 0%, #25252c 35%, #1b1b20 70%, #202026 100%);
+  box-shadow:
+    0 0 24px rgba(175, 175, 195, 0.12),
+    inset 0 0 30px rgba(195, 195, 215, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* Glass panel with red glow border (.red) */
+.gcl-glass-red, .panel.red, .red {
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.22) 100%) padding-box,
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px) padding-box,
+    linear-gradient(145deg, #303038 0%, #25252c 35%, #1b1b20 70%, #202026 100%) padding-box,
+    radial-gradient(circle 65px at 0 0, #ff2a38 0, rgba(232, 33, 46, 0.6) 16px, transparent 65px) border-box,
+    radial-gradient(circle 65px at 100% 100%, #ff2a38 0, rgba(232, 33, 46, 0.6) 16px, transparent 65px) border-box,
+    linear-gradient(#4a4a55, #3a3a44) border-box;
+  box-shadow:
+    -3px -3px 12px -6px rgba(232, 33, 46, 0.5),
+    3px 3px 12px -6px rgba(232, 33, 46, 0.5),
+    0 0 24px rgba(175, 175, 195, 0.12),
+    inset 0 0 30px rgba(195, 195, 215, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* Strip container for geometric overlays */
+.strip {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Pulsing dot animation */
+@keyframes pl { 50% { opacity: .35; } }
+.dot { animation: pl 1.4s infinite; }
+
+/* Number badge (.num) */
+.num, .gcl-glass-badge {
+  background: #2a2a32;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-family: 'Rajdhani', sans-serif;
+  color: #f4f4f6;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Red chip badge (.chip) */
+.chip, .gcl-you-badge {
+  background: #e8212e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Green highlight (.gr) */
+.gr {
+  color: #3fe085;
+  font-weight: 600;
+}
+
+/* Subdued grey text (.g) */
+.g {
+  color: #9a9aa3;
+}
+
+/* === HEADER STYLES (99px) === */
+.gcl-header-glass {
+  min-height: 99px;
+  height: 99px;
+  background: linear-gradient(#1c1c20, #17171a);
+  border-bottom: 1px solid #35353b;
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+}
+
+/* Header nav button (inactive) */
+.gcl-nav-btn {
+  height: 46px;
+  border-radius: 9px;
+  background: #18181c;
+  border: 1px solid #2c2c33;
+  font-size: 16px;
+  font-weight: 500;
+  color: #f4f4f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.gcl-nav-btn:hover {
+  background: #25252b;
+  border-color: #3e3e48;
+}
+
+/* Header nav button (active - Live) */
+.gcl-nav-btn-active {
+  height: 46px;
+  border-radius: 9px;
+  background: linear-gradient(#45141b, #2a0c11);
+  border: 1px solid #a6212c;
+  color: #ff4a56;
+  box-shadow: 0 0 16px rgba(232,33,46,.35);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Header stat card: Remaining budget & total teams */
+.gcl-header-stat {
+  height: 64px;
+  border-radius: 10px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gcl-header-stat-red {
+  height: 64px;
+  border-radius: 10px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* === RED DIAGONAL STREAK (Question Card) === */
+.gcl-red-streak {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.gcl-red-streak::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  width: 260px;
+  height: 300px;
+  background: radial-gradient(circle at 15% 20%, rgba(225, 29, 46, 0.38) 0%, rgba(225, 29, 46, 0.08) 50%, transparent 75%);
+  pointer-events: none;
+}
+.gcl-red-streak::after {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: 36px;
+  width: 3px;
+  height: 420px;
+  transform: rotate(38deg);
+  background: linear-gradient(180deg, rgba(255, 80, 100, 0.95) 0%, rgba(225, 29, 46, 0.8) 45%, transparent 95%);
+  box-shadow:
+    0 0 14px 2px rgba(225, 29, 46, 0.75),
+    0 0 28px 4px rgba(225, 29, 46, 0.35);
+  pointer-events: none;
+}
+
+/* === CORNER ACCENT (Current Bid Card) === */
+.gcl-corner-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  background: linear-gradient(225deg, rgba(225, 29, 46, 0.85) 0%, rgba(225, 29, 46, 0.3) 45%, transparent 70%);
+  border-top-right-radius: 14px;
+}
+
+/* === TIMER PROGRESS BAR (6px thick red bar on grey track) === */
+.gcl-timer-track {
+  width: 100%;
+  height: 6px;
+  background: #26242c;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.gcl-timer-bar {
+  height: 6px;
+  background: #e11d2e;
+  border-radius: 9999px;
+  box-shadow: 0 0 8px rgba(225, 29, 46, 0.7);
+  transition: width 1s linear;
+}
+
+/* === REAL-TIME PILL BADGE === */
+.gcl-realtime-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-weight: 800;
+  border: 1px solid rgba(225, 29, 46, 0.55);
+  background: rgba(225, 29, 46, 0.15);
+  color: #ff6b7a;
+  letter-spacing: 0.06em;
+}
+
+.gcl-realtime-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #e11d2e;
+  box-shadow: 0 0 8px #e11d2e;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* === YOU BADGE === */
+.gcl-you-badge {
+  background: #e11d2e;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* === TABLE ROW (selected/you: #2b0e13 background, #7a1a22 border) === */
+.gcl-table-row-you {
+  background: #2b0e13 !important;
+  height: 36px;
+}
+.gcl-table-row-you td {
+  background: #2b0e13 !important;
+  border-top: 1px solid #7a1a22;
+  border-bottom: 1px solid #7a1a22;
+  height: 36px;
+  padding: 0 1rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.gcl-table-row-you td:first-child {
+  border-left: 1px solid #7a1a22;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+.gcl-table-row-you td:last-child {
+  border-right: 1px solid #7a1a22;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+/* === TABLE ROW (regular glass row: 35px height, border-bottom #202026) === */
+.gcl-glass-row-table {
+  height: 35px;
+}
+.gcl-glass-row-table td {
+  height: 35px;
+  padding: 0 1rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid #202026;
+}
+
+/* === PREVIOUS BIDS ROW (grid aligned, 30px height, #1c1c21 fill) === */
+.gcl-prev-bid-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto 75px;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 16px;
+  background: #1c1c21;
+  border-radius: 4px;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === ICON TILE === */
+.gcl-icon-tile {
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gcl-icon-tile-red {
+  background: rgba(225, 29, 46, 0.18);
+  border: 1.5px solid rgba(225, 29, 46, 0.45);
+  color: #ff2d3d;
+  box-shadow: 0 0 10px rgba(225, 29, 46, 0.2);
+}
+
+.gcl-icon-tile-green {
+  background: rgba(47, 211, 107, 0.15);
+  border: 1.5px solid rgba(47, 211, 107, 0.40);
+  color: #2fd36b;
+}
+
+.gcl-icon-tile-neutral {
+  background: #1b191e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9a98a2;
+}
+
+/* === SELECT DROPDOWN GLASS === */
+.gcl-select-glass {
+  background: #17151a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9a98a2;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0.5rem 2.2rem 0.5rem 1rem;
+  border-radius: 10px;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-family: 'Inter', sans-serif;
+}
+.gcl-select-glass:focus {
+  border-color: rgba(225, 29, 46, 0.5);
+}
+
+/* === VERTICAL DIVIDER === */
+.gcl-vdivider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 1rem;
+}
+
+/* === ITEMS WON INNER BOX (~120px) === */
+.gcl-items-won-inner {
+  background: #1b191e;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  min-height: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === ARENA 2-COLUMN GRID (Left 1156px, Right 369px, Gap 26px) === */
+.gcl-live-arena-grid {
+  display: grid;
+  grid-template-columns: 1156px 369px;
+  gap: 26px;
+  justify-content: center;
+  width: 100%;
+}
+
+.gcl-live-bid-row {
+  display: grid;
+  grid-template-columns: 581px 557px;
+  gap: 18px;
+  width: 100%;
+}
+
+@media (max-width: 1580px) {
+  .gcl-live-arena-grid {
+    grid-template-columns: minmax(0, 1fr) 369px;
+    gap: 20px;
+  }
+  .gcl-live-bid-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .gcl-live-arena-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .gcl-live-bid-row {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
