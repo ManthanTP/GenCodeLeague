@@ -69,7 +69,7 @@ export default function HallOfFame() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -78,25 +78,25 @@ export default function HallOfFame() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Live Event
           </Link>
 
           <div className="flex items-center gap-3 text-xs font-mono">
-            <Link to="/gallery" className="text-slate-400 hover:text-cyan-400 transition-colors">
+            <Link to="/gallery" className="text-slate-400 hover:text-red-400 transition-colors">
               Gallery
             </Link>
             <span className="text-slate-700">•</span>
-            <Link to="/announcements" className="text-slate-400 hover:text-cyan-400 transition-colors">
+            <Link to="/announcements" className="text-slate-400 hover:text-red-400 transition-colors">
               Announcements
             </Link>
             <span className="text-slate-700">•</span>
-            <Link to="/faq" className="text-slate-400 hover:text-cyan-400 transition-colors">
+            <Link to="/faq" className="text-slate-400 hover:text-red-400 transition-colors">
               FAQ
             </Link>
             <span className="text-slate-700">•</span>
-            <Link to="/my-certificates" className="text-cyan-400 hover:underline">
+            <Link to="/my-certificates" className="text-red-400 hover:underline">
               Verify Credentials
             </Link>
           </div>
@@ -126,7 +126,7 @@ export default function HallOfFame() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Record 1: Most Correct Answers */}
-            <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-amber-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
+            <div className="bg-[#131316] border border-amber-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
               <div className="absolute top-3 right-3 text-amber-500/20">
                 <Zap size={48} />
               </div>
@@ -145,17 +145,17 @@ export default function HallOfFame() {
             </div>
 
             {/* Record 2: Highest Single Bid Won */}
-            <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-cyan-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
-              <div className="absolute top-3 right-3 text-cyan-500/20">
+            <div className="bg-[#131316] border border-red-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-3 right-3 text-red-500/20">
                 <TrendingUp size={48} />
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold block">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-bold block">
                 Highest Single Bid Won
               </span>
               <div className="text-2xl font-black text-white mt-1">
                 {records?.highestBidWon ? formatCurrency(records.highestBidWon.amount) : '—'}
               </div>
-              <div className="text-xs font-bold text-cyan-300 mt-2 truncate">
+              <div className="text-xs font-bold text-red-300 mt-2 truncate">
                 {records?.highestBidWon?.teamName || 'Record pending'}
               </div>
               <div className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">
@@ -164,7 +164,7 @@ export default function HallOfFame() {
             </div>
 
             {/* Record 3: Most Questions Won */}
-            <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-yellow-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
+            <div className="bg-[#131316] border border-yellow-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
               <div className="absolute top-3 right-3 text-yellow-500/20">
                 <Layers size={48} />
               </div>
@@ -183,17 +183,17 @@ export default function HallOfFame() {
             </div>
 
             {/* Record 4: Highest Tournament Investment */}
-            <div className="bg-gradient-to-br from-slate-900/90 to-slate-950 border border-purple-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
-              <div className="absolute top-3 right-3 text-purple-500/20">
+            <div className="bg-[#131316] border border-slate-700/60 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-3 right-3 text-slate-500/20">
                 <Flame size={48} />
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-purple-400 font-bold block">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-slate-300 font-bold block">
                 Highest Tournament Investment
               </span>
               <div className="text-2xl font-black text-white mt-1">
                 {records?.highestTournamentInvestment ? formatCurrency(records.highestTournamentInvestment.amount) : '—'}
               </div>
-              <div className="text-xs font-bold text-purple-300 mt-2 truncate">
+              <div className="text-xs font-bold text-slate-200 mt-2 truncate">
                 {records?.highestTournamentInvestment?.teamName || 'Record pending'}
               </div>
               <div className="text-[10px] font-mono text-slate-400 mt-0.5">
@@ -261,7 +261,7 @@ export default function HallOfFame() {
 
                     <Link
                       to={`/editions/${edition.id}`}
-                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700 w-fit shrink-0"
+                      className="px-5 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#26262b] text-red-400 text-xs font-bold flex items-center gap-1.5 transition-colors border border-[#26262b] w-fit shrink-0"
                     >
                       View Complete Standings & Details <ArrowRight size={14} />
                     </Link>

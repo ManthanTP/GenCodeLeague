@@ -2428,7 +2428,7 @@ export default function AdminPanel() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans relative" style={{ paddingTop: '84px' }}>
+    <div className="min-h-screen text-white pb-16 font-sans relative" style={{ paddingTop: '84px' }}>
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -2454,17 +2454,17 @@ export default function AdminPanel() {
       {/* Admin Change Password Modal */}
       {isChangePasswordOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4 text-cyan-400">
+          <div className="bg-[#131316] border border-[#26262b] rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-[var(--accent-red)]">
               <KeyRound size={24} />
               <h3 className="text-xl font-bold text-white">Set / Update Admin Password</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-[#a1a1aa] mb-4">
               Enter your new administrator password. This will update your login credentials in Supabase Auth immediately.
             </p>
             <form onSubmit={handleUpdateAdminPassword} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+                <label className="text-xs text-[#71717a] uppercase font-bold mb-1 block">
                   New Password (min 6 chars)
                 </label>
                 <input
@@ -2504,7 +2504,7 @@ export default function AdminPanel() {
 
       {/* Cyber Admin Command Bar */}
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 relative z-30">
-        <div className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
+        <div className="p-2.5 rounded-2xl bg-[#131316] border border-[#26262b] backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
           {/* Main 3 Module Tabs */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -2512,13 +2512,13 @@ export default function AdminPanel() {
               onClick={() => handleTabChange('auction')}
               className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
                 adminActiveTab === 'auction'
-                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-glow-blue border border-blue-400/40'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                  ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)] border border-[var(--accent-red)]'
+                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
               }`}
             >
-              <Hammer size={16} className={adminActiveTab === 'auction' ? 'text-blue-200 animate-pulse' : 'text-slate-400'} />
+              <Hammer size={16} className={adminActiveTab === 'auction' ? 'text-white' : 'text-[#71717a]'} />
               <span>LIVE AUCTION CONSOLE</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'auction' ? 'bg-blue-900/80 text-blue-200 border border-blue-400/30' : 'bg-slate-800 text-slate-400'}`}>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'auction' ? 'bg-[#0a0a0c]/60 text-white border border-white/20' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
                 LIVE
               </span>
             </button>
@@ -2528,14 +2528,14 @@ export default function AdminPanel() {
               onClick={() => handleTabChange('certificates')}
               className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
                 adminActiveTab === 'certificates'
-                  ? 'bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500 text-black shadow-glow-cyan border border-cyan-300/50'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)]'
+                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
               }`}
             >
-              <Award size={16} className={adminActiveTab === 'certificates' ? 'text-black' : 'text-slate-400'} />
+              <Award size={16} className={adminActiveTab === 'certificates' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
               <span>CERTIFICATE HUB</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'certificates' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' : 'bg-slate-800 text-slate-400'}`}>
-                LAYER A
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'certificates' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
+                MODULE
               </span>
             </button>
 
@@ -2544,14 +2544,14 @@ export default function AdminPanel() {
               onClick={() => handleTabChange('archive')}
               className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
                 adminActiveTab === 'archive'
-                  ? 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-black shadow-glow-gold border border-yellow-300/50'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                  ? 'bg-[#18181c] text-white border border-[#d4af37]/60 shadow-[0_0_12px_rgba(212,175,55,0.1)]'
+                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
               }`}
             >
-              <Archive size={16} className={adminActiveTab === 'archive' ? 'text-black' : 'text-slate-400'} />
+              <Archive size={16} className={adminActiveTab === 'archive' ? 'text-[#d4af37]' : 'text-[#71717a]'} />
               <span>ARCHIVE & HERITAGE</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'archive' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-400'}`}>
-                LAYER B
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'archive' ? 'bg-[#0a0a0c] text-[#d4af37] border border-[#d4af37]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
+                HERITAGE
               </span>
             </button>
           </div>
@@ -2559,34 +2559,34 @@ export default function AdminPanel() {
           {/* Quick Context & Public Portal Links */}
           <div className="hidden lg:flex items-center gap-2">
             {profile?.email && (
-              <span className="text-xs font-mono text-cyan-300 px-2.5 py-1.5 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center gap-1.5" title={`Logged in as ${profile.email}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span className="text-xs font-mono text-[#e1e1e6] px-2.5 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024] flex items-center gap-1.5" title={`Logged in as ${profile.email}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)] animate-pulse"></span>
                 <span className="max-w-[150px] truncate">{profile.email}</span>
               </span>
             )}
             <button
               type="button"
               onClick={() => setIsChangePasswordOpen(true)}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#a1a1aa] hover:text-white bg-[#0a0a0c] hover:bg-[#18181c] border border-[#202024] transition-all flex items-center gap-1.5 cursor-pointer"
               title="Set / Change Admin Password"
             >
-              <KeyRound size={13} className="text-amber-400" />
+              <KeyRound size={13} className="text-[#e1e1e6]" />
               <span>Password</span>
             </button>
-            <span className="text-xs font-mono text-slate-400 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs font-mono text-[#71717a] px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
               Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
             </span>
             <button
               type="button"
               onClick={() => navigate('/hall-of-fame')}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-yellow-400 hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/30 transition-all flex items-center gap-1"
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#71717a] hover:text-[#d4af37] hover:bg-[#d4af37]/10 border border-transparent hover:border-[#d4af37]/30 transition-all flex items-center gap-1"
             >
               ★ Hall of Fame
             </button>
             <button
               type="button"
               onClick={() => navigate('/my-certificates')}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1"
+              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#71717a] hover:text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10 border border-transparent hover:border-[var(--accent-red)]/30 transition-all flex items-center gap-1"
             >
               ◈ Certificates
             </button>
@@ -2708,12 +2708,12 @@ export default function AdminPanel() {
                             onClick={() => toggleTeamMembersExpanded(team.id)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                               isExpanded || members.length > 0
-                                ? 'bg-cyan-950 text-cyan-300 border border-cyan-800 hover:bg-cyan-900/60'
-                                : 'bg-slate-800/80 text-slate-400 border border-slate-700/60 hover:text-white'
+                                ? 'bg-[#18181c] text-[#e1e1e6] border border-[#26262b] hover:bg-[#202025]'
+                                : 'bg-[#18181c] text-[#71717a] border border-[#202024] hover:text-white'
                             }`}
                             title="Manage Team Members"
                           >
-                            <Users size={13} className={members.length > 0 ? 'text-cyan-400' : 'text-slate-400'} />
+                            <Users size={13} className={members.length > 0 ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
                             <span>{members.length} {members.length === 1 ? 'Member' : 'Members'}</span>
                           </button>
                           <button
@@ -2728,12 +2728,12 @@ export default function AdminPanel() {
 
                         {/* Collapsible Members Section */}
                         {isExpanded && (
-                          <div className="mt-3 pt-3 border-t border-slate-800/80 pl-8 pr-1 space-y-2.5">
+                          <div className="mt-3 pt-3 border-t border-[#202024] pl-8 pr-1 space-y-2.5">
                             <div className="flex items-center justify-between flex-wrap gap-2">
-                              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
+                              <span className="text-[11px] font-mono uppercase tracking-wider text-[#71717a]">
                                 Team Members ({members.length})
                               </span>
-                              <span className="text-[10px] text-cyan-400 font-mono">
+                              <span className="text-[10px] text-[#71717a] font-mono">
                                 ⚡ Ready for 1-click certificate generation
                               </span>
                             </div>
@@ -2743,13 +2743,13 @@ export default function AdminPanel() {
                               {members.map((m) => (
                                 <span
                                   key={m.id}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/90 border border-slate-700 text-xs text-slate-200"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#18181c] border border-[#26262b] text-xs text-[#e1e1e6]"
                                 >
                                   <span>{m.full_name || m.name}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveMemberFromTeam(m.id, team.id)}
-                                    className="text-slate-400 hover:text-red-400 transition-colors ml-0.5 cursor-pointer"
+                                    className="text-[#71717a] hover:text-red-400 transition-colors ml-0.5 cursor-pointer"
                                     title="Remove member"
                                   >
                                     ×
@@ -2757,7 +2757,7 @@ export default function AdminPanel() {
                                 </span>
                               ))}
                               {members.length === 0 && (
-                                <span className="text-xs text-slate-500 italic">
+                                <span className="text-xs text-[#71717a] italic">
                                   No members registered yet. Type names below to add.
                                 </span>
                               )}
@@ -2787,7 +2787,7 @@ export default function AdminPanel() {
                                 type="button"
                                 onClick={() => handleAddMemberToTeam(team.id)}
                                 disabled={!newMemberInputs[team.id]?.trim() || addingMemberTeamId === team.id}
-                                className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                                className="px-3 py-1.5 rounded-lg bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                               >
                                 <Plus size={13} /> Add
                               </button>
@@ -3120,13 +3120,13 @@ export default function AdminPanel() {
 
           {/* 3. Final Bid & Answer Form (FULL WIDTH: Wide & Balanced with Vibrant Evaluation) */}
           <form onSubmit={handlePromptBidSubmit} className="admin-card space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-700/60">
-              <h2 className="card-title text-blue-400 mb-0">
-                <Hammer size={22} /> Final Bid & Answer Evaluation
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#202024]">
+              <h2 className="card-title text-white mb-0">
+                <Hammer size={22} className="text-[var(--accent-red)]" /> Final Bid & Answer Evaluation
               </h2>
               {selectedTeamId && (
-                <span className="gcl-tech-tag gcl-tech-tag-cyan">
-                  <span className="gcl-tag-dot bg-cyan-400"></span>
+                <span className="gcl-tech-tag gcl-tech-tag-red">
+                  <span className="gcl-tag-dot bg-[var(--accent-red)]"></span>
                   SELECTED: <strong>{teams.find(t => t.id === selectedTeamId)?.name}</strong>
                 </span>
               )}
@@ -3521,18 +3521,18 @@ export default function AdminPanel() {
           <div className="space-y-8 mt-8">
             {/* 1. CURRENT ROUND SCORE */}
             <div className="scoreboard-card-current">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b border-[#202024]">
                 <div className="flex items-center gap-4">
-                  <Trophy size={28} className="text-cyan-400 shrink-0" />
+                  <Trophy size={28} className="text-[var(--accent-red)] shrink-0" />
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
                       <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight m-0">Current Round Score</h2>
-                      <div className="gcl-tech-tag gcl-tech-tag-cyan">
-                        <span className="gcl-tag-dot bg-cyan-400 shadow-glow-cyan animate-pulse"></span>
+                      <div className="gcl-tech-tag gcl-tech-tag-red">
+                        <span className="gcl-tag-dot bg-[var(--accent-red)] shadow-glow-red animate-pulse"></span>
                         ROUND {roundIdx + 1}
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 m-0">
+                    <p className="text-xs text-[#71717a] mt-1 m-0">
                       Live performance for {currentRoundData.name || `Round ${roundIdx + 1}`}
                     </p>
                   </div>
@@ -3601,20 +3601,20 @@ export default function AdminPanel() {
         <div className="admin-reveal-container space-y-8">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="admin-card space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#26262b] pb-4">
                 <div>
-                  <div className="flex items-center gap-2 text-cyan-400">
+                  <div className="flex items-center gap-2 text-[var(--accent-red)]">
                     <Trophy size={24} />
                     <h2 className="text-2xl font-extrabold text-white">Round 1 Leaderboard Reveal</h2>
                   </div>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <p className="text-sm text-[#71717a] mt-1">
                     Bottom-up manual reveal for the live screen. Scores remain 100% hidden from the audience.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-lg text-right">
-                    <span className="text-xs text-slate-400 uppercase tracking-wider block">Progress</span>
-                    <span className="font-mono text-lg font-bold text-yellow-400">
+                  <div className="bg-[#0a0a0c] border border-[#202024] px-4 py-2 rounded-lg text-right">
+                    <span className="text-xs text-[#71717a] uppercase tracking-wider block font-mono">Progress</span>
+                    <span className="font-mono text-lg font-bold text-[#d4af37]">
                       {r1Reveals.filter((r) => r.is_revealed).length} / {teams.length || r1Reveals.length} Revealed
                     </span>
                   </div>
@@ -3637,7 +3637,7 @@ export default function AdminPanel() {
                         <CheckCircle2 size={36} />
                       </div>
                       <h3 className="text-2xl font-bold text-white">All Positions Revealed!</h3>
-                      <p className="text-slate-300 max-w-md mx-auto text-sm">
+                      <p className="text-[#a1a1aa] max-w-md mx-auto text-sm">
                         All teams from {formatOrdinal(totalCount)} up to 1ST Place have been announced on the live screen. Ready to start Intermission.
                       </p>
                       <div className="pt-2">
@@ -3655,8 +3655,8 @@ export default function AdminPanel() {
 
                 if (!nextTarget) {
                   return (
-                    <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center space-y-4">
-                      <p className="text-slate-400 text-sm">
+                    <div className="p-6 bg-[#0a0a0c] border border-[#202024] rounded-xl text-center space-y-4">
+                      <p className="text-[#71717a] text-sm">
                         No reveal records found for Round 1. Click below to initialize the reveal table.
                       </p>
                       <button
@@ -3673,15 +3673,15 @@ export default function AdminPanel() {
                 const assignedTeamId = selectedRevealTeamId || nextTarget.team_id;
 
                 return (
-                  <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-xl space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div className="p-6 bg-[#0a0a0c] border border-[#202024] rounded-xl space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#202024] pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">Next Action:</span>
-                        <span className="px-3 py-1 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 font-mono font-bold rounded text-sm">
+                        <span className="text-xs uppercase tracking-wider font-semibold text-[#71717a]">Next Action:</span>
+                        <span className="px-3 py-1 bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/30 text-[var(--accent-red)] font-mono font-bold rounded text-sm">
                           Reveal {formatOrdinal(nextTarget.position)} Position
                         </span>
                       </div>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-[#71717a]">
                         Revealing bottom-up from last place to 1st place
                       </span>
                     </div>
@@ -3700,8 +3700,8 @@ export default function AdminPanel() {
                             </option>
                           ))}
                         </select>
-                        <p className="text-xs text-slate-500">
-                          Calculated rank team: <strong className="text-slate-400">{nextTarget.team_name || teams.find(t => t.id === nextTarget.team_id)?.name || 'Unknown'}</strong>
+                        <p className="text-xs text-[#71717a]">
+                          Calculated rank team: <strong className="text-[#e1e1e6]">{nextTarget.team_name || teams.find(t => t.id === nextTarget.team_id)?.name || 'Unknown'}</strong>
                         </p>
                       </div>
 
@@ -3709,7 +3709,7 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           onClick={() => handleConfirmAndRevealPosition(nextTarget.position, assignedTeamId)}
-                          className="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40"
+                          className="w-full py-3 px-4 bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-[0_2px_12px_rgba(224,38,63,0.3)] cursor-pointer"
                         >
                           <Eye size={18} /> CONFIRM & REVEAL
                         </button>
@@ -3721,10 +3721,10 @@ export default function AdminPanel() {
 
               {/* Positions List */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-[#71717a]">
                   Round 1 Position Standings (Admin View)
                 </h3>
-                <div className="border border-slate-800 rounded-lg overflow-hidden divide-y divide-slate-800/80 bg-slate-950/50">
+                <div className="border border-[#202024] rounded-lg overflow-hidden divide-y divide-[#1c1c21] bg-[#0a0a0c]">
                   {r1Reveals
                     .slice()
                     .sort((a, b) => b.position - a.position) // Display bottom-up N to 1
@@ -3735,16 +3735,16 @@ export default function AdminPanel() {
                           key={rev.position}
                           className={`p-3.5 flex items-center justify-between gap-4 transition-colors ${
                             rev.is_revealed
-                              ? 'bg-slate-900/40'
-                              : 'bg-transparent hover:bg-slate-900/20'
+                              ? 'bg-[#131316]'
+                              : 'bg-transparent hover:bg-[#18181c]/40'
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             <span
                               className={`w-9 h-9 rounded flex items-center justify-center font-mono font-bold text-sm ${
                                 rev.is_revealed
-                                  ? 'bg-cyan-950/80 text-cyan-400 border border-cyan-800/50'
-                                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                  ? 'bg-[#18181c] text-[var(--accent-red)] border border-[var(--accent-red)]/50'
+                                  : 'bg-[#18181c] text-[#71717a] border border-[#26262b]'
                               }`}
                             >
                               {String(rev.position).padStart(2, '0')}
@@ -3759,12 +3759,12 @@ export default function AdminPanel() {
                                     <CheckCircle2 size={12} /> REVEALED
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-[#18181c] text-[#71717a] border border-[#26262b]">
                                     HIDDEN ON LIVE SCREEN
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-slate-500 font-mono">
+                              <span className="text-xs text-[#71717a] font-mono">
                                 Live Screen shows: {rev.is_revealed ? (rev.team_name || team?.name) : '???'}
                               </span>
                             </div>
@@ -3774,7 +3774,7 @@ export default function AdminPanel() {
                             <button
                               type="button"
                               onClick={() => handleConfirmAndRevealPosition(rev.position, rev.team_id)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-semibold rounded border border-slate-700 flex items-center gap-1.5 transition-colors"
+                              className="px-3 py-1.5 bg-[#18181c] hover:bg-[#202025] text-[#e1e1e6] hover:text-white text-xs font-semibold rounded border border-[#26262b] flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
                               <Eye size={14} /> Reveal Now
                             </button>
@@ -3794,10 +3794,10 @@ export default function AdminPanel() {
         <div className="admin-intermission-container space-y-8">
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="admin-card text-center p-8 space-y-6">
-              <div className="flex flex-col items-center text-cyan-400">
+              <div className="flex flex-col items-center text-[var(--accent-red)]">
                 <Loader2 size={60} className="animate-spin mb-4" />
                 <h2 className="text-3xl font-extrabold text-white">Intermission in Progress</h2>
-                <p className="text-base text-slate-400 mt-2 max-w-xl">
+                <p className="text-base text-[#a1a1aa] mt-2 max-w-xl">
                   {isAfterRound3 ? (
                     <>
                       Round 3 results are currently displayed on the live screen.
@@ -4255,7 +4255,7 @@ export default function AdminPanel() {
                     type="button"
                     onClick={handleFinalizeAndArchiveCurrentEvent}
                     disabled={isFinalizingArchive}
-                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black font-extrabold text-sm rounded-xl transition-all shadow-glow-gold flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                    className="px-5 py-2.5 bg-[#18181c] hover:bg-[#202025] text-white border border-[#26262b] font-extrabold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                   >
                     {isFinalizingArchive ? (
                       <>
@@ -4263,7 +4263,7 @@ export default function AdminPanel() {
                       </>
                     ) : (
                       <>
-                        <Archive size={18} /> Save & Finalize to Archive
+                        <Archive size={18} className="text-[#d4af37]" /> Save & Finalize to Archive
                       </>
                     )}
                   </button>
@@ -4274,7 +4274,7 @@ export default function AdminPanel() {
                       handleTabChange('archive');
                       setIsNewEditionModalOpen(true);
                     }}
-                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-sm rounded-xl transition-all shadow-glow-emerald flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                    className="px-5 py-2.5 bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-extrabold text-sm rounded-xl transition-all shadow-[0_2px_12px_rgba(224,38,63,0.3)] flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                   >
                     <Plus size={18} /> Create New Archive / Edition
                   </button>
@@ -4295,9 +4295,9 @@ export default function AdminPanel() {
       {/* 1. Confirm SOLD Modal */}
       {isConfirmingSold && selectedWinningTeam && (
         <div className="gcl-modal-overlay" onClick={() => setIsConfirmingSold(false)}>
-          <div className="gcl-modal-box border-green-500/60" onClick={(e) => e.stopPropagation()}>
-            <h3 className="gcl-modal-title text-green-400">
-              <CheckCircle2 size={26} className="text-green-400" />
+          <div className="gcl-modal-box border-emerald-500/60" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-emerald-400">
+              <CheckCircle2 size={26} className="text-emerald-400" />
               Confirm Winning Bid (SOLD!)
             </h3>
             <p className="gcl-modal-body">
@@ -4305,17 +4305,17 @@ export default function AdminPanel() {
             </p>
 
             <div className="gcl-modal-details">
-              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
-                <span className="text-slate-400">Winning Team:</span>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-[#202024]">
+                <span className="text-[#71717a]">Winning Team:</span>
                 <span className="font-bold text-white text-base">{selectedWinningTeam.name}</span>
               </div>
-              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
-                <span className="text-slate-400">Question Ref:</span>
-                <span className="font-mono font-bold text-yellow-400">R{roundIdx + 1} - Q{questionIdx + 1}</span>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-[#202024]">
+                <span className="text-[#71717a]">Question Ref:</span>
+                <span className="font-mono font-bold text-[#d4af37]">R{roundIdx + 1} - Q{questionIdx + 1}</span>
               </div>
-              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
-                <span className="text-slate-400">Final Bid Amount:</span>
-                <span className="font-mono font-bold text-cyan-400 text-lg">{formatCurrency(parseFloat(bidAmount))}</span>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-[#202024]">
+                <span className="text-[#71717a]">Final Bid Amount:</span>
+                <span className="font-mono font-bold text-[var(--accent-red)] text-lg">{formatCurrency(parseFloat(bidAmount))}</span>
               </div>
               <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
                 <span className="text-slate-400">Answer Evaluation:</span>
@@ -4460,9 +4460,9 @@ export default function AdminPanel() {
       {/* 4. Confirm Team Rename Modal */}
       {teamPendingEdit && (
         <div className="gcl-modal-overlay" onClick={() => setTeamPendingEdit(null)}>
-          <div className="gcl-modal-box border-cyan-500/70" onClick={(e) => e.stopPropagation()}>
-            <h3 className="gcl-modal-title text-cyan-400">
-              <Users size={24} className="text-cyan-400" />
+          <div className="gcl-modal-box border-[#26262b]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="gcl-modal-title text-white">
+              <Users size={24} className="text-[var(--accent-red)]" />
               Confirm Team Name Change
             </h3>
             <p className="gcl-modal-body">
@@ -4470,13 +4470,13 @@ export default function AdminPanel() {
             </p>
 
             <div className="gcl-modal-details">
-              <div className="flex justify-between items-center text-sm py-1 border-b border-slate-700/60">
-                <span className="text-slate-400">Current Name:</span>
-                <span className="font-semibold text-slate-300 line-through">{teamPendingEdit.oldName}</span>
+              <div className="flex justify-between items-center text-sm py-1 border-b border-[#202024]">
+                <span className="text-[#71717a]">Current Name:</span>
+                <span className="font-semibold text-[#a1a1aa] line-through">{teamPendingEdit.oldName}</span>
               </div>
               <div className="flex justify-between items-center text-sm py-1">
-                <span className="text-slate-400">New Name:</span>
-                <span className="font-bold text-cyan-300 text-base">{teamPendingEdit.newName}</span>
+                <span className="text-[#71717a]">New Name:</span>
+                <span className="font-bold text-[var(--accent-red)] text-base">{teamPendingEdit.newName}</span>
               </div>
             </div>
 
@@ -4491,7 +4491,7 @@ export default function AdminPanel() {
               <button
                 type="button"
                 onClick={handleConfirmTeamRename}
-                className="btn-modal-confirm-green bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/40"
+                className="btn-modal-confirm-green bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] shadow-[0_2px_12px_rgba(224,38,63,0.3)] cursor-pointer"
               >
                 Save & Rename Team
               </button>

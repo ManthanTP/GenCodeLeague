@@ -75,7 +75,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen text-white font-sans">
       <Header viewMode="admin" onToggleView={() => navigate('/')} />
       <Notification notification={notification} />
 

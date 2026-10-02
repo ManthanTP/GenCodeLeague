@@ -102,7 +102,7 @@ export default function AnnouncementsView() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -111,7 +111,7 @@ export default function AnnouncementsView() {
         <div className="flex items-center justify-between">
           <Link
             to="/hall-of-fame"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Hall of Fame
           </Link>
@@ -119,7 +119,7 @@ export default function AnnouncementsView() {
           {isAdmin && (
             <button
               onClick={() => setIsCreating(true)}
-              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
+              className="px-4 py-2 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-glow-red"
             >
               <Plus size={15} /> Post Announcement
             </button>
@@ -128,7 +128,7 @@ export default function AnnouncementsView() {
 
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <Bell size={14} /> OFFICIAL DISPATCHES
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
@@ -142,7 +142,7 @@ export default function AnnouncementsView() {
         {/* List of Announcements */}
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-xs font-mono">Loading bulletins...</p>
           </div>
         ) : announcements.length === 0 ? (
@@ -160,14 +160,14 @@ export default function AnnouncementsView() {
                 key={ann.id}
                 className={`p-6 rounded-2xl border backdrop-blur-md transition-all shadow-xl space-y-3 ${
                   ann.is_pinned
-                    ? 'bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-cyan-500/50 shadow-glow-cyan'
-                    : 'bg-slate-900/60 border-slate-800'
+                    ? 'bg-[#18181c] border-red-500/50 shadow-glow-red'
+                    : 'bg-[#131316] border-[#26262b]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     {ann.is_pinned && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40 uppercase">
                         <Pin size={10} className="rotate-45" /> PINNED BULLETIN
                       </span>
                     )}
@@ -209,7 +209,7 @@ export default function AnnouncementsView() {
         {/* CREATE ANNOUNCEMENT MODAL */}
         {isCreating && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-            <div className="max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="max-w-md w-full bg-[#131316] border border-[#26262b] rounded-3xl p-6 shadow-2xl space-y-4">
               <h3 className="text-xl font-bold text-white">Post New Announcement</h3>
 
               <form onSubmit={handleCreate} className="space-y-4">
@@ -246,7 +246,7 @@ export default function AnnouncementsView() {
                     id="pin-check"
                     checked={isPinned}
                     onChange={(e) => setIsPinned(e.target.checked)}
-                    className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                    className="rounded border-slate-700 text-red-500 focus:ring-0"
                   />
                   <label htmlFor="pin-check" className="text-xs text-slate-300 select-none">
                     Pin this bulletin to the top of the feed
@@ -257,14 +257,14 @@ export default function AnnouncementsView() {
                   <button
                     type="button"
                     onClick={() => setIsCreating(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold"
+                    className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#26262b] text-xs font-semibold text-slate-300 border border-[#26262b]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs disabled:opacity-50"
+                    className="px-5 py-2 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-xs disabled:opacity-50"
                   >
                     {submitting ? 'Publishing...' : 'Publish'}
                   </button>

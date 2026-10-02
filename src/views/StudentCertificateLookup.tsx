@@ -143,7 +143,7 @@ export default function StudentCertificateLookup() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-16">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-16">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -152,7 +152,7 @@ export default function StudentCertificateLookup() {
         <div className="mb-6 flex items-center justify-between">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Live Event
           </Link>
@@ -160,7 +160,7 @@ export default function StudentCertificateLookup() {
 
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <Award size={14} /> PUBLIC CREDENTIAL PORTAL
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
@@ -174,7 +174,7 @@ export default function StudentCertificateLookup() {
         {/* Search Bar & Filter Form */}
         <form
           onSubmit={handleSearch}
-          className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-md shadow-2xl mb-10 max-w-3xl mx-auto"
+          className="bg-[#131316] border border-[#26262b] rounded-2xl p-4 sm:p-6 backdrop-blur-md shadow-2xl mb-10 max-w-3xl mx-auto"
         >
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             <div className="relative flex-1">
@@ -210,7 +210,7 @@ export default function StudentCertificateLookup() {
             <button
               type="submit"
               disabled={loading || !searchName.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0"
+              className="px-6 py-3 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-sm shadow-glow-red disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0"
             >
               <Search size={16} />
               {loading ? 'Searching...' : 'Search'}
@@ -251,7 +251,7 @@ export default function StudentCertificateLookup() {
                   return (
                     <div
                       key={cert.id}
-                      className="bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 backdrop-blur-md shadow-xl transition-all flex flex-col justify-between"
+                      className="bg-[#131316] border border-[#26262b] hover:border-red-500/40 rounded-2xl p-5 backdrop-blur-md shadow-xl transition-all flex flex-col justify-between"
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-2">
@@ -276,11 +276,11 @@ export default function StudentCertificateLookup() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                          <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                          <div className="bg-[#18181c] p-2 rounded-lg border border-[#26262b]">
                             <span className="text-[10px] uppercase font-mono text-slate-500 block">
                               Type
                             </span>
-                            <span className="font-semibold text-cyan-400 capitalize">
+                            <span className="font-semibold text-red-400 capitalize">
                               {cert.certificate_type.replace('_', ' ')}
                             </span>
                           </div>
@@ -334,7 +334,7 @@ export default function StudentCertificateLookup() {
                           <button
                             onClick={() => handleDownload(cert)}
                             disabled={downloadingId === cert.certificate_id}
-                            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-glow-cyan"
+                            className="px-3 py-1.5 rounded-lg bg-[#e0263f] hover:bg-[#ff3b53] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-glow-red"
                           >
                             <Download size={13} />
                             {downloadingId === cert.certificate_id ? 'Downloading...' : 'Download'}

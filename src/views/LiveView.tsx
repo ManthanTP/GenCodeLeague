@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Settings,
@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Users,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
@@ -45,6 +47,25 @@ export default function LiveView() {
 
   // Selected personal team ID for viewer
   const [myTeamId, setMyTeamId] = useState<string>('');
+
+  // Fullscreen mode state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   // Map items to teams to get live spent & won items count
   const teamsWithStats = useMemo(() => {
@@ -213,7 +234,7 @@ export default function LiveView() {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16 font-sans gcl-page-enter">
+    <div className="min-h-screen text-white pb-16 font-sans gcl-page-enter">
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -226,16 +247,14 @@ export default function LiveView() {
       {/* 1. SETUP STATE */}
       {gameState === 'setup' && (
         <div className="live-centered-screen">
-          <div className="ambient-glow glow-blue"></div>
-          <div className="ambient-glow glow-indigo"></div>
           <div className="text-center space-y-6 max-w-4xl z-10">
             <div className="inline-block mb-4">
-              <Settings size={72} className="text-slate-500 animate-spin-slow mx-auto" />
+              <Settings size={64} className="text-red-500 animate-spin-slow mx-auto" />
             </div>
-            <h1 className="text-6xl md:text-7xl font-black text-slate-400 tracking-tighter gcl-display">
+            <h1 className="text-6xl md:text-7xl font-black text-white tracking-tighter gcl-display">
               EVENT SETUP
             </h1>
-            <div className="divider-cyan"></div>
+            <div className="divider-red"></div>
             <p className="text-xl text-slate-400 font-mono uppercase tracking-widest animate-pulse">
               Configuration in Progress...
             </p>
@@ -246,8 +265,6 @@ export default function LiveView() {
       {/* 2. WAITING START STATE */}
       {gameState === 'waiting_start' && (
         <div className="live-centered-screen">
-          <div className="ambient-glow glow-blue"></div>
-          <div className="ambient-glow glow-indigo"></div>
           <div className="text-center space-y-6 max-w-4xl z-10 px-4">
             <div className="inline-block mb-2">
               <span className="badge-official">Official Auction</span>
@@ -257,7 +274,7 @@ export default function LiveView() {
               <br />
               LEAGUE
             </h1>
-            <div className="divider-blue"></div>
+            <div className="divider-red"></div>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-widest animate-bounce gcl-display">
               Auction Starting Soon
             </h2>
@@ -287,20 +304,36 @@ export default function LiveView() {
       {/* 3. ACTIVE ROUND STATE */}
       {gameState === 'active' && (
         <div className="live-page-container">
-          {/* Viewer Mode Selector (Right-aligned) */}
+          {/* Top Actions Row: Live Status Pill Left, Viewer Selector & Fullscreen Right */}
           <div className="live-top-actions-row">
-            <select
-              value={myTeamId}
-              onChange={(e) => setMyTeamId(e.target.value)}
-              className="gcl-select-compact"
-            >
-              <option value="">Viewing as Guest (Select Team)</option>
-              {sortedTeamsDropdown.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div className="live-status-pill">
+              <span className="live-dot-pulse"></span>
+              <span>{currentRound.name} &bull; LIVE AUCTION</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <select
+                value={myTeamId}
+                onChange={(e) => setMyTeamId(e.target.value)}
+                className="gcl-select-compact"
+              >
+                <option value="">Viewing as Guest (Select Team)</option>
+                {sortedTeamsDropdown.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={toggleFullscreen}
+                className="btn-fullscreen-toggle"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              >
+                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Personal Team Dashboard Card (Scores & Ranks completely hidden) */}
@@ -366,13 +399,13 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Current Question / Item Box with Gold Border (Timer embedded in top-right) */}
+          {/* Current Question / Item Box with Red Accent Stripe (Timer embedded in top-right) */}
           <div className="question-display-box">
             {/* Timer Widget inside top-right corner of Question Box */}
             <div className="question-timer-corner">
               <div className={`live-bid-timer-widget ${isExpired ? 'timer-expired' : isTimerRunning ? 'timer-running' : ''}`}>
                 <div className="live-timer-label">
-                  <Clock size={15} className={isTimerRunning ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
+                  <Clock size={15} className={isTimerRunning ? 'text-red-400 animate-spin-slow' : 'text-slate-400'} />
                   <span>BID TIMER</span>
                 </div>
                 <div className={`live-timer-digits ${isExpired ? 'digits-expired' : isTimerRunning ? 'digits-running' : ''}`}>
@@ -383,9 +416,10 @@ export default function LiveView() {
 
             {/* Always display Round & Question Index */}
             <p className="question-header-ref">
-              {currentRound.name} | Question {questionIdx + 1} of {totalQuestions}
+              <span className="live-dot-pulse"></span>
+              {currentRound.name} &bull; QUESTION {questionIdx + 1} OF {totalQuestions}
             </p>
-            <div className="divider-gold"></div>
+            <div className="divider-red"></div>
 
             {isRevealed ? (
               <h3 className="question-text">
@@ -402,22 +436,22 @@ export default function LiveView() {
           {activeBidTeam && currentBidPreview && currentBidPreview.amount > 0 && (
             <div className="active-bid-pulse">
               <p className="active-bid-tag">
-                <Zap size={18} className="text-cyan-300 animate-bounce" /> ACTIVE BID
+                <Zap size={18} className="text-red-500 animate-bounce" /> ACTIVE BID
               </p>
               <div className="grid grid-cols-3 gap-4 text-center items-center">
-                <div className="border-r border-slate-700">
+                <div className="border-r border-[#26262b]">
                   <p className="subtext-muted">Bidding Team</p>
-                  <p className="val-large text-white">{activeBidTeam.name}</p>
+                  <p className="val-large text-white font-black">{activeBidTeam.name}</p>
                 </div>
-                <div className="border-r border-slate-700">
+                <div className="border-r border-[#26262b]">
                   <p className="subtext-muted">Current Amount</p>
-                  <p className="val-large text-green-300">
+                  <p className="val-large text-green-400">
                     {formatCurrency(currentBidPreview.amount)}
                   </p>
                 </div>
                 <div>
                   <p className="subtext-muted">Question Ref</p>
-                  <p className="val-large text-cyan-300">
+                  <p className="val-large text-red-400 font-mono">
                     {currentBidPreview.questionRef || `R${roundIdx + 1} - Q${questionIdx + 1}`}
                   </p>
                 </div>
@@ -425,24 +459,24 @@ export default function LiveView() {
             </div>
           )}
 
-          {/* Last Successful Bid Banner (Scores & Results completely hidden) */}
+          {/* Last Successful Bid Banner */}
           {lastBidDetails && (
-            <div className="last-bid-card border border-cyan-500/40 bg-slate-900/90 shadow-lg">
-              <p className="last-bid-tag text-cyan-400">
-                <Hammer size={16} /> LAST SUCCESSFUL BID
+            <div className="last-bid-card">
+              <p className="last-bid-tag text-slate-300">
+                <Hammer size={16} className="text-red-500" /> LAST SUCCESSFUL BID
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center items-center">
-                <div className="border-b sm:border-b-0 sm:border-r border-slate-700 pb-2 sm:pb-0">
+                <div className="border-b sm:border-b-0 sm:border-r border-[#26262b] pb-2 sm:pb-0">
                   <p className="subtext-muted">Winning Team</p>
                   <p className="val-medium text-white font-bold">{lastBidDetails.teamName}</p>
                 </div>
-                <div className="border-b sm:border-b-0 sm:border-r border-slate-700 pb-2 sm:pb-0">
+                <div className="border-b sm:border-b-0 sm:border-r border-[#26262b] pb-2 sm:pb-0">
                   <p className="subtext-muted">Final Bid</p>
                   <p className="val-medium text-yellow-300 font-mono">{lastBidDetails.amount}</p>
                 </div>
                 <div>
                   <p className="subtext-muted">Question Ref</p>
-                  <p className="val-medium text-cyan-300 font-mono">{lastBidDetails.questionRef}</p>
+                  <p className="val-medium text-red-400 font-mono">{lastBidDetails.questionRef}</p>
                 </div>
               </div>
             </div>
@@ -473,16 +507,12 @@ export default function LiveView() {
             >
               ROUND 1 FINAL POSITIONS (REVEALING FROM BOTTOM TO TOP)
             </p>
-          </div>
-
-          <div className="max-w-5xl w-full mx-auto px-2">
+          </div>          <div className="max-w-4xl w-full mx-auto px-2">
             <div className="gcl-table-card">
-              <div className="gcl-leaderboard-header">
+              <div className="gcl-leaderboard-header-reveal">
                 <div>POS</div>
                 <div>TEAM NAME</div>
-                <div className="text-center">TOTAL ITEMS</div>
-                <div className="text-right">TOTAL SPENT</div>
-                <div className="text-right">REMAINING</div>
+                <div className="text-right">STATUS</div>
               </div>
 
               <div className="space-y-2">
@@ -510,16 +540,11 @@ export default function LiveView() {
 
                     const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
 
-                    const teamItems = items.filter((it) => it.team_id === (reveal?.team_id || teamObj?.id || r1Result?.id) && it.round_index === 0);
-                    const r1ItemsCount = r1Result?.itemsCount ?? teamItems.length;
-                    const r1Spent = r1Result?.totalSpent ?? teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-                    const r1Remaining = r1Result?.remainingBudget ?? (teamObj?.budget ?? Math.max(0, (edition?.starting_budget || 50000000) - r1Spent));
-
                     if (!isRevealed) {
                       return (
                         <div
                           key={position}
-                          className="gcl-leaderboard-row gcl-leaderboard-unrevealed"
+                          className="gcl-leaderboard-row-reveal gcl-leaderboard-unrevealed"
                         >
                           <div className="flex items-center">
                             <div className="gcl-pos-badge gcl-pos-muted opacity-60">
@@ -528,18 +553,12 @@ export default function LiveView() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-sm sm:text-base font-bold text-slate-500 tracking-widest flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-slate-600 animate-ping"></span>
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                               AWAITING REVEAL
                             </span>
                           </div>
-                          <div className="text-center font-mono text-slate-600 font-bold">
-                            —
-                          </div>
-                          <div className="text-right font-mono text-slate-600">
-                            —
-                          </div>
-                          <div className="text-right font-mono text-slate-600">
-                            —
+                          <div className="text-right font-mono text-xs uppercase tracking-wider text-slate-600">
+                            LOCKED
                           </div>
                         </div>
                       );
@@ -548,7 +567,7 @@ export default function LiveView() {
                     return (
                       <div
                         key={position}
-                        className={`gcl-leaderboard-row animate-reveal-up ${
+                        className={`gcl-leaderboard-row-reveal animate-reveal-up ${
                           position === 1
                             ? 'gcl-leaderboard-champion'
                             : position === 2
@@ -594,18 +613,16 @@ export default function LiveView() {
                           {isMyTeam && <span className="badge-you-inline">YOU</span>}
                         </div>
 
-                        <div className="text-center">
-                          <span className="badge-items-sm font-mono">
-                            {r1ItemsCount} {r1ItemsCount === 1 ? 'item' : 'items'}
-                          </span>
-                        </div>
-
-                        <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
-                          {formatCurrency(r1Spent)}
-                        </div>
-
-                        <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
-                          {formatCurrency(r1Remaining)}
+                        <div className="text-right font-mono text-xs uppercase tracking-wider">
+                          {position === 1 ? (
+                            <span className="text-yellow-400 font-bold">1ST PLACE</span>
+                          ) : position === 2 ? (
+                            <span className="text-slate-300 font-bold">2ND PLACE</span>
+                          ) : position === 3 ? (
+                            <span className="text-orange-400 font-bold">3RD PLACE</span>
+                          ) : (
+                            <span className="text-slate-400">REVEALED</span>
+                          )}
                         </div>
                       </div>
                     );
@@ -635,9 +652,9 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                     <span>PREVIOUS ROUND TABLE (ROUND 2 RESULTS)</span>
                   </div>
                   <span className="text-slate-400">ROUND 2 SUMMARY</span>
@@ -711,9 +728,9 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                     <span>PREVIOUS ROUND TABLE (ROUND 1 RESULTS)</span>
                   </div>
                   <span className="text-slate-400">ROUND 1 SUMMARY</span>
@@ -826,9 +843,9 @@ export default function LiveView() {
               </div>
 
               <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
+                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                     <span>PREVIOUS ROUND TABLE (ROUND 3 RESULTS)</span>
                   </div>
                   <span className="text-slate-400">ROUND 3 SUMMARY</span>

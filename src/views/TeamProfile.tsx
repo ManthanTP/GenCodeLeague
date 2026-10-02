@@ -93,7 +93,7 @@ export default function TeamProfile() {
   }, [teamId]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
+    <div className="min-h-screen text-white font-sans selection:bg-[var(--accent-red)] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -102,21 +102,21 @@ export default function TeamProfile() {
         <div className="flex items-center justify-between">
           <Link
             to={team?.edition?.id ? `/editions/${team.edition.id}` : '/hall-of-fame'}
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-[#71717a] hover:text-[var(--accent-red)] transition-colors"
           >
             <ChevronLeft size={16} /> Back to Edition
           </Link>
 
-          <span className="text-xs font-mono text-cyan-400">
+          <span className="text-xs font-mono text-[var(--accent-red)] uppercase tracking-wider font-semibold">
             OFFICIAL TEAM RECORD
           </span>
         </div>
 
         {/* Team Profile Header Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-4">
+        <div className="bg-[#131316] border-l-4 border-l-[var(--accent-red)] border-y border-r border-[#26262b] rounded-2xl p-6 sm:p-10 shadow-2xl space-y-4 relative overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="text-xs font-mono text-slate-400 uppercase tracking-widest block">
+              <span className="text-xs font-mono text-[var(--accent-red)] uppercase tracking-widest block font-bold">
                 {team?.edition?.name || 'GenCode League'}
               </span>
               <h1 className="text-3xl sm:text-5xl font-black text-white mt-1">
@@ -125,8 +125,18 @@ export default function TeamProfile() {
             </div>
 
             {rank !== null && (
-              <div className="px-5 py-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-center">
-                <span className="text-[10px] font-mono text-yellow-400 uppercase font-bold block">
+              <div
+                className={`px-5 py-3 rounded-2xl border text-center ${
+                  rank === 1
+                    ? 'bg-[#d4af37]/10 border-[#d4af37]/40 shadow-[0_0_16px_rgba(212,175,55,0.15)]'
+                    : 'bg-[#18181c] border-[#26262b]'
+                }`}
+              >
+                <span
+                  className={`text-[10px] font-mono uppercase font-bold block ${
+                    rank === 1 ? 'text-[#d4af37]' : 'text-[#71717a]'
+                  }`}
+                >
                   Final Standing
                 </span>
                 <span className="text-2xl font-black text-white font-mono">
@@ -137,14 +147,14 @@ export default function TeamProfile() {
           </div>
 
           <div className="flex flex-wrap gap-4 pt-2 text-xs font-mono">
-            <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
-              Score: <strong className="text-yellow-400 font-bold">★ {team?.score || 0} pts</strong>
+            <div className="px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
+              Score: <strong className="text-[#d4af37] font-bold">★ {team?.score || 0} pts</strong>
             </div>
-            <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
-              Budget: <strong className="text-green-400 font-bold">{formatCurrency(team?.budget || 0)}</strong>
+            <div className="px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
+              Budget: <strong className="text-emerald-400 font-bold">{formatCurrency(team?.budget || 0)}</strong>
             </div>
             {team?.linkedTeam && (
-              <div className="px-3 py-1.5 rounded-lg bg-purple-950/40 border border-purple-500/40 text-purple-300">
+              <div className="px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024] text-[#a1a1aa]">
                 Linked Prior Franchise: <strong className="text-white">{team.linkedTeam.name}</strong>
               </div>
             )}
@@ -152,14 +162,14 @@ export default function TeamProfile() {
         </div>
 
         {/* TEAM MEMBERS ROSTER */}
-        <section className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
+        <section className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
           <h2 className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2">
-            <Users size={20} className="text-cyan-400" />
+            <Users size={20} className="text-[var(--accent-red)]" />
             Registered Team Members & Captain
           </h2>
 
           {members.length === 0 ? (
-            <p className="text-xs text-slate-500 italic py-4">
+            <p className="text-xs text-[#71717a] italic py-4">
               Individual members have not been enumerated for this team record.
             </p>
           ) : (
@@ -167,25 +177,25 @@ export default function TeamProfile() {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2"
+                  className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white text-sm">
                       {member.name || member.full_name}
                     </span>
                     {member.is_captain && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--accent-red)]/15 text-[var(--accent-red)] border border-[var(--accent-red)]/30">
                         CAPTAIN
                       </span>
                     )}
                   </div>
                   {member.college && (
-                    <div className="text-[11px] text-slate-400 truncate">
+                    <div className="text-[11px] text-[#a1a1aa] truncate">
                       {member.college}
                     </div>
                   )}
                   {member.department && (
-                    <div className="text-[10px] font-mono text-slate-500">
+                    <div className="text-[10px] font-mono text-[#71717a]">
                       Dept: {member.department}
                     </div>
                   )}
@@ -196,19 +206,19 @@ export default function TeamProfile() {
         </section>
 
         {/* ISSUED CERTIFICATES */}
-        <section className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <section className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#202024]">
             <h2 className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2">
-              <Award size={20} className="text-yellow-400" />
+              <Award size={20} className="text-[#d4af37]" />
               Certificates Issued to Team & Members
             </h2>
-            <span className="text-xs font-mono text-slate-400">
+            <span className="text-xs font-mono text-[#71717a]">
               {certificates.length} Certificate(s)
             </span>
           </div>
 
           {certificates.length === 0 ? (
-            <p className="text-xs text-slate-500 italic py-6 text-center">
+            <p className="text-xs text-[#71717a] italic py-6 text-center">
               No certificates have been issued to this team yet.
             </p>
           ) : (
@@ -216,16 +226,16 @@ export default function TeamProfile() {
               {certificates.map((cert) => (
                 <div
                   key={cert.id}
-                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4"
+                  className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex items-center justify-between gap-4"
                 >
                   <div>
-                    <span className="text-[10px] font-mono font-bold text-amber-400 block">
+                    <span className="text-[10px] font-mono font-bold text-[#d4af37] block">
                       {cert.certificate_id}
                     </span>
                     <h4 className="font-bold text-white text-base">
                       {cert.recipient_name}
                     </h4>
-                    <span className="text-xs text-cyan-400 capitalize font-medium">
+                    <span className="text-xs text-[var(--accent-red)] capitalize font-medium">
                       {cert.certificate_type.replace('_', ' ')}
                     </span>
                   </div>
@@ -233,7 +243,7 @@ export default function TeamProfile() {
                   <Link
                     to={`/verify/${cert.certificate_id}`}
                     target="_blank"
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5 transition-colors border border-slate-700 shrink-0"
+                    className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#202025] text-xs font-semibold text-[#e1e1e6] flex items-center gap-1.5 transition-colors border border-[#26262b] shrink-0"
                   >
                     Verify <ExternalLink size={12} />
                   </Link>

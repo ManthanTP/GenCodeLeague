@@ -55,7 +55,7 @@ export default function TeamConsole() {
 
   if (!myTeam || !eventState || !edition) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 text-center">
         <div className="admin-card max-w-md w-full space-y-4">
           <h2 className="text-xl font-bold text-red-400">Team Profile Not Found</h2>
           <p className="text-slate-400 text-sm">
@@ -76,7 +76,7 @@ export default function TeamConsole() {
   const isLowBudget = !isOutOfBudget && myTeam.budget <= 5000000;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen text-white font-sans">
       <Header
         viewMode="team"
         onToggleView={() => navigate('/')}

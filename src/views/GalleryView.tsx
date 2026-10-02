@@ -82,7 +82,7 @@ export default function GalleryView() {
   }, [photos, selectedEditionId, selectedSegment]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -91,19 +91,19 @@ export default function GalleryView() {
         <div className="flex items-center justify-between">
           <Link
             to="/hall-of-fame"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Hall of Fame
           </Link>
 
-          <span className="text-xs font-mono text-cyan-400">
+          <span className="text-xs font-mono text-red-400">
             VISUAL ARCHIVE
           </span>
         </div>
 
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <Image size={15} /> EVENT MEDIA GALLERY
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
@@ -155,7 +155,7 @@ export default function GalleryView() {
         {/* Photos Grid */}
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-xs font-mono">Loading media gallery...</p>
           </div>
         ) : filteredPhotos.length === 0 ? (
@@ -172,7 +172,7 @@ export default function GalleryView() {
               <div
                 key={photo.id}
                 onClick={() => setLightboxPhoto(photo)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/60 aspect-[4/3] cursor-pointer shadow-lg hover:border-cyan-500/60 transition-all"
+                className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/60 aspect-[4/3] cursor-pointer shadow-lg hover:border-red-500/60 transition-all"
               >
                 <img
                   src={photo.image_url}
@@ -180,7 +180,7 @@ export default function GalleryView() {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-bold">
                     {photo.segment} • {photo.edition?.name || 'GCL'}
                   </span>
                   {photo.caption && (
@@ -201,16 +201,16 @@ export default function GalleryView() {
             onClick={() => setLightboxPhoto(null)}
           >
             <div
-              className="max-w-4xl w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl space-y-4 p-4"
+              className="max-w-4xl w-full bg-[#131316] border border-[#26262b] rounded-3xl overflow-hidden shadow-2xl space-y-4 p-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-2">
-                <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                <span className="text-xs font-mono text-red-400 font-bold uppercase tracking-wider">
                   {lightboxPhoto.segment} • {lightboxPhoto.edition?.name || 'GenCode League'}
                 </span>
                 <button
                   onClick={() => setLightboxPhoto(null)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                  className="p-1.5 rounded-lg bg-[#18181c] hover:bg-[#26262b] text-slate-300 transition-colors"
                 >
                   <X size={18} />
                 </button>

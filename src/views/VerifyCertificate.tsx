@@ -172,7 +172,7 @@ export default function VerifyCertificate() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -181,14 +181,14 @@ export default function VerifyCertificate() {
         <div className="mb-6 flex items-center justify-between">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Live Event
           </Link>
 
           <Link
             to="/my-certificates"
-            className="text-xs font-mono text-cyan-400 hover:underline flex items-center gap-1"
+            className="text-xs font-mono text-red-400 hover:underline flex items-center gap-1"
           >
             Search by Name →
           </Link>
@@ -196,8 +196,8 @@ export default function VerifyCertificate() {
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-20 bg-slate-900/40 rounded-2xl border border-slate-800 backdrop-blur-md p-8">
-            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="text-center py-20 bg-[#131316] rounded-2xl border border-[#26262b] backdrop-blur-md p-8">
+            <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <h2 className="text-lg font-bold tracking-wide">Validating Certificate Record...</h2>
             <p className="text-xs text-slate-400 font-mono mt-1">
               Querying official records for #{certificateId}
@@ -236,7 +236,7 @@ export default function VerifyCertificate() {
             <div className="mt-8 flex justify-center gap-4">
               <Link
                 to="/my-certificates"
-                className="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-sm transition-colors flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg bg-[#e0263f] hover:bg-[#ff3b53] text-white font-bold text-sm transition-colors flex items-center gap-2 shadow-glow-red"
               >
                 <Search size={16} /> Search Certificates by Name
               </Link>
@@ -281,7 +281,7 @@ export default function VerifyCertificate() {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-lg bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-sm shadow-glow-red flex items-center justify-center gap-2 transition-all"
                   >
                     <Download size={16} />
                     {downloading ? 'Downloading...' : 'Download PDF'}
@@ -308,8 +308,8 @@ export default function VerifyCertificate() {
             )}
 
             {/* Certificate Details Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-800">
+            <div className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-[#26262b]">
                 <div>
                   <div className="text-xs uppercase font-mono tracking-wider text-slate-400">
                     Recipient Name
@@ -323,7 +323,7 @@ export default function VerifyCertificate() {
                   <div className="text-xs uppercase font-mono tracking-wider text-slate-400">
                     Certificate Type
                   </div>
-                  <div className="text-lg font-bold text-cyan-400 capitalize mt-1 flex items-center gap-2">
+                  <div className="text-lg font-bold text-red-400 capitalize mt-1 flex items-center gap-2">
                     <Award size={20} />
                     {cert.certificate_type.replace('_', ' ')}
                   </div>

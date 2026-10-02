@@ -64,7 +64,7 @@ export default function FaqView() {
   }, [faqs, search]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black pb-20">
+    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -73,19 +73,19 @@ export default function FaqView() {
         <div className="flex items-center justify-between">
           <Link
             to="/hall-of-fame"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
           >
             <ChevronLeft size={16} /> Back to Hall of Fame
           </Link>
 
-          <span className="text-xs font-mono text-cyan-400">
+          <span className="text-xs font-mono text-red-400">
             KNOWLEDGE BASE
           </span>
         </div>
 
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <HelpCircle size={14} /> FREQUENTLY ASKED QUESTIONS
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
@@ -114,7 +114,7 @@ export default function FaqView() {
         {/* FAQ Accordion List */}
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-xs font-mono">Loading FAQ entries...</p>
           </div>
         ) : filteredFaqs.length === 0 ? (
@@ -132,18 +132,18 @@ export default function FaqView() {
               return (
                 <div
                   key={faq.id}
-                  className="bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 rounded-2xl overflow-hidden backdrop-blur-md transition-all shadow-lg"
+                  className="bg-[#131316] border border-[#26262b] hover:border-red-500/40 rounded-2xl overflow-hidden backdrop-blur-md transition-all shadow-lg"
                 >
                   <button
                     type="button"
                     onClick={() => toggleFaq(faq.id)}
-                    className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base text-white hover:text-cyan-400 transition-colors"
+                    className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base text-white hover:text-red-400 transition-colors"
                   >
                     <span>{faq.question}</span>
                     <ChevronDown
                       size={18}
                       className={`text-slate-400 shrink-0 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180 text-cyan-400' : ''
+                        isOpen ? 'rotate-180 text-red-400' : ''
                       }`}
                     />
                   </button>

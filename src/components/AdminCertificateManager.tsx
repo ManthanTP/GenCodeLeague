@@ -711,12 +711,12 @@ export default function AdminCertificateManager({
       {/* ═══ Top Header Bar ═══ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-            <Award size={22} className="text-cyan-400" />
+          <div className="w-10 h-10 rounded-xl bg-[#18181c] border border-[#26262b] flex items-center justify-center">
+            <Award size={22} className="text-[var(--accent-red)]" />
           </div>
           <div>
             <h2 className="text-xl font-black text-white">Certificate Studio</h2>
-            <p className="text-xs text-slate-400 font-mono">
+            <p className="text-xs text-[#71717a] font-mono">
               Customize branding, upload signatures & issue certificates
             </p>
           </div>
@@ -739,7 +739,7 @@ export default function AdminCertificateManager({
           {onNavigateBulk && (
             <button
               onClick={onNavigateBulk}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-400 flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 rounded-lg bg-[#18181c] hover:bg-[#202025] border border-[#26262b] text-xs font-bold text-[#e1e1e6] hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Plus size={14} /> Bulk CSV Issue
             </button>
@@ -748,13 +748,13 @@ export default function AdminCertificateManager({
       </div>
 
       {/* ═══ Mode Tabs ═══ */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+      <div className="flex items-center gap-2 border-b border-[#26262b] pb-3">
         <button
           onClick={() => setActiveTab('issue')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'issue'
-              ? 'bg-cyan-500 text-black shadow-glow-cyan'
-              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'bg-[#131316] text-[#71717a] hover:text-white border border-[#26262b]'
           }`}
         >
           <Award size={15} /> Issue Certificate
@@ -762,10 +762,10 @@ export default function AdminCertificateManager({
 
         <button
           onClick={() => setActiveTab('branding')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'branding'
-              ? 'bg-red-500 text-white shadow-glow-red'
-              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'bg-[#131316] text-[#71717a] hover:text-white border border-[#26262b]'
           }`}
         >
           <PenTool size={15} /> Signatures & Branding
@@ -773,10 +773,10 @@ export default function AdminCertificateManager({
 
         <button
           onClick={() => setActiveTab('list')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'list'
-              ? 'bg-cyan-500 text-black shadow-glow-cyan'
-              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'bg-[#131316] text-[#71717a] hover:text-white border border-[#26262b]'
           }`}
         >
           <Eye size={15} /> Issued Records ({certificatesList.length})
@@ -832,8 +832,8 @@ export default function AdminCertificateManager({
                 {selectedTeamId && (
                   <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5">
-                        <Users size={14} className="text-cyan-400" />
+                      <span className="text-xs font-mono font-bold text-[#e1e1e6] flex items-center gap-1.5">
+                        <Users size={14} className="text-[var(--accent-red)]" />
                         Team Members ({currentTeamMembers.length})
                       </span>
                       {currentTeamMembers.length > 0 && (
@@ -844,7 +844,7 @@ export default function AdminCertificateManager({
                           className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 ${
                             unissuedCount === 0
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
-                              : 'bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-black shadow-glow-cyan'
+                              : 'bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
                           }`}
                           title={
                             unissuedCount === 0
@@ -866,7 +866,7 @@ export default function AdminCertificateManager({
 
                     {currentTeamMembers.length > 0 ? (
                       <div>
-                        <p className="text-[11px] text-slate-400 mb-1.5">
+                        <p className="text-[11px] text-[#71717a] mb-1.5">
                           Click any member to autofill name, or use <strong>⚡ Issue All</strong> above:
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -888,10 +888,10 @@ export default function AdminCertificateManager({
                                 onClick={() => setRecipientName(memberName)}
                                 className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                                   isSelected
-                                    ? 'bg-cyan-500 text-black font-bold ring-2 ring-cyan-300 shadow-glow-cyan'
+                                    ? 'bg-[var(--accent-red)] text-white font-bold ring-1 ring-white/30'
                                     : isAlreadyIssued
                                     ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-700/60 hover:border-emerald-400'
-                                    : 'bg-slate-900 text-slate-300 border border-slate-700/80 hover:border-cyan-500/60 hover:text-white'
+                                    : 'bg-[#0a0a0c] text-slate-300 border border-[#26262b] hover:border-[var(--accent-red)]/60 hover:text-white'
                                 }`}
                               >
                                 <span>{memberName}</span>
@@ -899,7 +899,7 @@ export default function AdminCertificateManager({
                                   <span title="Certificate of this type already issued for this edition">
                                     <CheckCircle2
                                       size={12}
-                                      className={isSelected ? 'text-black' : 'text-emerald-400'}
+                                      className={isSelected ? 'text-white' : 'text-emerald-400'}
                                     />
                                   </span>
                                 )}
@@ -909,13 +909,13 @@ export default function AdminCertificateManager({
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-500 italic">
+                      <p className="text-xs text-[#71717a] italic">
                         No members registered for this team yet. Add one below:
                       </p>
                     )}
 
                     {/* Inline quick add member form */}
-                    <div className="flex gap-2 pt-1 border-t border-slate-800/80">
+                    <div className="flex gap-2 pt-1 border-t border-[#202024]">
                       <input
                         type="text"
                         placeholder="Quick add member to team..."
@@ -933,7 +933,7 @@ export default function AdminCertificateManager({
                         type="button"
                         onClick={handleQuickAddInlineMember}
                         disabled={!newInlineMemberName.trim() || addingMemberInline}
-                        className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                        className="px-2.5 py-1.5 rounded-lg bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
                       >
                         <UserPlus size={13} /> Add
                       </button>
@@ -1026,7 +1026,7 @@ export default function AdminCertificateManager({
                 <button
                   onClick={handleIssueCertificate}
                   disabled={generating || !recipientName.trim()}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-sm tracking-wide shadow-glow-red disabled:opacity-50 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-black text-sm tracking-wide shadow-[0_2px_12px_rgba(224,38,63,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <Award size={18} />
                   {generating ? 'Issuing Certificate...' : 'Issue Certificate'}
@@ -1035,12 +1035,12 @@ export default function AdminCertificateManager({
             </div>
 
             {/* Right: Real-time Live Certificate Preview */}
-            <div className="lg:col-span-7 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl flex flex-col items-center">
+            <div className="lg:col-span-7 bg-[#131316] border border-[#26262b] rounded-2xl p-6 shadow-xl flex flex-col items-center">
               <div className="w-full flex items-center justify-between mb-3">
-                <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
-                  <Eye size={14} className="text-cyan-400" /> Live Certificate Preview
+                <span className="text-xs font-mono text-[#71717a] flex items-center gap-1.5">
+                  <Eye size={14} className="text-[var(--accent-red)]" /> Live Certificate Preview
                 </span>
-                <span className="text-[10px] font-mono text-slate-500">
+                <span className="text-[10px] font-mono text-[#71717a]">
                   A4 Landscape (4K Print Ready)
                 </span>
               </div>
@@ -1979,7 +1979,7 @@ export default function AdminCertificateManager({
                 </button>
                 <button
                   onClick={() => handleDownload(previewCert)}
-                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-extrabold text-xs flex items-center gap-1.5 shadow-[0_2px_12px_rgba(224,38,63,0.3)] cursor-pointer"
                 >
                   <Download size={14} /> Download PDF
                 </button>

@@ -45,13 +45,13 @@ export default function TeamLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen text-white font-sans">
       <Header viewMode="team" onToggleView={() => navigate('/')} />
       
       <div className="auth-centered-wrapper">
         <div className="auth-card">
-          <div className="auth-icon-badge bg-cyan-950/40 border-cyan-500/30">
-            <Users size={38} className="text-cyan-400" />
+          <div className="auth-icon-badge bg-red-950/40 border-red-500/30">
+            <Users size={38} className="text-red-400" />
           </div>
           <h1 className="auth-title">Team Leader Login</h1>
           <p className="auth-subtitle">

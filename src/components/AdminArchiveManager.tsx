@@ -888,7 +888,7 @@ export default function AdminArchiveManager({
               <button
                 type="button"
                 onClick={handleSetActiveEdition}
-                className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-black text-xs font-bold font-mono rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer"
+                className="px-3 py-2 bg-[#18181c] hover:bg-[#202025] text-emerald-400 border border-emerald-500/40 text-xs font-bold font-mono rounded-xl transition flex items-center gap-1 shadow-sm cursor-pointer"
                 title="Make this edition the active live event"
               >
                 <Radio size={14} /> Set Active
@@ -899,14 +899,14 @@ export default function AdminArchiveManager({
       </div>
 
       {/* Subtab Navigation Strip */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl backdrop-blur-xl w-fit flex-wrap shadow-xl">
+      <div className="flex items-center gap-2 p-1.5 bg-[#131316] border border-[#26262b] rounded-2xl w-fit flex-wrap shadow-xl">
         <button
           type="button"
           onClick={() => setArchiveSubTab('podium')}
           className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
             archiveSubTab === 'podium'
-              ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-glow-gold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'text-[#71717a] hover:text-white hover:bg-[#18181c]'
           }`}
         >
           <Crown size={15} /> 1. PODIUM & FINALIZE
@@ -916,8 +916,8 @@ export default function AdminArchiveManager({
           onClick={() => setArchiveSubTab('sponsors')}
           className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
             archiveSubTab === 'sponsors'
-              ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-black shadow-glow-cyan'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'text-[#71717a] hover:text-white hover:bg-[#18181c]'
           }`}
         >
           <Sparkles size={15} /> 2. SPONSORS ({sponsors.length})
@@ -927,8 +927,8 @@ export default function AdminArchiveManager({
           onClick={() => setArchiveSubTab('gallery')}
           className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
             archiveSubTab === 'gallery'
-              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-glow-purple'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'text-[#71717a] hover:text-white hover:bg-[#18181c]'
           }`}
         >
           <Image size={15} /> 3. EVENT GALLERY ({galleryPhotos.length})
@@ -938,8 +938,8 @@ export default function AdminArchiveManager({
           onClick={() => setArchiveSubTab('faqs')}
           className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
             archiveSubTab === 'faqs'
-              ? 'bg-gradient-to-r from-emerald-400 to-teal-600 text-black shadow-glow-emerald'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'text-[#71717a] hover:text-white hover:bg-[#18181c]'
           }`}
         >
           <HelpCircle size={15} /> 4. FAQ HUB ({faqs.length})
@@ -949,8 +949,8 @@ export default function AdminArchiveManager({
           onClick={() => setArchiveSubTab('backup')}
           className={`px-4 py-2 rounded-xl text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
             archiveSubTab === 'backup'
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-glow-blue'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)]'
+              : 'text-[#71717a] hover:text-white hover:bg-[#18181c]'
           }`}
         >
           <Download size={15} /> 5. BACKUP & EXPORT
@@ -1138,40 +1138,40 @@ export default function AdminArchiveManager({
           <div className="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles size={18} className="text-cyan-400" />
+                <Sparkles size={18} className="text-[var(--accent-red)]" />
                 Add Sponsor / Partner
               </h3>
-              <span className="text-xs font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+              <span className="text-xs font-mono text-[var(--accent-red)] bg-[#0a0a0c] px-2 py-0.5 rounded border border-[#26262b]">
                 {sponsors.length} registered
               </span>
             </div>
 
             {/* Toggle: Show sponsors on certificates */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 shadow-inner">
+            <div className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex items-center justify-between gap-3 shadow-inner">
               <div>
                 <span className="text-xs font-bold text-white block">
                   Show Sponsors on Certificates
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-[#71717a]">
                   Off by default. Applies to certificates for this edition only.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleToggleSponsorsOnCerts}
-                className="text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                className="text-[var(--accent-red)] hover:text-red-400 transition-colors cursor-pointer"
               >
                 {showSponsorsOnCerts ? (
-                  <ToggleRight size={32} className="text-cyan-400" />
+                  <ToggleRight size={32} className="text-[var(--accent-red)]" />
                 ) : (
-                  <ToggleLeft size={32} className="text-slate-600" />
+                  <ToggleLeft size={32} className="text-[#4e4e58]" />
                 )}
               </button>
             </div>
 
             <form onSubmit={handleAddSponsor} className="space-y-4 pt-2">
               <div>
-                <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                <label className="text-xs text-[#71717a] uppercase font-bold block mb-1">
                   Sponsor Name *
                 </label>
                 <input
@@ -1186,7 +1186,7 @@ export default function AdminArchiveManager({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                  <label className="text-xs text-[#71717a] uppercase font-bold block mb-1">
                     Tier
                   </label>
                   <select
@@ -1203,7 +1203,7 @@ export default function AdminArchiveManager({
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                  <label className="text-xs text-[#71717a] uppercase font-bold block mb-1">
                     Website URL
                   </label>
                   <input
@@ -1217,7 +1217,7 @@ export default function AdminArchiveManager({
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
+                <label className="text-xs text-[#71717a] uppercase font-bold block mb-1">
                   Logo URL (Direct Image Link)
                 </label>
                 <input
@@ -1232,7 +1232,7 @@ export default function AdminArchiveManager({
               <button
                 type="submit"
                 disabled={savingSponsor || !sponsorName.trim()}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-black font-black text-xs transition-all shadow-glow-cyan disabled:opacity-50 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-black text-xs transition-all shadow-[0_2px_12px_rgba(224,38,63,0.3)] disabled:opacity-50 cursor-pointer"
               >
                 {savingSponsor ? 'Adding Sponsor...' : '+ Register Sponsor'}
               </button>
@@ -1568,11 +1568,11 @@ export default function AdminArchiveManager({
 
           {/* Import Panel */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Upload size={18} className="text-cyan-400" />
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 pb-3 border-b border-[#26262b]">
+              <Upload size={18} className="text-[var(--accent-red)]" />
               Import Edition Snapshot (JSON)
             </h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[#71717a] leading-relaxed">
               Upload or paste a previously exported GCL JSON archive. An integrity preview will be performed before creation.
             </p>
 
@@ -1587,19 +1587,19 @@ export default function AdminArchiveManager({
             </div>
 
             {importPreview && (
-              <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/40 space-y-3 shadow-lg">
-                <span className="text-[10px] font-mono text-cyan-400 uppercase font-black block">
+              <div className="p-4 rounded-xl bg-[#0a0a0c] border border-[#26262b] space-y-3 shadow-lg">
+                <span className="text-[10px] font-mono text-[var(--accent-red)] uppercase font-black block">
                   ✓ Valid GCL Edition Structure Detected
                 </span>
-                <div className="text-xs text-slate-300 space-y-1">
+                <div className="text-xs text-[#e1e1e6] space-y-1">
                   <div>Original Edition: <strong className="text-white">{importPreview.edition.name}</strong></div>
-                  <div>Teams Included: <strong className="text-cyan-300">{importPreview.teams.length}</strong></div>
-                  <div>Bids / Items: <strong className="text-purple-300">{importPreview.team_items?.length || 0}</strong></div>
-                  <div>Certificates: <strong className="text-yellow-300">{importPreview.certificates?.length || 0}</strong></div>
+                  <div>Teams Included: <strong className="text-[var(--accent-red)]">{importPreview.teams.length}</strong></div>
+                  <div>Bids / Items: <strong className="text-[#a1a1aa]">{importPreview.team_items?.length || 0}</strong></div>
+                  <div>Certificates: <strong className="text-[#d4af37]">{importPreview.certificates?.length || 0}</strong></div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                  <label className="text-[10px] text-[#71717a] uppercase font-bold block mb-1">
                     Name for New Edition
                   </label>
                   <input
@@ -1614,7 +1614,7 @@ export default function AdminArchiveManager({
                   type="button"
                   onClick={handleExecuteImport}
                   disabled={isImporting}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-black font-black text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-black text-xs shadow-[0_2px_12px_rgba(224,38,63,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Upload size={16} />
                   {isImporting ? 'Executing Database Import...' : 'Confirm & Restore as New Edition'}
@@ -1775,16 +1775,16 @@ export default function AdminArchiveManager({
       {/* EDIT EDITION MODAL */}
       {isEditModalOpen && activeEdition && (
         <div className="gcl-modal-overlay" onClick={() => setIsEditModalOpen(false)}>
-          <div className="gcl-modal-box max-w-lg border-blue-500/50" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-              <h3 className="gcl-modal-title text-cyan-400 flex items-center gap-2 m-0">
-                <Edit3 size={22} />
+          <div className="gcl-modal-box max-w-lg border-[#26262b]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#202024]">
+              <h3 className="gcl-modal-title text-white flex items-center gap-2 m-0">
+                <Edit3 size={22} className="text-[var(--accent-red)]" />
                 Edit Edition: {activeEdition.name}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-[#71717a] hover:text-white p-1 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1858,7 +1858,7 @@ export default function AdminArchiveManager({
                     onChange={(e) => setEditEditionForm((p) => ({ ...p, basePrice: e.target.value }))}
                     className="gcl-input font-mono"
                   />
-                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                  <span className="text-[10px] text-[var(--accent-red)] font-mono mt-0.5 block">
                     {formatCurrency(parseInt(editEditionForm.basePrice) || 0)}
                   </span>
                 </div>
@@ -1870,36 +1870,36 @@ export default function AdminArchiveManager({
                     onChange={(e) => setEditEditionForm((p) => ({ ...p, minIncrement: e.target.value }))}
                     className="gcl-input font-mono"
                   />
-                  <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                  <span className="text-[10px] text-[var(--accent-red)] font-mono mt-0.5 block">
                     {formatCurrency(parseInt(editEditionForm.minIncrement) || 0)}
                   </span>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 space-y-2">
-                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300">
+              <div className="pt-2 border-t border-[#202024] space-y-2">
+                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-[#e1e1e6]">
                   <input
                     type="checkbox"
                     checked={editEditionForm.isArchived}
                     onChange={(e) => setEditEditionForm((p) => ({ ...p, isArchived: e.target.checked }))}
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-700"
+                    className="w-4 h-4 rounded text-[var(--accent-red)] focus:ring-0 bg-[#0a0a0c] border-[#26262b]"
                   />
                   <span>Mark as Archived (Read-Only)</span>
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#202024]">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold"
+                  className="btn-cancel"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingEdition}
-                  className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm"
+                  className="btn-primary"
                 >
                   {isSubmittingEdition ? 'Saving...' : 'Save Changes'}
                 </button>

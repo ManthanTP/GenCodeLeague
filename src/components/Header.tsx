@@ -1,5 +1,6 @@
-import { Hammer, Users, Eye, LogOut, Zap, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Hammer, Users, Eye, LogOut, Zap, Shield, Menu, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 
 interface HeaderProps {
@@ -22,6 +23,18 @@ export default function Header({
   onLogout,
 }: HeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { label: 'Hall of Fame', path: '/hall-of-fame', icon: '★' },
+    { label: 'Certificates', path: '/my-certificates', icon: '◈' },
+    { label: 'Gallery', path: '/gallery', icon: '▣' },
+    { label: 'Updates', path: '/announcements', icon: '▲' },
+    { label: 'FAQ', path: '/faq', icon: '?' },
+  ];
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <header className="gcl-header">
@@ -47,7 +60,7 @@ export default function Header({
           </div>
         </div>
 
-        {/* Center: Context Info */}
+        {/* Center: Navigation */}
         <div className="gcl-header-center flex items-center gap-4">
           {viewMode === 'admin' && (
             <div className="header-role-badge header-role-admin">
@@ -62,42 +75,17 @@ export default function Header({
                 <span>LIVE</span>
               </div>
 
-              <nav className="hidden md:flex items-center gap-1.5 ml-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/hall-of-fame')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-yellow-400 hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/30 transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-yellow-400">★</span> Hall of Fame
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/my-certificates')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-cyan-400">◈</span> Certificates
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/gallery')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-cyan-400">▣</span> Gallery
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/announcements')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-cyan-400">▲</span> Updates
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/faq')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-cyan-400">?</span> FAQ
-                </button>
+              <nav className="gcl-nav-desktop">
+                {navLinks.map((link) => (
+                  <button
+                    key={link.path}
+                    type="button"
+                    onClick={() => navigate(link.path)}
+                    className={`gcl-nav-link ${isActive(link.path) ? 'gcl-nav-link-active' : ''}`}
+                  >
+                    <span className="gcl-nav-icon">{link.icon}</span> {link.label}
+                  </button>
+                ))}
               </nav>
             </div>
           )}
@@ -106,17 +94,10 @@ export default function Header({
         {/* Stats and Controls */}
         <div className="gcl-header-actions">
           <div className="gcl-stats-group">
-            <div className="header-stat-pill stat-pill-spent">
-              <span className="stat-pill-icon">▼</span>
-              <div>
-                <p className="stat-label">Spent</p>
-                <p className="stat-value-spent">{formatCurrency(totalSpent)}</p>
-              </div>
-            </div>
             <div className="header-stat-pill stat-pill-available">
               <span className="stat-pill-icon">▲</span>
               <div>
-                <p className="stat-label">Available</p>
+                <p className="stat-label">Budget</p>
                 <p className="stat-value-available">{formatCurrency(totalAvailable)}</p>
               </div>
             </div>
@@ -141,9 +122,36 @@ export default function Header({
                 <LogOut size={16} /> Logout
               </button>
             )}
+
+            {/* Mobile hamburger menu */}
+            {viewMode === 'live' && (
+              <button
+                className="gcl-mobile-menu-btn"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && viewMode === 'live' && (
+        <div className="gcl-mobile-nav">
+          {navLinks.map((link) => (
+            <button
+              key={link.path}
+              type="button"
+              onClick={() => { navigate(link.path); setMobileMenuOpen(false); }}
+              className={`gcl-mobile-nav-link ${isActive(link.path) ? 'gcl-mobile-nav-link-active' : ''}`}
+            >
+              <span className="gcl-nav-icon">{link.icon}</span> {link.label}
+            </button>
+          ))}
+        </div>
+      )}
     </header>
   );
 }

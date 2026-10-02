@@ -396,14 +396,14 @@ Priya Sharma,,volunteer`;
 
   if (authLoading || !isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen text-white font-sans selection:bg-cyan-500 selection:text-black">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
