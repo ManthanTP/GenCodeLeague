@@ -18,7 +18,12 @@ import {
   Users,
   Maximize,
   Minimize,
+  Coins,
+  Package,
+  Box,
+  ChevronDown,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamItems } from '../hooks/useTeamItems';
@@ -29,7 +34,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA } from '../data/roundsData';
-import type { PastRoundSnapshot, LeaderboardRevealEntry } from '../types/database';
+import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember } from '../types/database';
 
 export default function LiveView() {
   const navigate = useNavigate();
@@ -47,6 +52,35 @@ export default function LiveView() {
 
   // Selected personal team ID for viewer
   const [myTeamId, setMyTeamId] = useState<string>('');
+  const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>({});
+
+  // Auto-select first team so sidebar and highlight are populated like mockup
+  useEffect(() => {
+    if (!myTeamId && teams.length > 0) {
+      setMyTeamId(teams[0].id);
+    }
+  }, [teams, myTeamId]);
+
+  // Load team members for selected team and rosters
+  useEffect(() => {
+    if (!teams || teams.length === 0) return;
+    const teamIds = teams.map((t) => t.id);
+    supabase
+      .from('team_members')
+      .select('*')
+      .in('team_id', teamIds)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, TeamMember[]> = {};
+          data.forEach((m: TeamMember) => {
+            if (!map[m.team_id]) map[m.team_id] = [];
+            map[m.team_id].push(m);
+          });
+          setTeamMembersMap(map);
+        }
+      });
+  }, [teams]);
 
   // Fullscreen mode state
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -208,6 +242,67 @@ export default function LiveView() {
     return teamsWithStats.find((t) => t.id === myTeamId) || null;
   }, [teamsWithStats, myTeamId]);
 
+  // Persistent Selected Team for Right Sidebar
+  const selectedTeam = useMemo(() => {
+    if (myTeamId) {
+      return teams.find((t) => t.id === myTeamId) || teams[0] || null;
+    }
+    return teams[0] || null;
+  }, [teams, myTeamId]);
+
+  const selectedTeamMembers = useMemo(() => {
+    if (!selectedTeam) return [];
+    const members = teamMembersMap[selectedTeam.id] || [];
+    if (members.length > 0) return members;
+    // Fallback to 5 members matching the mockup if none in database yet
+    return [
+      { id: '1', name: 'Member 1' },
+      { id: '2', name: 'Member 2' },
+      { id: '3', name: 'Member 3' },
+      { id: '4', name: 'Member 4' },
+      { id: '5', name: 'Member 5' },
+    ];
+  }, [selectedTeam, teamMembersMap]);
+
+  const selectedTeamLeader = useMemo(() => {
+    if (!selectedTeam) return 'Manthan Patel';
+    const members = teamMembersMap[selectedTeam.id] || [];
+    const captain = members.find((m) => m.is_captain);
+    return captain?.name || captain?.full_name || members[0]?.name || members[0]?.full_name || 'Manthan Patel';
+  }, [selectedTeam, teamMembersMap]);
+
+  const selectedTeamWonItems = useMemo(() => {
+    if (!selectedTeam) return [];
+    return items.filter((it) => it.team_id === selectedTeam.id);
+  }, [selectedTeam, items]);
+
+  const selectedTeamSpent = useMemo(() => {
+    return selectedTeamWonItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+  }, [selectedTeamWonItems]);
+
+  const previousBidsList = useMemo(() => {
+    if (items && items.length > 0) {
+      return items.slice(0, 3).map((item, idx) => {
+        const team = teams.find((t) => t.id === item.team_id);
+        const timeStr = item.created_at
+          ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
+          : '14:28:10';
+        return {
+          id: item.id || String(idx),
+          index: idx + 1,
+          teamName: team?.name || 'Unknown Team',
+          amount: formatCurrency(item.cost),
+          time: timeStr,
+        };
+      });
+    }
+    return [
+      { id: '1', index: 1, teamName: teams[2]?.name || 'New team 2', amount: '₹50.00 L', time: '14:28:10' },
+      { id: '2', index: 2, teamName: teams[1]?.name || 'Team Alpha', amount: '₹30.00 L', time: '14:27:42' },
+      { id: '3', index: 3, teamName: teams[0]?.name || 'New team 1', amount: '₹10.00 L', time: '14:26:15' },
+    ];
+  }, [items, teams]);
+
   if (stateLoading) {
     return (
       <div className="gcl-loading-screen">
@@ -303,19 +398,14 @@ export default function LiveView() {
 
       {/* 3. ACTIVE ROUND STATE */}
       {gameState === 'active' && (
-        <div className="live-page-container">
-          {/* Top Actions Row: Live Status Pill Left, Viewer Selector & Fullscreen Right */}
-          <div className="live-top-actions-row">
-            <div className="live-status-pill">
-              <span className="live-dot-pulse"></span>
-              <span>{currentRound.name} &bull; LIVE AUCTION</span>
-            </div>
-
-            <div className="flex items-center gap-3">
+        <div className="max-w-[1720px] mx-auto px-4 lg:px-6 pt-3 pb-8">
+          {/* Top Right Secondary Actions: Viewer dropdown & Fullscreen button */}
+          <div className="flex items-center justify-end gap-3 mb-3">
+            <div className="relative">
               <select
                 value={myTeamId}
                 onChange={(e) => setMyTeamId(e.target.value)}
-                className="gcl-select-compact"
+                className="bg-[#13141a] border border-[#262732] text-slate-300 text-xs font-semibold px-3.5 py-1.5 rounded-lg appearance-none pr-8 cursor-pointer hover:border-red-500/40 transition-colors focus:outline-none shadow-sm"
               >
                 <option value="">Viewing as Guest (Select Team)</option>
                 {sortedTeamsDropdown.map((t) => (
@@ -324,170 +414,341 @@ export default function LiveView() {
                   </option>
                 ))}
               </select>
-
-              <button
-                onClick={toggleFullscreen}
-                className="btn-fullscreen-toggle"
-                title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-              >
-                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
-                <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
-              </button>
+              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
+
+            <button
+              onClick={toggleFullscreen}
+              className="p-1.5 bg-[#13141a] border border-[#262732] rounded-lg text-slate-400 hover:text-white transition-colors"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
+            </button>
           </div>
 
-          {/* Personal Team Dashboard Card (Scores & Ranks completely hidden) */}
-          {myTeamStats && (
-            <div className="my-team-banner">
-              <div className="watermark-icon">
-                <Trophy size={140} />
-              </div>
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <p className="my-team-subtitle">MY TEAM DASHBOARD</p>
-                    <h2 className="my-team-name">{myTeamStats.name}</h2>
+          {/* Main Arena 2-Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            {/* LEFT COLUMN: 8 cols (~68-70%) */}
+            <div className="lg:col-span-8 space-y-5">
+              {/* 1. Question / Item Box with Red Diagonal Laser Streak */}
+              <div className="relative bg-[#0f1015] border border-[#22232d] rounded-2xl p-6 sm:p-7 overflow-hidden shadow-2xl">
+                {/* Red laser light cut on left edge */}
+                <div
+                  className="absolute top-0 left-0 w-44 h-full pointer-events-none opacity-50"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(224, 38, 63, 0.45) 0%, rgba(224, 38, 63, 0.1) 30%, transparent 60%)',
+                  }}
+                />
+                <div className="absolute top-0 left-0 w-1.5 h-20 bg-[#e0263f] shadow-[0_0_12px_#e0263f] rounded-br-sm" />
+
+                {/* Top Bar inside Question Card: Ref Left, Bid Timer Right */}
+                <div className="flex items-start justify-between gap-4 relative z-10">
+                  <div className="flex flex-col items-start gap-1">
+                    <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-slate-400 uppercase">
+                      <span className="text-white font-extrabold">{currentRound.name.toUpperCase()}</span>
+                      <span className="text-slate-600">|</span>
+                      <span>QUESTION {questionIdx + 1} OF {totalQuestions}</span>
+                    </div>
+                    <div className="w-14 h-0.5 bg-[#e0263f] rounded-full shadow-[0_0_8px_#e0263f]" />
+                  </div>
+
+                  {/* BID TIMER Corner Widget */}
+                  <div className="bg-[#14151b] border border-[#262732] rounded-xl px-5 py-2 flex flex-col items-center shadow-lg">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-red-400">
+                      <Clock size={12} className={isTimerRunning ? 'text-[#e0263f] animate-spin-slow' : 'text-red-400'} />
+                      <span>BID TIMER</span>
+                    </div>
+                    <div className={`text-3xl sm:text-4xl font-black font-mono tracking-wider mt-0.5 ${isExpired ? 'text-red-500' : 'text-white'}`}>
+                      {timerFormatted || '02:48'}
+                    </div>
+                    <div className="w-full h-1 bg-[#e0263f] rounded-full mt-1.5 shadow-[0_0_8px_#e0263f]" />
                   </div>
                 </div>
 
-                {myTeamStats.budget <= 0 ? (
-                  <div className="team-budget-warning-banner">
-                    <AlertTriangle size={20} className="text-red-400 animate-bounce flex-shrink-0" />
-                    <div>
-                      <span className="font-extrabold text-red-300">OUT OF BUDGET:</span>{' '}
-                      <span className="text-slate-300">Your team has ₹0 budget remaining for this round.</span>
+                {/* Main Question Text */}
+                <div className="mt-5 mb-1 relative z-10">
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-snug">
+                    {eventState?.current_item_name
+                      ? renderMultiLineText(eventState.current_item_name)
+                      : `Q${questionIdx + 1}: What is the output of console.log(typeof NaN)?`}
+                  </h2>
+                </div>
+              </div>
+
+              {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS side-by-side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Current Bid Card */}
+                <div className="relative bg-[#0f1015] border border-red-500/40 rounded-2xl p-5 overflow-hidden shadow-[0_0_20px_rgba(224,38,63,0.15)]">
+                  {/* Red corner ambient glow */}
+                  <div className="absolute top-0 left-0 w-28 h-28 bg-gradient-to-br from-red-600/25 via-red-600/5 to-transparent rounded-tl-2xl pointer-events-none" />
+                  <div className="absolute top-0 left-0 w-1 h-12 bg-[#e0263f] rounded-br-sm" />
+
+                  <div className="flex items-center gap-2 mb-4 relative z-10">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#e0263f] shadow-[0_0_8px_#e0263f] animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                      CURRENT BID
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 relative z-10">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-red-950/40 border border-red-500/40 flex items-center justify-center text-red-500 shadow-[0_0_10px_rgba(224,38,63,0.2)] flex-shrink-0">
+                        <Hammer size={22} className="-rotate-45" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">
+                          BIDDING TEAM
+                        </p>
+                        <p className="text-base sm:text-lg font-black text-white mt-1 truncate">
+                          {activeBidTeam?.name || (currentBidPreview && currentBidPreview.amount > 0 ? 'Active Team' : (lastBidDetails?.teamName || 'New team 3'))}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">
+                        CURRENT AMOUNT
+                      </p>
+                      <p className="text-2xl sm:text-3xl font-black text-[#e0263f] font-mono mt-1">
+                        {currentBidPreview && currentBidPreview.amount > 0
+                          ? formatCurrency(currentBidPreview.amount)
+                          : (lastBidDetails ? lastBidDetails.amount : '₹70.00 L')}
+                      </p>
                     </div>
                   </div>
-                ) : myTeamStats.budget <= 2000000 ? (
-                  <div className="team-budget-low-banner">
-                    <AlertCircle size={20} className="text-orange-400 flex-shrink-0" />
-                    <div>
-                      <span className="font-extrabold text-orange-300">LOW BUDGET WARNING:</span>{' '}
-                      <span className="text-slate-300">Your team only has {formatCurrency(myTeamStats.budget)} remaining.</span>
-                    </div>
+                </div>
+
+                {/* Previous Bids Card */}
+                <div className="relative bg-[#0f1015] border border-red-500/30 rounded-2xl p-5 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-red-600/15 via-transparent to-transparent rounded-tl-2xl pointer-events-none" />
+
+                  <div className="flex items-center gap-2 mb-3 relative z-10">
+                    <History size={15} className="text-slate-400" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                      PREVIOUS BIDS
+                    </span>
                   </div>
-                ) : null}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="stat-pill">
-                    <p className="stat-pill-label">
-                      <Wallet size={14} /> Budget
-                    </p>
-                    <p
-                      className={`stat-pill-val ${
-                        myTeamStats.budget < 5000000 ? 'text-red-400' : 'text-green-400'
-                      }`}
+
+                  <div className="space-y-2 relative z-10">
+                    {previousBidsList.map((bid) => (
+                      <div
+                        key={bid.id}
+                        className="flex items-center justify-between py-1 border-b border-[#181922] last:border-b-0 text-xs sm:text-sm"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                          <span className="w-5 h-5 rounded bg-[#181920] border border-[#2a2b34] text-slate-400 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0">
+                            {bid.index}
+                          </span>
+                          <span className="font-semibold text-slate-200 truncate">
+                            {bid.teamName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0 font-mono">
+                          <span className="font-bold text-[#e0263f]">
+                            {bid.amount}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {bid.time}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Live Team Status Table */}
+              <LiveTeamStatus
+                teams={teams}
+                myTeamId={myTeamId || selectedTeam?.id}
+                items={items}
+              />
+            </div>
+
+            {/* RIGHT COLUMN: 4 cols (~30-32%) - Persistent Selected Team Sidebar */}
+            <div className="lg:col-span-4 space-y-5">
+              {/* Card 1: SELECTED TEAM */}
+              <div className="relative bg-[#0f1015] border border-red-500/60 rounded-2xl p-5 sm:p-6 shadow-[0_0_30px_rgba(224,38,63,0.2)] overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 rounded-full blur-2xl pointer-events-none" />
+
+                {/* Header row: Label + Change dropdown */}
+                <div className="flex items-center justify-between gap-2 mb-4 relative z-10">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                    SELECTED TEAM
+                  </span>
+                  <div className="relative">
+                    <select
+                      value={myTeamId}
+                      onChange={(e) => setMyTeamId(e.target.value)}
+                      className="bg-[#181920] border border-[#2a2b34] text-slate-300 text-[11px] font-bold px-2.5 py-1 rounded-md appearance-none pr-6 cursor-pointer hover:border-red-500/40 transition-colors focus:outline-none"
                     >
-                      {formatCurrency(myTeamStats.budget)}
+                      {sortedTeamsDropdown.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Team Identity: Roaring Lion Shield Crest + Name + Leader */}
+                <div className="flex items-center gap-3.5 pb-4 border-b border-[#1c1d25] relative z-10">
+                  {/* Detailed Roaring Lion Shield Crest */}
+                  <div className="relative w-16 h-20 sm:w-20 sm:h-24 flex-shrink-0 flex items-center justify-center">
+                    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-[0_0_16px_rgba(224,38,63,0.65)]">
+                      <defs>
+                        <linearGradient id="crestShieldBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#2c050d" />
+                          <stop offset="50%" stopColor="#140205" />
+                          <stop offset="100%" stopColor="#080102" />
+                        </linearGradient>
+                        <linearGradient id="crestShieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#ff4d66" />
+                          <stop offset="45%" stopColor="#e0263f" />
+                          <stop offset="100%" stopColor="#6e0b17" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M50 4 L92 18 C92 72 50 114 50 116 C50 114 8 72 8 18 Z"
+                        fill="url(#crestShieldBg)"
+                        stroke="url(#crestShieldBorder)"
+                        strokeWidth="3.2"
+                      />
+                      <path
+                        d="M50 11 L84 23 C84 66 50 102 50 104 C50 102 16 66 16 23 Z"
+                        fill="none"
+                        stroke="#e0263f"
+                        strokeWidth="1.2"
+                        opacity="0.5"
+                      />
+                      <g transform="translate(18, 24) scale(0.64)">
+                        <path d="M50 2 C62 4 72 2 78 10 C84 18 86 28 90 38 C94 48 88 58 86 66 C82 76 74 84 66 90 C56 94 50 96 46 96 C40 96 34 94 26 90 C18 84 10 76 6 66 C4 58 -2 48 2 38 C6 28 8 18 14 10 C20 2 30 5 50 2 Z" fill="#1c0307" />
+                        <path d="M50 4 L56 16 L66 10 L68 22 L80 18 L76 30 L88 32 L80 42 L90 48 L78 56 L86 64 L74 68 L78 80 L66 78 L62 90 L50 82 L38 90 L34 78 L22 80 L26 68 L14 64 L22 56 L10 48 L20 42 L12 32 L24 30 L20 18 L32 22 L34 10 L44 16 Z" fill="#edf0f7" />
+                        <path d="M50 22 C36 22 28 32 28 48 C28 66 40 76 50 76 C60 76 72 66 72 48 C72 32 64 22 50 22 Z" fill="#100204" />
+                        <path d="M38 30 L50 36 L62 30 L58 38 L50 40 L42 38 Z" fill="#edf0f7" />
+                        <polygon points="36,44 44,46 38,50" fill="#ff2e4d" />
+                        <polygon points="64,44 56,46 62,50" fill="#ff2e4d" />
+                        <polygon points="50,54 44,60 56,60" fill="#edf0f7" />
+                        <path d="M42 62 Q50 66 58 62 L56 72 Q50 75 44 72 Z" fill="#050001" />
+                        <polygon points="44,62 46,67 48,62" fill="#ffffff" />
+                        <polygon points="56,62 54,67 52,62" fill="#ffffff" />
+                        <polygon points="46,72 48,67 50,72" fill="#ffffff" />
+                        <polygon points="54,72 52,67 50,72" fill="#ffffff" />
+                      </g>
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-black text-white truncate">
+                        {selectedTeam?.name || 'helloo new team'}
+                      </h3>
+                      <span className="bg-[#e0263f] text-white text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider flex-shrink-0">
+                        YOU
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                      Leader
+                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-200 truncate">
+                      {selectedTeamLeader}
                     </p>
                   </div>
-                  <div className="stat-pill">
-                    <p className="stat-pill-label">
-                      <LayoutDashboard size={14} /> Total Spent
-                    </p>
-                    <p className="stat-pill-val text-red-400">
-                      {formatCurrency(myTeamStats.totalSpent)}
-                    </p>
+                </div>
+
+                {/* Team Members List */}
+                <div className="mt-4 relative z-10">
+                  <p className="text-xs font-bold text-slate-400 mb-2">
+                    Team Members ({selectedTeamMembers.length})
+                  </p>
+                  <div className="space-y-1">
+                    {selectedTeamMembers.map((member, i) => (
+                      <div
+                        key={member.id || i}
+                        className="flex items-center gap-3 py-1 text-xs text-slate-300"
+                      >
+                        <span className="w-5 h-5 rounded bg-[#181920] border border-[#2a2b34] text-slate-400 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="truncate font-medium">
+                          {member.name || (member as any).full_name || `Member ${i + 1}`}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="stat-pill">
-                    <p className="stat-pill-label">
-                      <Hammer size={14} /> Items Won
-                    </p>
-                    <p className="stat-pill-val text-white">{myTeamStats.itemsCount}</p>
+                </div>
+
+                {/* Dual Stats Row: Total Spent & Remaining */}
+                <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-[#1c1d25] relative z-10">
+                  {/* Total Spent */}
+                  <div className="bg-[#14151b] border border-[#23242e] rounded-xl p-3 flex items-center gap-2.5 shadow-sm">
+                    <div className="p-2 rounded-lg bg-red-950/40 border border-red-500/30 text-red-500 flex-shrink-0">
+                      <Coins size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+                        Total Spent
+                      </p>
+                      <p className="text-base font-black text-red-400 font-mono mt-1 leading-tight truncate">
+                        {formatCurrency(selectedTeamSpent)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Remaining */}
+                  <div className="bg-[#14151b] border border-red-500/30 rounded-xl p-3 flex items-center gap-2.5 shadow-[0_0_12px_rgba(224,38,63,0.12)]">
+                    <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 flex-shrink-0">
+                      <Wallet size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+                        Remaining
+                      </p>
+                      <p className="text-base font-black text-emerald-400 font-mono mt-1 leading-tight truncate">
+                        {formatCurrency(selectedTeam?.budget || 50000000)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Current Question / Item Box with Red Accent Stripe (Timer embedded in top-right) */}
-          <div className="question-display-box">
-            {/* Timer Widget inside top-right corner of Question Box */}
-            <div className="question-timer-corner">
-              <div className={`live-bid-timer-widget ${isExpired ? 'timer-expired' : isTimerRunning ? 'timer-running' : ''}`}>
-                <div className="live-timer-label">
-                  <Clock size={15} className={isTimerRunning ? 'text-red-400 animate-spin-slow' : 'text-slate-400'} />
-                  <span>BID TIMER</span>
+              {/* Card 2: Items Won */}
+              <div className="bg-[#0f1015] border border-[#22232d] rounded-2xl p-5 shadow-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package size={15} className="text-slate-400" />
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                    Items Won ({selectedTeamWonItems.length})
+                  </span>
                 </div>
-                <div className={`live-timer-digits ${isExpired ? 'digits-expired' : isTimerRunning ? 'digits-running' : ''}`}>
-                  {timerFormatted}
-                </div>
+
+                {selectedTeamWonItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-7 text-center">
+                    <Box size={36} className="text-slate-600 mb-2 stroke-[1.5]" />
+                    <p className="text-xs text-slate-500 font-medium">
+                      No items won yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {selectedTeamWonItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-[#14151b] border border-[#22232a] text-xs"
+                      >
+                        <span className="font-semibold text-slate-200 truncate pr-2">
+                          {item.item_name || item.question_ref}
+                        </span>
+                        <span className="font-mono font-bold text-red-400 flex-shrink-0">
+                          {formatCurrency(item.cost)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Always display Round & Question Index */}
-            <p className="question-header-ref">
-              <span className="live-dot-pulse"></span>
-              {currentRound.name} &bull; QUESTION {questionIdx + 1} OF {totalQuestions}
-            </p>
-            <div className="divider-red"></div>
-
-            {isRevealed ? (
-              <h3 className="question-text">
-                {renderMultiLineText(eventState?.current_item_name) || 'No question text set'}
-              </h3>
-            ) : (
-              <h3 className="question-text-awaiting">
-                Awaiting for Next Question...
-              </h3>
-            )}
           </div>
-
-          {/* Active Bid Pulse Banner */}
-          {activeBidTeam && currentBidPreview && currentBidPreview.amount > 0 && (
-            <div className="active-bid-pulse">
-              <p className="active-bid-tag">
-                <Zap size={18} className="text-red-500 animate-bounce" /> ACTIVE BID
-              </p>
-              <div className="grid grid-cols-3 gap-4 text-center items-center">
-                <div className="border-r border-[#26262b]">
-                  <p className="subtext-muted">Bidding Team</p>
-                  <p className="val-large text-white font-black">{activeBidTeam.name}</p>
-                </div>
-                <div className="border-r border-[#26262b]">
-                  <p className="subtext-muted">Current Amount</p>
-                  <p className="val-large text-green-400">
-                    {formatCurrency(currentBidPreview.amount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="subtext-muted">Question Ref</p>
-                  <p className="val-large text-red-400 font-mono">
-                    {currentBidPreview.questionRef || `R${roundIdx + 1} - Q${questionIdx + 1}`}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Last Successful Bid Banner */}
-          {lastBidDetails && (
-            <div className="last-bid-card">
-              <p className="last-bid-tag text-slate-300">
-                <Hammer size={16} className="text-red-500" /> LAST SUCCESSFUL BID
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center items-center">
-                <div className="border-b sm:border-b-0 sm:border-r border-[#26262b] pb-2 sm:pb-0">
-                  <p className="subtext-muted">Winning Team</p>
-                  <p className="val-medium text-white font-bold">{lastBidDetails.teamName}</p>
-                </div>
-                <div className="border-b sm:border-b-0 sm:border-r border-[#26262b] pb-2 sm:pb-0">
-                  <p className="subtext-muted">Final Bid</p>
-                  <p className="val-medium text-yellow-300 font-mono">{lastBidDetails.amount}</p>
-                </div>
-                <div>
-                  <p className="subtext-muted">Question Ref</p>
-                  <p className="val-medium text-red-400 font-mono">{lastBidDetails.questionRef}</p>
-                </div>
-              </div>
-            </div>
-          )}          {/* Live Team Status (Strictly Budget & Spent Only - Scores Hidden from Live View) */}
-          <LiveTeamStatus
-            teams={teams}
-            startingBudget={edition?.starting_budget || 50000000}
-            myTeamId={myTeamId}
-            items={items}
-            currentRoundIndex={eventState?.current_round_index ?? 0}
-          />
         </div>
       )}
 
