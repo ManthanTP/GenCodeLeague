@@ -3,18 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Settings,
   UserCircle,
-  Trophy,
   Wallet,
-  LayoutDashboard,
   Hammer,
-  Zap,
-  History,
   Medal,
   Award,
   Crown,
   Clock,
-  AlertTriangle,
-  AlertCircle,
   Users,
   Maximize,
   Minimize,
@@ -493,7 +487,7 @@ export default function LiveView() {
                     boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
                   }}
                 >
-                  <option value="">Select Team ▼</option>
+                  <option value="">Viewing as Guest (Select Team)</option>
                   {sortedTeamsDropdown.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -854,7 +848,15 @@ export default function LiveView() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', position: 'relative', zIndex: 10 }}>
-                        <History size={15} style={{ color: '#94a3b8' }} />
+                        <span
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#94a3b8',
+                            flexShrink: 0,
+                          }}
+                        />
                         <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                           PREVIOUS BIDS
                         </span>
@@ -934,41 +936,71 @@ export default function LiveView() {
                     position: 'relative',
                   }}
                 >
-                  {/* Header row: Label + Close [ × ] button (NO duplicate Change dropdown) */}
+                  {/* Header row: Label + Change dropdown + Close [ × ] button */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
                     <span style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                       SELECTED TEAM
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleCloseTeamPanel}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        color: '#94a3b8',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#ffffff';
-                        e.currentTarget.style.background = 'rgba(224, 38, 63, 0.25)';
-                        e.currentTarget.style.borderColor = '#e0263f';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#94a3b8';
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      }}
-                      title="Close Panel"
-                    >
-                      <X size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {!isTeamLeader && (
+                        <div style={{ position: 'relative' }}>
+                          <select
+                            value={myTeamId}
+                            onChange={(e) => handleSelectTeam(e.target.value)}
+                            style={{
+                              background: '#1a1b24',
+                              border: '1px solid #2a2b36',
+                              color: '#94a3b8',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '0.3rem 1.6rem 0.3rem 0.6rem',
+                              borderRadius: '6px',
+                              appearance: 'none',
+                              cursor: 'pointer',
+                              outline: 'none',
+                            }}
+                          >
+                            <option value="">Change</option>
+                            {sortedTeamsDropdown.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={11} style={{ position: 'absolute', right: '0.45rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleCloseTeamPanel}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#94a3b8',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.background = 'rgba(224, 38, 63, 0.25)';
+                          e.currentTarget.style.borderColor = '#e0263f';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#94a3b8';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        }}
+                        title="Close Panel"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
 
                 {/* Team Identity: Roaring Lion Shield Crest + Name + Leader */}

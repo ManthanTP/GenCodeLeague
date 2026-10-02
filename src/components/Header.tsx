@@ -322,7 +322,7 @@ export default function Header({
                   lineHeight: 1,
                 }}
               >
-                TOTAL REMAINING BUDGET
+                Remaining Budget
               </p>
               <p
                 style={{
