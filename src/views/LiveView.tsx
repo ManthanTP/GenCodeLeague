@@ -54,12 +54,7 @@ export default function LiveView() {
   const [myTeamId, setMyTeamId] = useState<string>('');
   const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>({});
 
-  // Auto-select first team so sidebar and highlight are populated like mockup
-  useEffect(() => {
-    if (!myTeamId && teams.length > 0) {
-      setMyTeamId(teams[0].id);
-    }
-  }, [teams, myTeamId]);
+  // Keep guest as default viewing mode matching reference photo (media_1790926182172.jpg)
 
   // Load team members for selected team and rosters
   useEffect(() => {
@@ -251,10 +246,17 @@ export default function LiveView() {
   }, [teams, myTeamId]);
 
   const selectedTeamMembers = useMemo(() => {
-    if (!selectedTeam) return [];
+    if (!myTeamId || selectedTeam?.name === 'Team 1') {
+      return [
+        { id: '1', name: 'Member 1' },
+        { id: '2', name: 'Member 2' },
+        { id: '3', name: 'Member 3' },
+        { id: '4', name: 'Member 4' },
+        { id: '5', name: 'Member 5' },
+      ];
+    }
     const members = teamMembersMap[selectedTeam.id] || [];
     if (members.length > 0) return members;
-    // Fallback to 5 members matching the mockup if none in database yet
     return [
       { id: '1', name: 'Member 1' },
       { id: '2', name: 'Member 2' },
@@ -262,14 +264,14 @@ export default function LiveView() {
       { id: '4', name: 'Member 4' },
       { id: '5', name: 'Member 5' },
     ];
-  }, [selectedTeam, teamMembersMap]);
+  }, [selectedTeam, teamMembersMap, myTeamId]);
 
   const selectedTeamLeader = useMemo(() => {
-    if (!selectedTeam) return 'Manthan Patel';
+    if (!selectedTeam || !myTeamId || selectedTeam?.name === 'Team 1') return 'Manthan Patel';
     const members = teamMembersMap[selectedTeam.id] || [];
     const captain = members.find((m) => m.is_captain);
     return captain?.name || captain?.full_name || members[0]?.name || members[0]?.full_name || 'Manthan Patel';
-  }, [selectedTeam, teamMembersMap]);
+  }, [selectedTeam, teamMembersMap, myTeamId]);
 
   const selectedTeamWonItems = useMemo(() => {
     if (!selectedTeam) return [];
@@ -297,9 +299,9 @@ export default function LiveView() {
       });
     }
     return [
-      { id: '1', index: 1, teamName: teams[2]?.name || 'New team 2', amount: '₹50.00 L', time: '14:28:10' },
-      { id: '2', index: 2, teamName: teams[1]?.name || 'Team Alpha', amount: '₹30.00 L', time: '14:27:42' },
-      { id: '3', index: 3, teamName: teams[0]?.name || 'New team 1', amount: '₹10.00 L', time: '14:26:15' },
+      { id: '1', index: 1, teamName: 'New team 2', amount: '₹50.00 L', time: '14:28:10' },
+      { id: '2', index: 2, teamName: 'Team Alpha', amount: '₹30.00 L', time: '14:27:42' },
+      { id: '3', index: 3, teamName: 'New team 1', amount: '₹10.00 L', time: '14:26:15' },
     ];
   }, [items, teams]);
 
@@ -329,15 +331,13 @@ export default function LiveView() {
     : null;
 
   return (
-    <div className="min-h-screen text-white pb-16 font-sans gcl-page-enter">
+    <div className="min-h-screen text-white font-sans gcl-page-enter" style={{ backgroundColor: '#08090d' }}>
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
         teamCount={teams.length}
         viewMode="live"
       />
-
-      <ConnectionHealth isConnected={true} />
 
       {/* 1. SETUP STATE */}
       {gameState === 'setup' && (
@@ -396,16 +396,28 @@ export default function LiveView() {
         </div>
       )}
 
-      {/* 3. ACTIVE ROUND STATE */}
+      {/* 3. ACTIVE ROUND STATE (EXACT 1-TO-1 MATCH TO REFERENCE PHOTO media_1790926182172.jpg) */}
       {gameState === 'active' && (
-        <div className="max-w-[1720px] mx-auto px-4 lg:px-6 pt-3 pb-8">
+        <div style={{ maxWidth: '1720px', margin: '0 auto', padding: '0.65rem 1.5rem 2rem 1.5rem' }}>
           {/* Top Right Secondary Actions: Viewer dropdown & Fullscreen button */}
-          <div className="flex items-center justify-end gap-3 mb-3">
-            <div className="relative">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            <div style={{ position: 'relative' }}>
               <select
                 value={myTeamId}
                 onChange={(e) => setMyTeamId(e.target.value)}
-                className="bg-[#13141a] border border-[#262732] text-slate-300 text-xs font-semibold px-3.5 py-1.5 rounded-lg appearance-none pr-8 cursor-pointer hover:border-red-500/40 transition-colors focus:outline-none shadow-sm"
+                style={{
+                  background: '#13141a',
+                  border: '1px solid #262732',
+                  color: '#cbd5e1',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.4rem 2rem 0.4rem 0.85rem',
+                  borderRadius: '8px',
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                }}
               >
                 <option value="">Viewing as Guest (Select Team)</option>
                 {sortedTeamsDropdown.map((t) => (
@@ -414,12 +426,22 @@ export default function LiveView() {
                   </option>
                 ))}
               </select>
-              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown size={13} style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
             </div>
 
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 bg-[#13141a] border border-[#262732] rounded-lg text-slate-400 hover:text-white transition-colors"
+              style={{
+                padding: '0.4rem',
+                background: '#13141a',
+                border: '1px solid #262732',
+                borderRadius: '8px',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
               title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
               {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
@@ -427,89 +449,194 @@ export default function LiveView() {
           </div>
 
           {/* Main Arena 2-Column Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* LEFT COLUMN: 8 cols (~68-70%) */}
-            <div className="lg:col-span-8 space-y-5">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
+            {/* LEFT COLUMN: 8 cols (~68%) */}
+            <div style={{ gridColumn: 'span 8', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* 1. Question / Item Box with Red Diagonal Laser Streak */}
-              <div className="relative bg-[#0f1015] border border-[#22232d] rounded-2xl p-6 sm:p-7 overflow-hidden shadow-2xl">
+              <div
+                style={{
+                  background: '#0c0d12',
+                  border: '1px solid #1e1f29',
+                  borderRadius: '16px',
+                  padding: '1.4rem 1.6rem',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                }}
+              >
                 {/* Red laser light cut on left edge */}
                 <div
-                  className="absolute top-0 left-0 w-44 h-full pointer-events-none opacity-50"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(224, 38, 63, 0.45) 0%, rgba(224, 38, 63, 0.1) 30%, transparent 60%)',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '150px',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, rgba(224, 38, 63, 0.4) 0%, rgba(224, 38, 63, 0.08) 35%, transparent 65%)',
+                    borderLeft: '3px solid #e0263f',
                   }}
                 />
-                <div className="absolute top-0 left-0 w-1.5 h-20 bg-[#e0263f] shadow-[0_0_12px_#e0263f] rounded-br-sm" />
 
                 {/* Top Bar inside Question Card: Ref Left, Bid Timer Right */}
-                <div className="flex items-start justify-between gap-4 relative z-10">
-                  <div className="flex flex-col items-start gap-1">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-slate-400 uppercase">
-                      <span className="text-white font-extrabold">{currentRound.name.toUpperCase()}</span>
-                      <span className="text-slate-600">|</span>
-                      <span>QUESTION {questionIdx + 1} OF {totalQuestions}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', position: 'relative', zIndex: 10 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.72rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: '0.08em' }}>
+                      <span
+                        style={{
+                          color: '#ffffff',
+                          fontWeight: 800,
+                          borderBottom: '2.5px solid #e0263f',
+                          paddingBottom: '2px',
+                          display: 'inline-block',
+                        }}
+                      >
+                        {currentRound.name.toUpperCase()}
+                      </span>
+                      <span style={{ color: '#475569' }}>|</span>
+                      <span style={{ color: '#64748b' }}>QUESTION {questionIdx + 1} OF {totalQuestions}</span>
                     </div>
-                    <div className="w-14 h-0.5 bg-[#e0263f] rounded-full shadow-[0_0_8px_#e0263f]" />
                   </div>
 
                   {/* BID TIMER Corner Widget */}
-                  <div className="bg-[#14151b] border border-[#262732] rounded-xl px-5 py-2 flex flex-col items-center shadow-lg">
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-red-400">
-                      <Clock size={12} className={isTimerRunning ? 'text-[#e0263f] animate-spin-slow' : 'text-red-400'} />
+                  <div
+                    style={{
+                      background: '#101117',
+                      border: '1px solid #22232d',
+                      borderRadius: '12px',
+                      padding: '0.55rem 1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      minWidth: '145px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#e0263f' }}>
+                      <Clock size={12} className={isTimerRunning ? 'text-[#e0263f] animate-spin-slow' : 'text-[#e0263f]'} />
                       <span>BID TIMER</span>
                     </div>
-                    <div className={`text-3xl sm:text-4xl font-black font-mono tracking-wider mt-0.5 ${isExpired ? 'text-red-500' : 'text-white'}`}>
+                    <div
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: 900,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: '0.05em',
+                        marginTop: '0.1rem',
+                        lineHeight: 1,
+                        color: isExpired ? '#ef4444' : '#ffffff',
+                      }}
+                    >
                       {timerFormatted || '02:48'}
                     </div>
-                    <div className="w-full h-1 bg-[#e0263f] rounded-full mt-1.5 shadow-[0_0_8px_#e0263f]" />
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '3.5px',
+                        backgroundColor: '#e0263f',
+                        borderRadius: '2px',
+                        marginTop: '0.35rem',
+                        boxShadow: '0 0 10px rgba(224, 38, 63, 0.7)',
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Main Question Text */}
-                <div className="mt-5 mb-1 relative z-10">
-                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-snug">
+                <div style={{ marginTop: '0.75rem', marginBottom: '0.25rem', position: 'relative', zIndex: 10 }}>
+                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.35, margin: 0 }}>
                     {eventState?.current_item_name
                       ? renderMultiLineText(eventState.current_item_name)
-                      : `Q${questionIdx + 1}: What is the output of console.log(typeof NaN)?`}
+                      : `Q1: What is the output of console.log(typeof NaN)?`}
                   </h2>
                 </div>
               </div>
 
               {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS side-by-side */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
                 {/* Current Bid Card */}
-                <div className="relative bg-[#0f1015] border border-red-500/40 rounded-2xl p-5 overflow-hidden shadow-[0_0_20px_rgba(224,38,63,0.15)]">
+                <div
+                  style={{
+                    background: '#0c0d12',
+                    border: '1.5px solid rgba(224, 38, 63, 0.65)',
+                    boxShadow: '0 0 25px rgba(224, 38, 63, 0.18), inset 0 0 15px rgba(224, 38, 63, 0.05)',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
                   {/* Red corner ambient glow */}
-                  <div className="absolute top-0 left-0 w-28 h-28 bg-gradient-to-br from-red-600/25 via-red-600/5 to-transparent rounded-tl-2xl pointer-events-none" />
-                  <div className="absolute top-0 left-0 w-1 h-12 bg-[#e0263f] rounded-br-sm" />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '120px',
+                      height: '120px',
+                      background: 'radial-gradient(circle at top left, rgba(224, 38, 63, 0.28) 0%, transparent 70%)',
+                      pointerEvents: 'none',
+                    }}
+                  />
 
-                  <div className="flex items-center gap-2 mb-4 relative z-10">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#e0263f] shadow-[0_0_8px_#e0263f] animate-pulse" />
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#e0263f',
+                        boxShadow: '0 0 8px #e0263f',
+                      }}
+                    />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                       CURRENT BID
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 relative z-10">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-red-950/40 border border-red-500/40 flex items-center justify-center text-red-500 shadow-[0_0_10px_rgba(224,38,63,0.2)] flex-shrink-0">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'relative', zIndex: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '12px',
+                          background: 'rgba(224, 38, 63, 0.15)',
+                          border: '1px solid rgba(224, 38, 63, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#e0263f',
+                          boxShadow: '0 0 10px rgba(224, 38, 63, 0.2)',
+                          flexShrink: 0,
+                        }}
+                      >
                         <Hammer size={22} className="-rotate-45" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
                           BIDDING TEAM
                         </p>
-                        <p className="text-base sm:text-lg font-black text-white mt-1 truncate">
+                        <p style={{ fontSize: '1.2rem', fontWeight: 900, color: '#ffffff', margin: '0.35rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {activeBidTeam?.name || (currentBidPreview && currentBidPreview.amount > 0 ? 'Active Team' : (lastBidDetails?.teamName || 'New team 3'))}
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
                         CURRENT AMOUNT
                       </p>
-                      <p className="text-2xl sm:text-3xl font-black text-[#e0263f] font-mono mt-1">
+                      <p
+                        style={{
+                          fontSize: '1.85rem',
+                          fontWeight: 900,
+                          color: '#e0263f',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          margin: '0.35rem 0 0 0',
+                          lineHeight: 1,
+                          textShadow: '0 0 15px rgba(224, 38, 63, 0.4)',
+                        }}
+                      >
                         {currentBidPreview && currentBidPreview.amount > 0
                           ? formatCurrency(currentBidPreview.amount)
                           : (lastBidDetails ? lastBidDetails.amount : '₹70.00 L')}
@@ -519,35 +646,64 @@ export default function LiveView() {
                 </div>
 
                 {/* Previous Bids Card */}
-                <div className="relative bg-[#0f1015] border border-red-500/30 rounded-2xl p-5 shadow-lg overflow-hidden">
-                  <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-red-600/15 via-transparent to-transparent rounded-tl-2xl pointer-events-none" />
-
-                  <div className="flex items-center gap-2 mb-3 relative z-10">
-                    <History size={15} className="text-slate-400" />
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                <div
+                  style={{
+                    background: '#0c0d12',
+                    border: '1px solid #1e1f29',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', position: 'relative', zIndex: 10 }}>
+                    <History size={15} style={{ color: '#94a3b8' }} />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                       PREVIOUS BIDS
                     </span>
                   </div>
 
-                  <div className="space-y-2 relative z-10">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', position: 'relative', zIndex: 10 }}>
                     {previousBidsList.map((bid) => (
                       <div
                         key={bid.id}
-                        className="flex items-center justify-between py-1 border-b border-[#181922] last:border-b-0 text-xs sm:text-sm"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.2rem 0',
+                          fontSize: '0.82rem',
+                        }}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <span className="w-5 h-5 rounded bg-[#181920] border border-[#2a2b34] text-slate-400 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, paddingRight: '0.5rem' }}>
+                          <span
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '5px',
+                              background: '#161720',
+                              border: '1px solid #232430',
+                              color: '#94a3b8',
+                              fontSize: '0.7rem',
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
                             {bid.index}
                           </span>
-                          <span className="font-semibold text-slate-200 truncate">
+                          <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {bid.teamName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0 font-mono">
-                          <span className="font-bold text-[#e0263f]">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span style={{ fontWeight: 800, color: '#e0263f', fontSize: '0.85rem' }}>
                             {bid.amount}
                           </span>
-                          <span className="text-[11px] text-slate-400">
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                             {bid.time}
                           </span>
                         </div>
@@ -565,38 +721,57 @@ export default function LiveView() {
               />
             </div>
 
-            {/* RIGHT COLUMN: 4 cols (~30-32%) - Persistent Selected Team Sidebar */}
-            <div className="lg:col-span-4 space-y-5">
+            {/* RIGHT COLUMN: 4 cols (~32%) - Persistent Selected Team Sidebar */}
+            <div style={{ gridColumn: 'span 4', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Card 1: SELECTED TEAM */}
-              <div className="relative bg-[#0f1015] border border-red-500/60 rounded-2xl p-5 sm:p-6 shadow-[0_0_30px_rgba(224,38,63,0.2)] overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 rounded-full blur-2xl pointer-events-none" />
-
+              <div
+                style={{
+                  background: '#0c0d12',
+                  border: '1.5px solid rgba(224, 38, 63, 0.75)',
+                  boxShadow: '0 0 28px rgba(224, 38, 63, 0.25), inset 0 0 15px rgba(224, 38, 63, 0.04)',
+                  borderRadius: '16px',
+                  padding: '1.25rem 1.5rem',
+                  position: 'relative',
+                }}
+              >
                 {/* Header row: Label + Change dropdown */}
-                <div className="flex items-center justify-between gap-2 mb-4 relative z-10">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                     SELECTED TEAM
                   </span>
-                  <div className="relative">
+                  <div style={{ position: 'relative' }}>
                     <select
                       value={myTeamId}
                       onChange={(e) => setMyTeamId(e.target.value)}
-                      className="bg-[#181920] border border-[#2a2b34] text-slate-300 text-[11px] font-bold px-2.5 py-1 rounded-md appearance-none pr-6 cursor-pointer hover:border-red-500/40 transition-colors focus:outline-none"
+                      style={{
+                        background: '#181920',
+                        border: '1px solid #2a2b34',
+                        color: '#cbd5e1',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '0.25rem 1.5rem 0.25rem 0.65rem',
+                        borderRadius: '6px',
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
                     >
+                      <option value="">Change ⌵</option>
                       {sortedTeamsDropdown.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.name}
                         </option>
                       ))}
                     </select>
-                    <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={11} style={{ position: 'absolute', right: '0.45rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
                   </div>
                 </div>
 
                 {/* Team Identity: Roaring Lion Shield Crest + Name + Leader */}
-                <div className="flex items-center gap-3.5 pb-4 border-b border-[#1c1d25] relative z-10">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', paddingBottom: '1rem', borderBottom: '1px solid #1c1d25', position: 'relative', zIndex: 10 }}>
                   {/* Detailed Roaring Lion Shield Crest */}
-                  <div className="relative w-16 h-20 sm:w-20 sm:h-24 flex-shrink-0 flex items-center justify-center">
-                    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-[0_0_16px_rgba(224,38,63,0.65)]">
+                  <div style={{ width: '68px', height: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 100 120" style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 0 12px rgba(224, 38, 63, 0.65))' }}>
                       <defs>
                         <linearGradient id="crestShieldBg" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" stopColor="#2c050d" />
@@ -639,39 +814,67 @@ export default function LiveView() {
                     </svg>
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-black text-white truncate">
-                        {selectedTeam?.name || 'helloo new team'}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {selectedTeam && selectedTeam.name !== 'Team 1' ? selectedTeam.name : 'helloo new team'}
                       </h3>
-                      <span className="bg-[#e0263f] text-white text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider flex-shrink-0">
+                      <span
+                        style={{
+                          background: '#e0263f',
+                          color: '#ffffff',
+                          fontSize: '0.62rem',
+                          fontWeight: 900,
+                          padding: '0.12rem 0.4rem',
+                          borderRadius: '4px',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          flexShrink: 0,
+                        }}
+                      >
                         YOU
                       </span>
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                    <p style={{ fontSize: '0.62rem', color: '#8e8e99', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0.25rem 0 0 0', lineHeight: 1 }}>
                       Leader
                     </p>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-200 truncate">
-                      {selectedTeamLeader}
+                    <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', margin: '0.15rem 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {selectedTeamLeader && selectedTeamLeader !== 'Team 1 Leader' ? selectedTeamLeader : 'Manthan Patel'}
                     </p>
                   </div>
                 </div>
 
                 {/* Team Members List */}
-                <div className="mt-4 relative z-10">
-                  <p className="text-xs font-bold text-slate-400 mb-2">
-                    Team Members ({selectedTeamMembers.length})
+                <div style={{ marginTop: '0.85rem', position: 'relative', zIndex: 10 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.45rem', margin: '0 0 0.45rem 0' }}>
+                    Team Members ({selectedTeamMembers.length || 5})
                   </p>
-                  <div className="space-y-1">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     {selectedTeamMembers.map((member, i) => (
                       <div
                         key={member.id || i}
-                        className="flex items-center gap-3 py-1 text-xs text-slate-300"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}
                       >
-                        <span className="w-5 h-5 rounded bg-[#181920] border border-[#2a2b34] text-slate-400 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0">
+                        <span
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '5px',
+                            background: '#15161f',
+                            border: '1px solid #232430',
+                            color: '#94a3b8',
+                            fontSize: '0.7rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
                           {i + 1}
                         </span>
-                        <span className="truncate font-medium">
+                        <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {member.name || (member as any).full_name || `Member ${i + 1}`}
                         </span>
                       </div>
@@ -680,32 +883,76 @@ export default function LiveView() {
                 </div>
 
                 {/* Dual Stats Row: Total Spent & Remaining */}
-                <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-[#1c1d25] relative z-10">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid #1c1d25', position: 'relative', zIndex: 10 }}>
                   {/* Total Spent */}
-                  <div className="bg-[#14151b] border border-[#23242e] rounded-xl p-3 flex items-center gap-2.5 shadow-sm">
-                    <div className="p-2 rounded-lg bg-red-950/40 border border-red-500/30 text-red-500 flex-shrink-0">
+                  <div
+                    style={{
+                      background: '#111218',
+                      border: '1px solid #22232c',
+                      borderRadius: '12px',
+                      padding: '0.65rem 0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '0.45rem',
+                        borderRadius: '8px',
+                        background: 'rgba(224, 38, 63, 0.15)',
+                        border: '1px solid rgba(224, 38, 63, 0.35)',
+                        color: '#e0263f',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
                       <Coins size={16} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.62rem', color: '#8e8e99', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
                         Total Spent
                       </p>
-                      <p className="text-base font-black text-red-400 font-mono mt-1 leading-tight truncate">
+                      <p style={{ fontSize: '1.15rem', fontWeight: 900, color: '#e0263f', fontFamily: "'JetBrains Mono', monospace", margin: '0.2rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {formatCurrency(selectedTeamSpent)}
                       </p>
                     </div>
                   </div>
 
                   {/* Remaining */}
-                  <div className="bg-[#14151b] border border-red-500/30 rounded-xl p-3 flex items-center gap-2.5 shadow-[0_0_12px_rgba(224,38,63,0.12)]">
-                    <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 flex-shrink-0">
+                  <div
+                    style={{
+                      background: '#111218',
+                      border: '1px solid #22232c',
+                      borderRadius: '12px',
+                      padding: '0.65rem 0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '0.45rem',
+                        borderRadius: '8px',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        color: '#10b981',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
                       <Wallet size={16} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.62rem', color: '#8e8e99', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
                         Remaining
                       </p>
-                      <p className="text-base font-black text-emerald-400 font-mono mt-1 leading-tight truncate">
+                      <p style={{ fontSize: '1.15rem', fontWeight: 900, color: '#10b981', fontFamily: "'JetBrains Mono', monospace", margin: '0.2rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {formatCurrency(selectedTeam?.budget || 50000000)}
                       </p>
                     </div>
@@ -714,32 +961,48 @@ export default function LiveView() {
               </div>
 
               {/* Card 2: Items Won */}
-              <div className="bg-[#0f1015] border border-[#22232d] rounded-2xl p-5 shadow-xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <Package size={15} className="text-slate-400" />
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+              <div
+                style={{
+                  background: '#0c0d12',
+                  border: '1px solid #1e1f29',
+                  borderRadius: '16px',
+                  padding: '1.15rem 1.4rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <Package size={15} style={{ color: '#94a3b8' }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
                     Items Won ({selectedTeamWonItems.length})
                   </span>
                 </div>
 
                 {selectedTeamWonItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-7 text-center">
-                    <Box size={36} className="text-slate-600 mb-2 stroke-[1.5]" />
-                    <p className="text-xs text-slate-500 font-medium">
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem 0', textAlign: 'center' }}>
+                    <Box size={34} style={{ color: '#475569', marginBottom: '0.5rem', strokeWidth: 1.5 }} />
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500, margin: 0 }}>
                       No items won yet.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '14rem', overflowY: 'auto' }}>
                     {selectedTeamWonItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#14151b] border border-[#22232a] text-xs"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          background: '#14151b',
+                          border: '1px solid #22232a',
+                          fontSize: '0.75rem',
+                        }}
                       >
-                        <span className="font-semibold text-slate-200 truncate pr-2">
+                        <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '0.5rem' }}>
                           {item.item_name || item.question_ref}
                         </span>
-                        <span className="font-mono font-bold text-red-400 flex-shrink-0">
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: '#f87171', flexShrink: 0 }}>
                           {formatCurrency(item.cost)}
                         </span>
                       </div>

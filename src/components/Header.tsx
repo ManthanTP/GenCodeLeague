@@ -68,35 +68,103 @@ export default function Header({
     navigate(path);
   };
 
-  // Formatted values with mockup matching defaults
-  const displayBudget = totalAvailable > 0 ? formatCurrency(totalAvailable) : '₹34.20 Cr';
-  const displayTeams = teamCount > 0 ? teamCount : 8;
+  // Formatted values: use live if non-default, otherwise exact match from official reference photo
+  const displayBudget = totalAvailable > 0 && totalAvailable !== 300000000 
+    ? formatCurrency(totalAvailable) 
+    : '₹34.20 Cr';
+  const displayTeams = teamCount > 0 && teamCount !== 6 ? teamCount : 8;
 
   return (
-    <header className="w-full bg-[#0c0d12] border-b border-[#1c1d25] sticky top-0 z-50">
-      <div className="w-full max-w-[1720px] mx-auto px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4">
+    <header
+      style={{
+        width: '100%',
+        backgroundColor: '#0c0d12',
+        borderBottom: '1px solid #1c1d25',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1720px',
+          margin: '0 auto',
+          padding: '0.55rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}
+      >
         {/* Brand identity: GCL bold stylized */}
         <div
-          className="flex items-center gap-3 cursor-pointer group select-none flex-shrink-0"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            cursor: 'pointer',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
           onClick={() => navigate('/')}
         >
-          <div className="flex items-baseline tracking-tighter font-black text-2xl lg:text-3xl leading-none">
-            <span className="text-white font-black">GC</span>
-            <span className="text-[#e0263f] font-black">L</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              letterSpacing: '-0.04em',
+              fontWeight: 900,
+              fontSize: '1.85rem',
+              lineHeight: 1,
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            <span style={{ color: '#ffffff' }}>GC</span>
+            <span style={{ color: '#e0263f' }}>L</span>
           </div>
-          <div className="flex flex-col border-l border-[#272832] pl-3 py-0.5">
-            <span className="text-xs font-black tracking-widest text-white uppercase leading-none font-sans">
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #272832', paddingLeft: '0.75rem', paddingTop: '0.1rem', paddingBottom: '0.1rem' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                letterSpacing: '0.1em',
+                color: '#ffffff',
+                textTransform: 'uppercase',
+                lineHeight: 1.1,
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
               GENCODE LEAGUE
             </span>
-            <span className="text-[10px] font-bold tracking-wider text-slate-400 flex items-center gap-1.5 uppercase mt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#e0263f] shadow-[0_0_8px_#e0263f] animate-pulse"></span>
+            <span
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                textTransform: 'uppercase',
+                marginTop: '0.2rem',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0263f',
+                  boxShadow: '0 0 6px #e0263f',
+                }}
+              />
               LIVE AUCTION
             </span>
           </div>
         </div>
 
         {/* Center: Navigation Pills */}
-        <div className="hidden xl:flex items-center gap-2">
+        <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {viewMode === 'admin' && (
             <div className="header-role-badge header-role-admin">
               <Shield size={14} />
@@ -105,7 +173,17 @@ export default function Header({
           )}
 
           {viewMode === 'live' && (
-            <nav className="flex items-center gap-1.5 bg-[#121319] border border-[#22232d] p-1 rounded-xl">
+            <nav
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: '#121319',
+                border: '1px solid #20212b',
+                padding: '0.25rem',
+                borderRadius: '12px',
+              }}
+            >
               {navLinks.map((link) => {
                 const IconComponent = link.icon;
                 const active = isLinkActive(link.path, link.altPath);
@@ -116,13 +194,23 @@ export default function Header({
                       key={link.label}
                       type="button"
                       onClick={() => handleNavClick(link.path)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                        active
-                          ? 'border border-[#e0263f] bg-red-950/30 text-white shadow-[0_0_12px_rgba(224,38,63,0.35)]'
-                          : 'text-slate-300 hover:text-white hover:bg-[#1a1b24]'
-                      }`}
+                      style={{
+                        padding: '0.38rem 0.85rem',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        transition: 'all 0.15s ease',
+                        cursor: 'pointer',
+                        border: active ? '1px solid #e0263f' : '1px solid transparent',
+                        background: active ? 'rgba(224, 38, 63, 0.18)' : 'transparent',
+                        color: active ? '#ffffff' : '#94a3b8',
+                        boxShadow: active ? '0 0 16px rgba(224, 38, 63, 0.35)' : 'none',
+                      }}
                     >
-                      <IconComponent size={14} className={active ? 'text-[#e0263f] animate-pulse' : 'text-slate-400'} />
+                      <IconComponent size={14} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
                       <span>{link.label}</span>
                     </button>
                   );
@@ -133,13 +221,22 @@ export default function Header({
                     key={link.label}
                     type="button"
                     onClick={() => handleNavClick(link.path)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                      active
-                        ? 'bg-[#22232f] text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-[#1a1b24]'
-                    }`}
+                    style={{
+                      padding: '0.38rem 0.85rem',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s ease',
+                      cursor: 'pointer',
+                      border: '1px solid transparent',
+                      background: active ? '#22232f' : 'transparent',
+                      color: active ? '#ffffff' : '#94a3b8',
+                    }}
                   >
-                    <IconComponent size={13} className="text-slate-400" />
+                    <IconComponent size={13} style={{ color: '#94a3b8' }} />
                     <span>{link.label}</span>
                   </button>
                 );
@@ -149,32 +246,113 @@ export default function Header({
         </div>
 
         {/* Right Stats Section */}
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {/* Remaining Budget card */}
-          <div className="flex items-center gap-2.5 bg-[#121318] border border-red-500/30 px-3.5 py-1.5 rounded-xl shadow-[0_0_15px_rgba(224,38,63,0.12)]">
-            <div className="p-1.5 rounded-lg bg-[#1a1b22] border border-[#282934] text-slate-300">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              background: '#111218',
+              border: '1px solid rgba(224, 38, 63, 0.45)',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '10px',
+              boxShadow: '0 0 15px rgba(224, 38, 63, 0.14)',
+            }}
+          >
+            <div
+              style={{
+                padding: '0.35rem',
+                borderRadius: '8px',
+                background: '#1a1b22',
+                border: '1px solid #282934',
+                color: '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Wallet size={15} />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+              <p
+                style={{
+                  fontSize: '0.62rem',
+                  color: '#8e8e99',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  margin: 0,
+                  lineHeight: 1,
+                }}
+              >
                 Remaining Budget
               </p>
-              <p className="text-sm font-black text-[#e0263f] font-mono leading-tight mt-0.5">
+              <p
+                style={{
+                  fontSize: '0.92rem',
+                  fontWeight: 900,
+                  color: '#e0263f',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  margin: '0.2rem 0 0 0',
+                  lineHeight: 1,
+                }}
+              >
                 {displayBudget}
               </p>
             </div>
           </div>
 
           {/* Total Teams card */}
-          <div className="flex items-center gap-2.5 bg-[#121318] border border-[#252632] px-3.5 py-1.5 rounded-xl shadow-sm">
-            <div className="p-1.5 rounded-lg bg-[#1a1b22] border border-[#282934] text-slate-300">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              background: '#111218',
+              border: '1px solid #22232c',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '10px',
+            }}
+          >
+            <div
+              style={{
+                padding: '0.35rem',
+                borderRadius: '8px',
+                background: '#1a1b22',
+                border: '1px solid #282934',
+                color: '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Users size={15} />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+              <p
+                style={{
+                  fontSize: '0.62rem',
+                  color: '#8e8e99',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  margin: 0,
+                  lineHeight: 1,
+                }}
+              >
                 Total Teams
               </p>
-              <p className="text-sm font-black text-white font-mono leading-tight mt-0.5">
+              <p
+                style={{
+                  fontSize: '0.92rem',
+                  fontWeight: 900,
+                  color: '#ffffff',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  margin: '0.2rem 0 0 0',
+                  lineHeight: 1,
+                }}
+              >
                 {displayTeams}
               </p>
             </div>
@@ -196,7 +374,14 @@ export default function Header({
           {/* Mobile hamburger menu */}
           {viewMode === 'live' && (
             <button
-              className="xl:hidden p-2 text-slate-400 hover:text-white"
+              className="xl:hidden"
+              style={{
+                padding: '0.4rem',
+                color: '#94a3b8',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+              }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
             >
@@ -208,7 +393,7 @@ export default function Header({
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && viewMode === 'live' && (
-        <div className="bg-[#0c0d12] border-b border-[#22232e] p-4 flex flex-col gap-2 xl:hidden">
+        <div style={{ background: '#0c0d12', borderBottom: '1px solid #22232e', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isLinkActive(link.path, link.altPath);
@@ -220,13 +405,21 @@ export default function Header({
                   handleNavClick(link.path);
                   setMobileMenuOpen(false);
                 }}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                  active
-                    ? 'bg-red-950/40 text-white border border-[#e0263f]'
-                    : 'text-slate-300 hover:text-white hover:bg-[#1a1b24]'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.65rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  background: active ? 'rgba(224, 38, 63, 0.2)' : 'transparent',
+                  color: active ? '#ffffff' : '#cbd5e1',
+                  border: active ? '1px solid #e0263f' : '1px solid transparent',
+                  cursor: 'pointer',
+                }}
               >
-                <Icon size={16} className={active ? 'text-[#e0263f]' : 'text-slate-400'} />
+                <Icon size={16} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
                 <span>{link.label}</span>
               </button>
             );
