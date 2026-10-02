@@ -4852,6 +4852,37 @@ select.gcl-input option {
   padding: 1.25rem 1.5rem;
 }
 
+/* Responsive Grid Classes for Live Arena */
+.gcl-live-arena-grid {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+  width: 100%;
+}
+
+.gcl-live-arena-grid.has-panel {
+  grid-template-columns: minmax(0, 3.1fr) minmax(0, 1fr);
+}
+
+.gcl-live-arena-grid.no-panel {
+  grid-template-columns: 1fr;
+}
+
+.gcl-live-bid-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .gcl-live-arena-grid.has-panel {
+    grid-template-columns: 1fr !important;
+  }
+  .gcl-live-bid-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 
 
 

@@ -37,7 +37,7 @@ export default function LiveTeamStatus({
       ? teams.map((team, idx) => {
           const teamItems = items.filter((it) => it.team_id === team.id);
           const spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-          const isMyTeam = team.id === myTeamId || (!myTeamId && idx === 0);
+          const isMyTeam = Boolean(myTeamId && (team.id === myTeamId || (myTeamId === 'ref-1' && idx === 0)));
           return {
             id: team.id,
             name: team.name,
@@ -48,7 +48,7 @@ export default function LiveTeamStatus({
         })
       : referenceTeams.map((row) => ({
           ...row,
-          isYou: row.id === 'ref-1',
+          isYou: Boolean(myTeamId && (row.id === myTeamId || row.name.toLowerCase() === myTeamId.toLowerCase())),
         }));
 
   return (

@@ -22,8 +22,10 @@ import {
   Package,
   Box,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamItems } from '../hooks/useTeamItems';
@@ -34,7 +36,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA } from '../data/roundsData';
-import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember } from '../types/database';
+import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
 
 export default function LiveView() {
   const navigate = useNavigate();
@@ -50,11 +52,22 @@ export default function LiveView() {
     isExpired,
   } = useTimer(eventState);
 
-  // Selected personal team ID for viewer
+  const { profile } = useAuth();
+  const isTeamLeader = profile?.role === 'team_leader' && Boolean(profile.team_id);
+  const isAdmin = profile?.role === 'admin';
+
+  // Selected personal team ID for viewer and panel visibility
   const [myTeamId, setMyTeamId] = useState<string>('');
+  const [isTeamPanelOpen, setIsTeamPanelOpen] = useState<boolean>(false);
   const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>({});
 
-  // Keep guest as default viewing mode matching reference photo (media_1790926182172.jpg)
+  // Team Leader is automatically bound to their own team
+  useEffect(() => {
+    if (isTeamLeader && profile?.team_id) {
+      setMyTeamId(profile.team_id);
+      setIsTeamPanelOpen(true);
+    }
+  }, [isTeamLeader, profile?.team_id]);
 
   // Load team members for selected team and rosters
   useEffect(() => {
@@ -84,15 +97,35 @@ export default function LiveView() {
     const handleFsChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreen(false);
+      }
+    };
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+    if (!document.fullscreenElement && !isFullscreen) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().then(() => {
+          setIsFullscreen(true);
+        }).catch(() => {
+          setIsFullscreen(true);
+        });
+      } else {
+        setIsFullscreen(true);
+      }
     } else {
-      document.exitFullscreen().catch(() => {});
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      setIsFullscreen(false);
     }
   };
 
@@ -211,25 +244,40 @@ export default function LiveView() {
     }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [teams, items]);
 
+  // Fallback reference teams matching official reference data
+  const availableTeams = useMemo(() => {
+    if (teams && teams.length > 0) return teams;
+    return [
+      { id: 'ref-1', name: 'helloo new team', budget: 50000000 },
+      { id: 'ref-2', name: 'New team 1', budget: 49000000 },
+      { id: 'ref-3', name: 'New team 2', budget: 45000000 },
+      { id: 'ref-4', name: 'New team 3', budget: 43000000 },
+      { id: 'ref-5', name: 'New team 4', budget: 50000000 },
+      { id: 'ref-6', name: 'New team 5', budget: 50000000 },
+      { id: 'ref-7', name: 'Team Alpha', budget: 47000000 },
+      { id: 'ref-8', name: 'New team 6', budget: 50000000 },
+    ] as Team[];
+  }, [teams]);
+
   // Sorted teams for dropdown selects (A to Z)
   const sortedTeamsDropdown = useMemo(() => {
-    return [...teams].sort((a, b) =>
+    return [...availableTeams].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
     );
-  }, [teams]);
+  }, [availableTeams]);
 
   // Last successful bid derived from team_items (Result: Correct/Incorrect hidden from live view)
   const lastBidDetails = useMemo(() => {
     if (!items || items.length === 0) return null;
     const lastItem = items[0]; // sorted by created_at desc
-    const team = teams.find((t) => t.id === lastItem.team_id);
+    const team = availableTeams.find((t) => t.id === lastItem.team_id);
     return {
       teamName: team?.name || 'Unknown Team',
       questionRef: lastItem.question_ref || `R${lastItem.round_index + 1} - Q${lastItem.question_index + 1}`,
       amount: formatCurrency(lastItem.cost),
       status: lastItem.is_correct ? 'correct' : 'wrong',
     };
-  }, [items, teams]);
+  }, [items, availableTeams]);
 
   // Personal team stats for viewer (Scores and ranks completely hidden)
   const myTeamStats = useMemo(() => {
@@ -237,24 +285,14 @@ export default function LiveView() {
     return teamsWithStats.find((t) => t.id === myTeamId) || null;
   }, [teamsWithStats, myTeamId]);
 
-  // Persistent Selected Team for Right Sidebar
+  // Selected Team for Right Sidebar - ONLY available when selected & open!
   const selectedTeam = useMemo(() => {
-    if (myTeamId) {
-      return teams.find((t) => t.id === myTeamId) || teams[0] || null;
-    }
-    return teams[0] || null;
-  }, [teams, myTeamId]);
+    if (!myTeamId || !isTeamPanelOpen) return null;
+    return availableTeams.find((t) => t.id === myTeamId || t.name.toLowerCase() === myTeamId.toLowerCase()) || null;
+  }, [availableTeams, myTeamId, isTeamPanelOpen]);
 
   const selectedTeamMembers = useMemo(() => {
-    if (!myTeamId || selectedTeam?.name === 'Team 1') {
-      return [
-        { id: '1', name: 'Member 1' },
-        { id: '2', name: 'Member 2' },
-        { id: '3', name: 'Member 3' },
-        { id: '4', name: 'Member 4' },
-        { id: '5', name: 'Member 5' },
-      ];
-    }
+    if (!selectedTeam) return [];
     const members = teamMembersMap[selectedTeam.id] || [];
     if (members.length > 0) return members;
     return [
@@ -264,14 +302,14 @@ export default function LiveView() {
       { id: '4', name: 'Member 4' },
       { id: '5', name: 'Member 5' },
     ];
-  }, [selectedTeam, teamMembersMap, myTeamId]);
+  }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamLeader = useMemo(() => {
-    if (!selectedTeam || !myTeamId || selectedTeam?.name === 'Team 1') return 'Manthan Patel';
+    if (!selectedTeam) return '';
     const members = teamMembersMap[selectedTeam.id] || [];
     const captain = members.find((m) => m.is_captain);
     return captain?.name || captain?.full_name || members[0]?.name || members[0]?.full_name || 'Manthan Patel';
-  }, [selectedTeam, teamMembersMap, myTeamId]);
+  }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamWonItems = useMemo(() => {
     if (!selectedTeam) return [];
@@ -279,8 +317,21 @@ export default function LiveView() {
   }, [selectedTeam, items]);
 
   const selectedTeamSpent = useMemo(() => {
+    if (!selectedTeam) return 0;
     return selectedTeamWonItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-  }, [selectedTeamWonItems]);
+  }, [selectedTeam, selectedTeamWonItems]);
+
+  const handleSelectTeam = (id: string) => {
+    setMyTeamId(id);
+    setIsTeamPanelOpen(Boolean(id));
+  };
+
+  const handleCloseTeamPanel = () => {
+    setIsTeamPanelOpen(false);
+    if (!isTeamLeader) {
+      setMyTeamId('');
+    }
+  };
 
   const previousBidsList = useMemo(() => {
     if (items && items.length > 0) {
@@ -331,12 +382,35 @@ export default function LiveView() {
     : null;
 
   return (
-    <div className="min-h-screen text-white font-sans gcl-page-enter" style={{ backgroundColor: '#08090d' }}>
+    <div
+      className={`min-h-screen text-white font-sans gcl-page-enter ${isFullscreen ? 'gcl-fullscreen-active' : ''}`}
+      style={{
+        backgroundColor: '#08090d',
+        ...(isFullscreen
+          ? {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99999,
+              overflowY: 'auto',
+              width: '100vw',
+              minHeight: '100vh',
+            }
+          : {}),
+      }}
+    >
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
         teamCount={teams.length}
         viewMode="live"
+        isFullscreen={isFullscreen}
+        onExitFullscreen={toggleFullscreen}
+        currentRoundName={currentRound.name}
+        questionIdx={questionIdx}
+        totalQuestions={totalQuestions}
       />
 
       {/* 1. SETUP STATE */}
@@ -399,59 +473,65 @@ export default function LiveView() {
       {/* 3. ACTIVE ROUND STATE (EXACT 1-TO-1 MATCH TO REFERENCE PHOTO media_1790926182172.jpg) */}
       {gameState === 'active' && (
         <div style={{ maxWidth: '1720px', margin: '0 auto', padding: '0.65rem 1.5rem 2rem 1.5rem' }}>
-          {/* Top Right Secondary Actions: Viewer dropdown & Fullscreen button */}
+          {/* Top Right Controls: ONE Unified Team Selector & Fullscreen button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ position: 'relative' }}>
-              <select
-                value={myTeamId}
-                onChange={(e) => setMyTeamId(e.target.value)}
-                style={{
-                  background: '#13141a',
-                  border: '1px solid #262732',
-                  color: '#cbd5e1',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.4rem 2rem 0.4rem 0.85rem',
-                  borderRadius: '8px',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-                }}
-              >
-                <option value="">Viewing as Guest (Select Team)</option>
-                {sortedTeamsDropdown.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={13} style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-            </div>
+            {!isTeamLeader && (
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={myTeamId}
+                  onChange={(e) => handleSelectTeam(e.target.value)}
+                  style={{
+                    background: '#13141a',
+                    border: '1px solid #262732',
+                    color: myTeamId ? '#ffffff' : '#cbd5e1',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    padding: '0.4rem 2rem 0.4rem 0.85rem',
+                    borderRadius: '8px',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  <option value="">Select Team ▼</option>
+                  {sortedTeamsDropdown.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={13} style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+            )}
 
             <button
+              type="button"
               onClick={toggleFullscreen}
               style={{
                 padding: '0.4rem',
                 background: '#13141a',
                 border: '1px solid #262732',
                 borderRadius: '8px',
-                color: '#94a3b8',
+                color: isFullscreen ? '#e0263f' : '#94a3b8',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                transition: 'all 0.15s ease',
               }}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              title={isFullscreen ? 'Exit Presentation Mode' : 'Enter Presentation Mode (Fullscreen)'}
             >
               {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
             </button>
           </div>
 
-          {/* Main Arena 2-Column Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
-            {/* LEFT COLUMN: 8 cols (~68%) */}
-            <div style={{ gridColumn: 'span 8', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Main Arena Dynamic Grid */}
+          <div
+            className={`gcl-live-arena-grid ${isTeamPanelOpen && selectedTeam ? 'has-panel' : 'no-panel'}`}
+          >
+            {/* MAIN CONTENT AREA: 75.6% when Selected Team panel is open, 100% full width when closed */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with Red Diagonal Laser Streak */}
               <div
                 style={{
@@ -552,7 +632,7 @@ export default function LiveView() {
               </div>
 
               {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS side-by-side */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+              <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
                 {/* Current Bid Card */}
                 <div
                   style={{
@@ -716,56 +796,61 @@ export default function LiveView() {
               {/* 3. Live Team Status Table */}
               <LiveTeamStatus
                 teams={teams}
-                myTeamId={myTeamId || selectedTeam?.id}
+                myTeamId={myTeamId}
                 items={items}
               />
             </div>
 
-            {/* RIGHT COLUMN: 4 cols (~32%) - Persistent Selected Team Sidebar */}
-            <div style={{ gridColumn: 'span 4', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Card 1: SELECTED TEAM */}
-              <div
-                style={{
-                  background: '#0c0d12',
-                  border: '1.5px solid rgba(224, 38, 63, 0.75)',
-                  boxShadow: '0 0 28px rgba(224, 38, 63, 0.25), inset 0 0 15px rgba(224, 38, 63, 0.04)',
-                  borderRadius: '16px',
-                  padding: '1.25rem 1.5rem',
-                  position: 'relative',
-                }}
-              >
-                {/* Header row: Label + Change dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
-                    SELECTED TEAM
-                  </span>
-                  <div style={{ position: 'relative' }}>
-                    <select
-                      value={myTeamId}
-                      onChange={(e) => setMyTeamId(e.target.value)}
+            {/* RIGHT COLUMN: ~24.4% - Selected Team Panel (ONLY RENDERED WHEN OPEN & SELECTED) */}
+            {isTeamPanelOpen && selectedTeam && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', minWidth: 0 }}>
+                {/* Card 1: SELECTED TEAM */}
+                <div
+                  style={{
+                    background: '#0c0d12',
+                    border: '1.5px solid rgba(224, 38, 63, 0.75)',
+                    boxShadow: '0 0 28px rgba(224, 38, 63, 0.25), inset 0 0 15px rgba(224, 38, 63, 0.04)',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Header row: Label + Close [ × ] button (NO duplicate Change dropdown) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
+                      SELECTED TEAM
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCloseTeamPanel}
                       style={{
-                        background: '#181920',
-                        border: '1px solid #2a2b34',
-                        color: '#cbd5e1',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '0.25rem 1.5rem 0.25rem 0.65rem',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#94a3b8',
+                        width: '24px',
+                        height: '24px',
                         borderRadius: '6px',
-                        appearance: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         cursor: 'pointer',
-                        outline: 'none',
+                        transition: 'all 0.15s ease',
                       }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.background = 'rgba(224, 38, 63, 0.25)';
+                        e.currentTarget.style.borderColor = '#e0263f';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      title="Close Panel"
                     >
-                      <option value="">Change ⌵</option>
-                      {sortedTeamsDropdown.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={11} style={{ position: 'absolute', right: '0.45rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+                      <X size={14} />
+                    </button>
                   </div>
-                </div>
 
                 {/* Team Identity: Roaring Lion Shield Crest + Name + Leader */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', paddingBottom: '1rem', borderBottom: '1px solid #1c1d25', position: 'relative', zIndex: 10 }}>
@@ -1011,6 +1096,7 @@ export default function LiveView() {
                 )}
               </div>
             </div>
+            )}
           </div>
         </div>
       )}

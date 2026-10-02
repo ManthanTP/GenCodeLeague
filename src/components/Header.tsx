@@ -13,6 +13,7 @@ import {
   Megaphone,
   HelpCircle,
   Wallet,
+  Minimize,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
@@ -25,6 +26,11 @@ interface HeaderProps {
   onToggleView?: () => void;
   isAdminAuthenticated?: boolean;
   onLogout?: () => void;
+  isFullscreen?: boolean;
+  onExitFullscreen?: () => void;
+  currentRoundName?: string;
+  questionIdx?: number;
+  totalQuestions?: number;
 }
 
 export default function Header({
@@ -35,6 +41,11 @@ export default function Header({
   onToggleView,
   isAdminAuthenticated = false,
   onLogout,
+  isFullscreen = false,
+  onExitFullscreen,
+  currentRoundName,
+  questionIdx,
+  totalQuestions,
 }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -163,32 +174,60 @@ export default function Header({
           </div>
         </div>
 
-        {/* Center: Navigation Pills */}
-        <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {viewMode === 'admin' && (
-            <div className="header-role-badge header-role-admin">
-              <Shield size={14} />
-              <span>ADMIN</span>
-            </div>
-          )}
+        {/* Center: Navigation Pills (Hidden in Fullscreen Presentation Mode) */}
+        {!isFullscreen && (
+          <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {viewMode === 'admin' && (
+              <div className="header-role-badge header-role-admin">
+                <Shield size={14} />
+                <span>ADMIN</span>
+              </div>
+            )}
 
-          {viewMode === 'live' && (
-            <nav
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                background: '#121319',
-                border: '1px solid #20212b',
-                padding: '0.25rem',
-                borderRadius: '12px',
-              }}
-            >
-              {navLinks.map((link) => {
-                const IconComponent = link.icon;
-                const active = isLinkActive(link.path, link.altPath);
+            {viewMode === 'live' && (
+              <nav
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: '#121319',
+                  border: '1px solid #20212b',
+                  padding: '0.25rem',
+                  borderRadius: '12px',
+                }}
+              >
+                {navLinks.map((link) => {
+                  const IconComponent = link.icon;
+                  const active = isLinkActive(link.path, link.altPath);
 
-                if (link.isLive) {
+                  if (link.isLive) {
+                    return (
+                      <button
+                        key={link.label}
+                        type="button"
+                        onClick={() => handleNavClick(link.path)}
+                        style={{
+                          padding: '0.38rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          transition: 'all 0.15s ease',
+                          cursor: 'pointer',
+                          border: active ? '1px solid #e0263f' : '1px solid transparent',
+                          background: active ? 'rgba(224, 38, 63, 0.18)' : 'transparent',
+                          color: active ? '#ffffff' : '#94a3b8',
+                          boxShadow: active ? '0 0 16px rgba(224, 38, 63, 0.35)' : 'none',
+                        }}
+                      >
+                        <IconComponent size={14} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
+                        <span>{link.label}</span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
                       key={link.label}
@@ -198,52 +237,52 @@ export default function Header({
                         padding: '0.38rem 0.85rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        fontWeight: 700,
+                        fontWeight: 600,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.4rem',
                         transition: 'all 0.15s ease',
                         cursor: 'pointer',
-                        border: active ? '1px solid #e0263f' : '1px solid transparent',
-                        background: active ? 'rgba(224, 38, 63, 0.18)' : 'transparent',
+                        border: '1px solid transparent',
+                        background: active ? '#22232f' : 'transparent',
                         color: active ? '#ffffff' : '#94a3b8',
-                        boxShadow: active ? '0 0 16px rgba(224, 38, 63, 0.35)' : 'none',
                       }}
                     >
-                      <IconComponent size={14} style={{ color: active ? '#e0263f' : '#94a3b8' }} />
+                      <IconComponent size={13} style={{ color: '#94a3b8' }} />
                       <span>{link.label}</span>
                     </button>
                   );
-                }
+                })}
+              </nav>
+            )}
+          </div>
+        )}
 
-                return (
-                  <button
-                    key={link.label}
-                    type="button"
-                    onClick={() => handleNavClick(link.path)}
-                    style={{
-                      padding: '0.38rem 0.85rem',
-                      borderRadius: '8px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      transition: 'all 0.15s ease',
-                      cursor: 'pointer',
-                      border: '1px solid transparent',
-                      background: active ? '#22232f' : 'transparent',
-                      color: active ? '#ffffff' : '#94a3b8',
-                    }}
-                  >
-                    <IconComponent size={13} style={{ color: '#94a3b8' }} />
-                    <span>{link.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          )}
-        </div>
+        {/* Center: Competition Status Badge (Shown only in Fullscreen Presentation Mode) */}
+        {isFullscreen && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.35rem 0.85rem',
+              background: '#121319',
+              border: '1px solid #20212b',
+              borderRadius: '8px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.75rem',
+              fontWeight: 700,
+            }}
+          >
+            <span style={{ color: '#ffffff', borderBottom: '2px solid #e0263f', paddingBottom: '1px' }}>
+              {(currentRoundName || 'ROUND 1').toUpperCase()}
+            </span>
+            <span style={{ color: '#475569' }}>|</span>
+            <span style={{ color: '#94a3b8' }}>
+              QUESTION {(questionIdx !== undefined ? questionIdx + 1 : 1)} OF {totalQuestions || 20}
+            </span>
+          </div>
+        )}
 
         {/* Right Stats Section */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -286,7 +325,7 @@ export default function Header({
                   lineHeight: 1,
                 }}
               >
-                Remaining Budget
+                TOTAL REMAINING BUDGET
               </p>
               <p
                 style={{
@@ -341,7 +380,7 @@ export default function Header({
                   lineHeight: 1,
                 }}
               >
-                Total Teams
+                TOTAL TEAMS
               </p>
               <p
                 style={{
@@ -358,6 +397,35 @@ export default function Header({
             </div>
           </div>
 
+          {/* Exit Fullscreen Button in Header (Presentation Mode) */}
+          {isFullscreen && onExitFullscreen && (
+            <button
+              type="button"
+              onClick={onExitFullscreen}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'rgba(224, 38, 63, 0.18)',
+                border: '1.5px solid #e0263f',
+                color: '#ffffff',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                fontFamily: "'JetBrains Mono', monospace",
+                letterSpacing: '0.06em',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 0 15px rgba(224, 38, 63, 0.35)',
+                transition: 'all 0.15s ease',
+              }}
+              title="Exit Fullscreen Presentation Mode"
+            >
+              <Minimize size={13} style={{ color: '#e0263f' }} />
+              <span>EXIT FULLSCREEN</span>
+            </button>
+          )}
+
           {/* Admin Controls */}
           {viewMode === 'admin' && onToggleView && (
             <button onClick={onToggleView} className="btn-header-view">
@@ -371,8 +439,8 @@ export default function Header({
             </button>
           )}
 
-          {/* Mobile hamburger menu */}
-          {viewMode === 'live' && (
+          {/* Mobile hamburger menu (Hidden in Fullscreen) */}
+          {!isFullscreen && viewMode === 'live' && (
             <button
               className="xl:hidden"
               style={{
