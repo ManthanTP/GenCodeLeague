@@ -348,7 +348,13 @@ export default function AdminCertificateManager({
       onShowToast('Enter participant name.', 'error');
       return;
     }
-    if (!selectedEditionId) {
+    const targetEditionId =
+      selectedEditionId ||
+      activeEdition?.id ||
+      currentEdition?.id ||
+      (editions.length > 0 ? editions[0].id : '');
+
+    if (!targetEditionId) {
       onShowToast('Select an edition.', 'error');
       return;
     }
@@ -366,7 +372,7 @@ export default function AdminCertificateManager({
 
       const record = {
         certificate_id: certId,
-        edition_id: selectedEditionId,
+        edition_id: targetEditionId,
         team_id: teamId,
         recipient_name: recipientName.trim(),
         certificate_type: certificateType,
@@ -408,13 +414,26 @@ export default function AdminCertificateManager({
 
   // ─── Batch Issue for All Members of Selected Team ───
   const handleBatchIssueTeamCertificates = async () => {
-    if (!selectedTeamId || currentTeamMembers.length === 0 || !selectedEditionId) return;
-    const teamName = selectedTeam?.name || 'Selected Team';
+    const targetEditionId =
+      selectedEditionId ||
+      activeEdition?.id ||
+      currentEdition?.id ||
+      (editions.length > 0 ? editions[0].id : '');
 
-    const confirmed = window.confirm(
-      `Issue "${CERTIFICATE_TYPE_LABELS[certificateType]}" certificates for all ${currentTeamMembers.length} member(s) of team "${teamName}"?`
-    );
-    if (!confirmed) return;
+    if (!targetEditionId) {
+      onShowToast('Please select an edition first.', 'error');
+      return;
+    }
+    if (!selectedTeamId) {
+      onShowToast('Please select a team first.', 'error');
+      return;
+    }
+    if (currentTeamMembers.length === 0) {
+      onShowToast('This team has no registered members to issue certificates for.', 'error');
+      return;
+    }
+
+    const teamName = selectedTeam?.name || 'Selected Team';
 
     setBatchIssuing(true);
     try {
@@ -431,7 +450,7 @@ export default function AdminCertificateManager({
         const certId = generateCertificateId(editionCode, certificateType);
         records.push({
           certificate_id: certId,
-          edition_id: selectedEditionId,
+          edition_id: targetEditionId,
           team_id: selectedTeamId,
           recipient_name: memberName,
           certificate_type: certificateType,
@@ -450,14 +469,17 @@ export default function AdminCertificateManager({
       }
 
       const { error } = await supabase.from('certificates').insert(records);
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to insert certificates:', error);
+        throw error;
+      }
 
       await logAdminAction('BATCH_TEAM_CERTIFICATES_ISSUED', {
         team_id: selectedTeamId,
         team_name: teamName,
         count: records.length,
         certificate_type: certificateType,
-        edition_id: selectedEditionId,
+        edition_id: targetEditionId,
       });
 
       onShowToast(
@@ -466,8 +488,9 @@ export default function AdminCertificateManager({
       );
 
       // Refresh list
-      loadCertificates();
+      await loadCertificates();
     } catch (err: any) {
+      console.error('Error in handleBatchIssueTeamCertificates:', err);
       onShowToast(err?.message || 'Failed to issue batch certificates.', 'error');
     } finally {
       setBatchIssuing(false);
