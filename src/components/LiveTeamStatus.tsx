@@ -15,41 +15,18 @@ export default function LiveTeamStatus({
   myTeamId,
   items = [],
 }: LiveTeamStatusProps) {
-  // Official reference teams from photo (media_1790926182172.jpg)
-  const referenceTeams = [
-    { id: 'ref-1', name: 'helloo new team', spent: 0, budget: 50000000, isYou: true },
-    { id: 'ref-2', name: 'New team 1', spent: 1000000, budget: 49000000, isYou: false },
-    { id: 'ref-3', name: 'New team 2', spent: 5000000, budget: 45000000, isYou: false },
-    { id: 'ref-4', name: 'New team 3', spent: 7000000, budget: 43000000, isYou: false },
-    { id: 'ref-5', name: 'New team 4', spent: 0, budget: 50000000, isYou: false },
-    { id: 'ref-6', name: 'New team 5', spent: 0, budget: 50000000, isYou: false },
-    { id: 'ref-7', name: 'Team Alpha', spent: 3000000, budget: 47000000, isYou: false },
-    { id: 'ref-8', name: 'New team 6', spent: 0, budget: 50000000, isYou: false },
-  ];
-
-  // If live auction purchases exist or teams are customized, use live data;
-  // otherwise use the exact 8 reference teams from the official photo
-  const hasLivePurchases = items && items.length > 0;
-  const hasCustomTeams = teams && teams.some((t) => !t.name.startsWith('Team ') && t.name !== 'helloo new team');
-
-  const displayRows =
-    hasLivePurchases || hasCustomTeams
-      ? teams.map((team, idx) => {
-          const teamItems = items.filter((it) => it.team_id === team.id);
-          const spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-          const isMyTeam = Boolean(myTeamId && (team.id === myTeamId || (myTeamId === 'ref-1' && idx === 0)));
-          return {
-            id: team.id,
-            name: team.name,
-            spent,
-            budget: team.budget,
-            isYou: isMyTeam,
-          };
-        })
-      : referenceTeams.map((row) => ({
-          ...row,
-          isYou: Boolean(myTeamId && (row.id === myTeamId || row.name.toLowerCase() === myTeamId.toLowerCase())),
-        }));
+  const displayRows = (teams || []).map((team) => {
+    const teamItems = (items || []).filter((it) => it.team_id === team.id);
+    const spent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+    const isMyTeam = Boolean(myTeamId && (team.id === myTeamId || (team.linked_team_id && team.linked_team_id === myTeamId)));
+    return {
+      id: team.id,
+      name: team.name,
+      spent,
+      budget: team.budget,
+      isYou: isMyTeam,
+    };
+  });
 
   return (
     <div
@@ -130,7 +107,23 @@ export default function LiveTeamStatus({
             </tr>
           </thead>
           <tbody>
-            {displayRows.map((row, idx) => {
+            {displayRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  style={{
+                    padding: '2rem 1rem',
+                    textAlign: 'center',
+                    color: '#64748b',
+                    fontSize: '0.85rem',
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  No teams registered yet.
+                </td>
+              </tr>
+            ) : (
+              displayRows.map((row, idx) => {
               const numStr = String(idx + 1).padStart(2, '0');
               const isSelected = row.isYou;
 
@@ -224,7 +217,8 @@ export default function LiveTeamStatus({
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

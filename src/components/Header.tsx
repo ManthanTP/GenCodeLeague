@@ -79,11 +79,8 @@ export default function Header({
     navigate(path);
   };
 
-  // Formatted values: use live if non-default, otherwise exact match from official reference photo
-  const displayBudget = totalAvailable > 0 && totalAvailable !== 300000000 
-    ? formatCurrency(totalAvailable) 
-    : '₹34.20 Cr';
-  const displayTeams = teamCount > 0 && teamCount !== 6 ? teamCount : 8;
+  const displayBudget = formatCurrency(totalAvailable || 0);
+  const displayTeams = teamCount || 0;
 
   return (
     <header

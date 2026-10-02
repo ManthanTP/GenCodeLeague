@@ -32,10 +32,9 @@ import { useTeamItems } from '../hooks/useTeamItems';
 import { useTimer } from '../hooks/useTimer';
 import { useLeaderboardReveal } from '../hooks/useLeaderboardReveal';
 import Header from '../components/Header';
-import ConnectionHealth from '../components/ConnectionHealth';
 import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
-import { DEFAULT_ROUNDS_DATA } from '../data/roundsData';
+import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
 
 export default function LiveView() {
@@ -244,19 +243,9 @@ export default function LiveView() {
     }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [teams, items]);
 
-  // Fallback reference teams matching official reference data
+  // Available teams from Supabase
   const availableTeams = useMemo(() => {
-    if (teams && teams.length > 0) return teams;
-    return [
-      { id: 'ref-1', name: 'helloo new team', budget: 50000000 },
-      { id: 'ref-2', name: 'New team 1', budget: 49000000 },
-      { id: 'ref-3', name: 'New team 2', budget: 45000000 },
-      { id: 'ref-4', name: 'New team 3', budget: 43000000 },
-      { id: 'ref-5', name: 'New team 4', budget: 50000000 },
-      { id: 'ref-6', name: 'New team 5', budget: 50000000 },
-      { id: 'ref-7', name: 'Team Alpha', budget: 47000000 },
-      { id: 'ref-8', name: 'New team 6', budget: 50000000 },
-    ] as Team[];
+    return teams || [];
   }, [teams]);
 
   // Sorted teams for dropdown selects (A to Z)
@@ -288,27 +277,19 @@ export default function LiveView() {
   // Selected Team for Right Sidebar - ONLY available when selected & open!
   const selectedTeam = useMemo(() => {
     if (!myTeamId || !isTeamPanelOpen) return null;
-    return availableTeams.find((t) => t.id === myTeamId || t.name.toLowerCase() === myTeamId.toLowerCase()) || null;
+    return availableTeams.find((t) => t.id === myTeamId) || null;
   }, [availableTeams, myTeamId, isTeamPanelOpen]);
 
   const selectedTeamMembers = useMemo(() => {
     if (!selectedTeam) return [];
-    const members = teamMembersMap[selectedTeam.id] || [];
-    if (members.length > 0) return members;
-    return [
-      { id: '1', name: 'Member 1' },
-      { id: '2', name: 'Member 2' },
-      { id: '3', name: 'Member 3' },
-      { id: '4', name: 'Member 4' },
-      { id: '5', name: 'Member 5' },
-    ];
+    return teamMembersMap[selectedTeam.id] || [];
   }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamLeader = useMemo(() => {
     if (!selectedTeam) return '';
     const members = teamMembersMap[selectedTeam.id] || [];
     const captain = members.find((m) => m.is_captain);
-    return captain?.name || captain?.full_name || members[0]?.name || members[0]?.full_name || 'Manthan Patel';
+    return captain?.name || (captain as any)?.full_name || members[0]?.name || (members[0] as any)?.full_name || '';
   }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamWonItems = useMemo(() => {
@@ -334,36 +315,21 @@ export default function LiveView() {
   };
 
   const previousBidsList = useMemo(() => {
-    if (items && items.length > 0) {
-      return items.slice(0, 3).map((item, idx) => {
-        const team = teams.find((t) => t.id === item.team_id);
-        const timeStr = item.created_at
-          ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
-          : '14:28:10';
-        return {
-          id: item.id || String(idx),
-          index: idx + 1,
-          teamName: team?.name || 'Unknown Team',
-          amount: formatCurrency(item.cost),
-          time: timeStr,
-        };
-      });
-    }
-    return [
-      { id: '1', index: 1, teamName: 'New team 2', amount: '₹50.00 L', time: '14:28:10' },
-      { id: '2', index: 2, teamName: 'Team Alpha', amount: '₹30.00 L', time: '14:27:42' },
-      { id: '3', index: 3, teamName: 'New team 1', amount: '₹10.00 L', time: '14:26:15' },
-    ];
+    if (!items || items.length === 0) return [];
+    return items.slice(0, 3).map((item, idx) => {
+      const team = teams.find((t) => t.id === item.team_id);
+      const timeStr = item.created_at
+        ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
+        : '--:--:--';
+      return {
+        id: item.id || String(idx),
+        index: idx + 1,
+        teamName: team?.name || 'Unknown Team',
+        amount: formatCurrency(item.cost),
+        time: timeStr,
+      };
+    });
   }, [items, teams]);
-
-  if (stateLoading) {
-    return (
-      <div className="gcl-loading-screen">
-        <div className="loading-spinner"></div>
-        <p className="loading-text">Connecting to Live Auction...</p>
-      </div>
-    );
-  }
 
   const gameState = eventState?.game_state || 'setup';
   const roundIdx = eventState?.current_round_index ?? 0;
@@ -380,6 +346,39 @@ export default function LiveView() {
   const activeBidTeam = currentBidPreview
     ? teams.find((t) => t.id === currentBidPreview.teamId)
     : null;
+
+  // Round base price
+  const roundBasePrice = getRoundBasePrice(roundIdx);
+
+  // Check if current question is already sold in team_items
+  const alreadySoldItem = useMemo(() => {
+    if (!items || items.length === 0) return null;
+    return items.find(
+      (it) =>
+        it.round_index === roundIdx &&
+        it.question_index === questionIdx
+    ) || null;
+  }, [items, roundIdx, questionIdx]);
+
+  const soldBuyerTeam = useMemo(() => {
+    if (!alreadySoldItem || !teams) return null;
+    return teams.find((t) => t.id === alreadySoldItem.team_id) || null;
+  }, [alreadySoldItem, teams]);
+
+  const isQuestionSold = Boolean(alreadySoldItem);
+  const isBiddingActive = Boolean(currentBidPreview && currentBidPreview.amount > 0);
+  const hasCurrentBid = Boolean(isBiddingActive || (isQuestionSold && alreadySoldItem));
+  const hasPreviousBids = Boolean(previousBidsList && previousBidsList.length > 0);
+  const showBidRow = hasCurrentBid || hasPreviousBids;
+
+  if (stateLoading) {
+    return (
+      <div className="gcl-loading-screen">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Connecting to Live Auction...</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -536,7 +535,11 @@ export default function LiveView() {
               <div
                 style={{
                   background: '#0c0d12',
-                  border: '1px solid #1e1f29',
+                  border: isQuestionSold
+                    ? '1.5px solid rgba(239, 68, 68, 0.6)'
+                    : isBiddingActive
+                    ? '1.5px solid rgba(224, 38, 63, 0.65)'
+                    : '1px solid #1e1f29',
                   borderRadius: '16px',
                   padding: '1.4rem 1.6rem',
                   position: 'relative',
@@ -553,14 +556,16 @@ export default function LiveView() {
                     width: '150px',
                     height: '100%',
                     pointerEvents: 'none',
-                    background: 'linear-gradient(135deg, rgba(224, 38, 63, 0.4) 0%, rgba(224, 38, 63, 0.08) 35%, transparent 65%)',
-                    borderLeft: '3px solid #e0263f',
+                    background: isQuestionSold
+                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0.08) 35%, transparent 65%)'
+                      : 'linear-gradient(135deg, rgba(224, 38, 63, 0.4) 0%, rgba(224, 38, 63, 0.08) 35%, transparent 65%)',
+                    borderLeft: isQuestionSold ? '3px solid #ef4444' : '3px solid #e0263f',
                   }}
                 />
 
                 {/* Top Bar inside Question Card: Ref Left, Bid Timer Right */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', position: 'relative', zIndex: 10 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.45rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.72rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: '0.08em' }}>
                       <span
                         style={{
@@ -575,6 +580,88 @@ export default function LiveView() {
                       </span>
                       <span style={{ color: '#475569' }}>|</span>
                       <span style={{ color: '#64748b' }}>QUESTION {questionIdx + 1} OF {totalQuestions}</span>
+                    </div>
+
+                    {/* Question Status Tag */}
+                    <div>
+                      {isQuestionSold ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.68rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 800,
+                            border: '1px solid rgba(239, 68, 68, 0.55)',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#f87171',
+                            letterSpacing: '0.06em',
+                          }}
+                        >
+                          ✓ SOLD TO {soldBuyerTeam?.name?.toUpperCase() || 'TEAM'} ({formatCurrency(alreadySoldItem?.cost || 0)})
+                        </span>
+                      ) : isBiddingActive ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.68rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 800,
+                            border: '1px solid rgba(224, 38, 63, 0.6)',
+                            background: 'rgba(224, 38, 63, 0.2)',
+                            color: '#f87171',
+                            letterSpacing: '0.06em',
+                          }}
+                        >
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} className="animate-ping" />
+                          LIVE BIDDING
+                        </span>
+                      ) : isRevealed ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.68rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 800,
+                            border: '1px solid rgba(34, 197, 94, 0.45)',
+                            background: 'rgba(34, 197, 94, 0.12)',
+                            color: '#4ade80',
+                            letterSpacing: '0.06em',
+                          }}
+                        >
+                          ● BIDDING OPEN
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.68rem',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 800,
+                            border: '1px solid #334155',
+                            background: 'rgba(30, 41, 59, 0.6)',
+                            color: '#94a3b8',
+                            letterSpacing: '0.06em',
+                          }}
+                        >
+                          🔒 QUESTION LOCKED
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -606,7 +693,7 @@ export default function LiveView() {
                         color: isExpired ? '#ef4444' : '#ffffff',
                       }}
                     >
-                      {timerFormatted || '02:48'}
+                      {timerFormatted || '00:00'}
                     </div>
                     <div
                       style={{
@@ -622,176 +709,208 @@ export default function LiveView() {
                 </div>
 
                 {/* Main Question Text */}
-                <div style={{ marginTop: '0.75rem', marginBottom: '0.25rem', position: 'relative', zIndex: 10 }}>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.35, margin: 0 }}>
-                    {eventState?.current_item_name
-                      ? renderMultiLineText(eventState.current_item_name)
-                      : `Q1: What is the output of console.log(typeof NaN)?`}
-                  </h2>
+                <div style={{ marginTop: '0.9rem', marginBottom: '0.25rem', position: 'relative', zIndex: 10 }}>
+                  {isRevealed || isQuestionSold ? (
+                    <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.35, margin: 0 }}>
+                      {eventState?.current_item_name
+                        ? renderMultiLineText(eventState.current_item_name)
+                        : (alreadySoldItem?.item_name ? renderMultiLineText(alreadySoldItem.item_name) : 'No question text set')}
+                    </h2>
+                  ) : (
+                    <div>
+                      <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#64748b', lineHeight: 1.35, margin: 0, fontStyle: 'italic' }}>
+                        Awaiting Next Question...
+                      </h2>
+                      <p style={{ fontSize: '0.78rem', color: '#475569', marginTop: '0.35rem', margin: '0.35rem 0 0 0' }}>
+                        Question text is locked and will be revealed when the timer starts.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS side-by-side */}
-              <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
-                {/* Current Bid Card */}
+              {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS (conditionally rendered) */}
+              {showBidRow && (
                 <div
+                  className="gcl-live-bid-row"
                   style={{
-                    background: '#0c0d12',
-                    border: '1.5px solid rgba(224, 38, 63, 0.65)',
-                    boxShadow: '0 0 25px rgba(224, 38, 63, 0.18), inset 0 0 15px rgba(224, 38, 63, 0.05)',
-                    borderRadius: '16px',
-                    padding: '1.25rem 1.5rem',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    display: 'grid',
+                    gridTemplateColumns: hasCurrentBid && hasPreviousBids ? 'repeat(2, 1fr)' : '1fr',
+                    gap: '1.25rem',
                   }}
                 >
-                  {/* Red corner ambient glow */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '120px',
-                      height: '120px',
-                      background: 'radial-gradient(circle at top left, rgba(224, 38, 63, 0.28) 0%, transparent 70%)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
-                    <span
+                  {/* Current Bid Card */}
+                  {hasCurrentBid && (
+                    <div
                       style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: '#e0263f',
-                        boxShadow: '0 0 8px #e0263f',
+                        background: '#0c0d12',
+                        border: isBiddingActive
+                          ? '1.5px solid rgba(224, 38, 63, 0.75)'
+                          : '1.5px solid rgba(239, 68, 68, 0.5)',
+                        boxShadow: isBiddingActive
+                          ? '0 0 25px rgba(224, 38, 63, 0.22), inset 0 0 15px rgba(224, 38, 63, 0.05)'
+                          : 'none',
+                        borderRadius: '16px',
+                        padding: '1.25rem 1.5rem',
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
-                    />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
-                      CURRENT BID
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'relative', zIndex: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                    >
+                      {/* Red corner ambient glow */}
                       <div
                         style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '12px',
-                          background: 'rgba(224, 38, 63, 0.15)',
-                          border: '1px solid rgba(224, 38, 63, 0.35)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#e0263f',
-                          boxShadow: '0 0 10px rgba(224, 38, 63, 0.2)',
-                          flexShrink: 0,
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '120px',
+                          height: '120px',
+                          background: 'radial-gradient(circle at top left, rgba(224, 38, 63, 0.28) 0%, transparent 70%)',
+                          pointerEvents: 'none',
                         }}
-                      >
-                        <Hammer size={22} className="-rotate-45" />
+                      />
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', position: 'relative', zIndex: 10 }}>
+                        <span
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: isBiddingActive ? '#e0263f' : '#ef4444',
+                            boxShadow: isBiddingActive ? '0 0 8px #e0263f' : 'none',
+                          }}
+                        />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
+                          {isQuestionSold && !isBiddingActive ? 'WINNING BID (SOLD)' : 'CURRENT BID'}
+                        </span>
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
-                          BIDDING TEAM
-                        </p>
-                        <p style={{ fontSize: '1.2rem', fontWeight: 900, color: '#ffffff', margin: '0.35rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {activeBidTeam?.name || (currentBidPreview && currentBidPreview.amount > 0 ? 'Active Team' : (lastBidDetails?.teamName || 'New team 3'))}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
-                        CURRENT AMOUNT
-                      </p>
-                      <p
-                        style={{
-                          fontSize: '1.85rem',
-                          fontWeight: 900,
-                          color: '#e0263f',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          margin: '0.35rem 0 0 0',
-                          lineHeight: 1,
-                          textShadow: '0 0 15px rgba(224, 38, 63, 0.4)',
-                        }}
-                      >
-                        {currentBidPreview && currentBidPreview.amount > 0
-                          ? formatCurrency(currentBidPreview.amount)
-                          : (lastBidDetails ? lastBidDetails.amount : '₹70.00 L')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Previous Bids Card */}
-                <div
-                  style={{
-                    background: '#0c0d12',
-                    border: '1px solid #1e1f29',
-                    borderRadius: '16px',
-                    padding: '1.25rem 1.5rem',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', position: 'relative', zIndex: 10 }}>
-                    <History size={15} style={{ color: '#94a3b8' }} />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
-                      PREVIOUS BIDS
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', position: 'relative', zIndex: 10 }}>
-                    {previousBidsList.map((bid) => (
-                      <div
-                        key={bid.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.2rem 0',
-                          fontSize: '0.82rem',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, paddingRight: '0.5rem' }}>
-                          <span
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'relative', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                          <div
                             style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '5px',
-                              background: '#161720',
-                              border: '1px solid #232430',
-                              color: '#94a3b8',
-                              fontSize: '0.7rem',
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontWeight: 700,
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '12px',
+                              background: 'rgba(224, 38, 63, 0.15)',
+                              border: '1px solid rgba(224, 38, 63, 0.35)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
+                              color: '#e0263f',
+                              boxShadow: '0 0 10px rgba(224, 38, 63, 0.2)',
                               flexShrink: 0,
                             }}
                           >
-                            {bid.index}
-                          </span>
-                          <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {bid.teamName}
-                          </span>
+                            <Hammer size={22} className="-rotate-45" />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
+                              {isQuestionSold && !isBiddingActive ? 'WINNING TEAM' : 'BIDDING TEAM'}
+                            </p>
+                            <p style={{ fontSize: '1.2rem', fontWeight: 900, color: '#ffffff', margin: '0.35rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {isBiddingActive
+                                ? (activeBidTeam?.name || 'Active Team')
+                                : (soldBuyerTeam?.name || 'Unknown Team')}
+                            </p>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                          <span style={{ fontWeight: 800, color: '#e0263f', fontSize: '0.85rem' }}>
-                            {bid.amount}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            {bid.time}
-                          </span>
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <p style={{ fontSize: '0.62rem', color: '#8e8e99', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', margin: 0, lineHeight: 1 }}>
+                            {isBiddingActive
+                              ? 'CURRENT AMOUNT'
+                              : 'FINAL PRICE'}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: '1.85rem',
+                              fontWeight: 900,
+                              color: '#e0263f',
+                              fontFamily: "'JetBrains Mono', monospace",
+                              margin: '0.35rem 0 0 0',
+                              lineHeight: 1,
+                              textShadow: '0 0 15px rgba(224, 38, 63, 0.4)',
+                            }}
+                          >
+                            {isBiddingActive
+                              ? formatCurrency(currentBidPreview?.amount || 0)
+                              : formatCurrency(alreadySoldItem?.cost || 0)}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Previous Bids Card */}
+                  {hasPreviousBids && (
+                    <div
+                      style={{
+                        background: '#0c0d12',
+                        border: '1px solid #1e1f29',
+                        borderRadius: '16px',
+                        padding: '1.25rem 1.5rem',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', position: 'relative', zIndex: 10 }}>
+                        <History size={15} style={{ color: '#94a3b8' }} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#e2e8f0' }}>
+                          PREVIOUS BIDS
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', position: 'relative', zIndex: 10 }}>
+                        {previousBidsList.map((bid) => (
+                          <div
+                            key={bid.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '0.2rem 0',
+                              fontSize: '0.82rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, paddingRight: '0.5rem' }}>
+                              <span
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '5px',
+                                  background: '#161720',
+                                  border: '1px solid #232430',
+                                  color: '#94a3b8',
+                                  fontSize: '0.7rem',
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {bid.index}
+                              </span>
+                              <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {bid.teamName}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, fontFamily: "'JetBrains Mono', monospace" }}>
+                              <span style={{ fontWeight: 800, color: '#e0263f', fontSize: '0.85rem' }}>
+                                {bid.amount}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                {bid.time}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* 3. Live Team Status Table */}
               <LiveTeamStatus
@@ -902,7 +1021,7 @@ export default function LiveView() {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                       <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {selectedTeam && selectedTeam.name !== 'Team 1' ? selectedTeam.name : 'helloo new team'}
+                        {selectedTeam?.name || 'Selected Team'}
                       </h3>
                       <span
                         style={{
@@ -924,7 +1043,7 @@ export default function LiveView() {
                       Leader
                     </p>
                     <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', margin: '0.15rem 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {selectedTeamLeader && selectedTeamLeader !== 'Team 1 Leader' ? selectedTeamLeader : 'Manthan Patel'}
+                      {selectedTeamLeader || 'No Leader Assigned'}
                     </p>
                   </div>
                 </div>
@@ -932,38 +1051,44 @@ export default function LiveView() {
                 {/* Team Members List */}
                 <div style={{ marginTop: '0.85rem', position: 'relative', zIndex: 10 }}>
                   <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.45rem', margin: '0 0 0.45rem 0' }}>
-                    Team Members ({selectedTeamMembers.length || 5})
+                    Team Members ({selectedTeamMembers.length})
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {selectedTeamMembers.map((member, i) => (
-                      <div
-                        key={member.id || i}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}
-                      >
-                        <span
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '5px',
-                            background: '#15161f',
-                            border: '1px solid #232430',
-                            color: '#94a3b8',
-                            fontSize: '0.7rem',
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {i + 1}
-                        </span>
-                        <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {member.name || (member as any).full_name || `Member ${i + 1}`}
-                        </span>
+                    {selectedTeamMembers.length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.8rem', fontStyle: 'italic', padding: '0.35rem 0' }}>
+                        No members registered
                       </div>
-                    ))}
+                    ) : (
+                      selectedTeamMembers.map((member, i) => (
+                        <div
+                          key={member.id || i}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}
+                        >
+                          <span
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '5px',
+                              background: '#15161f',
+                              border: '1px solid #232430',
+                              color: '#94a3b8',
+                              fontSize: '0.7rem',
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {i + 1}
+                          </span>
+                          <span style={{ fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {member.name || (member as any).full_name || `Member ${i + 1}`}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -1038,7 +1163,7 @@ export default function LiveView() {
                         Remaining
                       </p>
                       <p style={{ fontSize: '1.15rem', fontWeight: 900, color: '#10b981', fontFamily: "'JetBrains Mono', monospace", margin: '0.2rem 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {formatCurrency(selectedTeam?.budget || 50000000)}
+                        {formatCurrency(selectedTeam?.budget || 0)}
                       </p>
                     </div>
                   </div>
