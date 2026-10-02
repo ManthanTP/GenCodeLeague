@@ -29,40 +29,42 @@ export default function LiveTeamStatus({
   });
 
   return (
-    <div
-      id="live-team-status-section"
-      className="panel red"
-      style={{
-        padding: '18px 24px',
-        minHeight: '385px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Title & Real-time pill */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginBottom: '14px', position: 'relative', zIndex: 10 }}>
-        <h2 style={{ fontSize: '30px', fontWeight: 700, color: '#f4f4f6', letterSpacing: '0.02em', margin: 0, fontFamily: "'Rajdhani', sans-serif" }}>
+    <div style={{ width: '100%' }}>
+      {/* Title & Real-time pill outside the table card */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#f4f4f6', letterSpacing: '0.02em', margin: 0, lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
           Live Team Status
         </h2>
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
-            width: '126px',
-            height: '32px',
-            border: '1.5px solid #e8212e',
-            borderRadius: '6px',
-            background: 'rgba(232, 33, 46, 0.08)',
-            padding: '0 12px',
+            gap: '7px',
+            height: '26px',
+            border: '1px solid rgba(232, 33, 46, 0.55)',
+            borderRadius: '9999px',
+            background: 'rgba(232, 33, 46, 0.12)',
+            padding: '0 11px',
           }}
         >
-          <div className="dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#e8212e', flexShrink: 0 }} />
-          <span style={{ fontSize: '15px', fontWeight: 600, color: '#ff4350', letterSpacing: '0.04em', fontFamily: "'Inter', sans-serif" }}>
+          <div className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#e8212e', boxShadow: '0 0 6px #e8212e', flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ff4350', letterSpacing: '0.06em', fontFamily: "'Inter', sans-serif" }}>
             REAL-TIME
           </span>
         </div>
       </div>
+
+      {/* Table Panel */}
+      <div
+        id="live-team-status-section"
+        className="panel red"
+        style={{
+          padding: '14px 18px',
+          minHeight: '340px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
 
       {/* Table Container */}
       <div style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 10 }}>
@@ -224,5 +226,6 @@ export default function LiveTeamStatus({
         </table>
       </div>
     </div>
-  );
+  </div>
+);
 }

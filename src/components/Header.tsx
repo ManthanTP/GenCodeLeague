@@ -115,7 +115,7 @@ export default function Header({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '1rem', marginLeft: '0.25rem' }}>
             <span style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
-              GENCODE LEAGUE
+              GEN CODE LEAGUE
             </span>
             <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.25rem' }}>
               <span className="dot" style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#e8212e' }} />

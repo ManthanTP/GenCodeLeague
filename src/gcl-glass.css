@@ -403,12 +403,26 @@
   justify-content: center;
 }
 
-/* === ARENA 2-COLUMN GRID (Left 1156px, Right 369px, Gap 26px) === */
+/* === ARENA DYNAMIC GRID (Left 1156px, Right 369px, Gap 26px) === */
 .gcl-live-arena-grid {
   display: grid;
   grid-template-columns: 1156px 369px;
   gap: 26px;
   justify-content: center;
+  width: 100%;
+}
+
+.gcl-live-arena-grid.has-panel {
+  display: grid;
+  grid-template-columns: 1156px 369px;
+  gap: 26px;
+  justify-content: center;
+  width: 100%;
+}
+
+.gcl-live-arena-grid.no-panel {
+  display: grid;
+  grid-template-columns: 1fr;
   width: 100%;
 }
 
@@ -419,8 +433,13 @@
   width: 100%;
 }
 
+.gcl-live-arena-grid.no-panel .gcl-live-bid-row {
+  grid-template-columns: 1fr 1fr;
+}
+
 @media (max-width: 1580px) {
-  .gcl-live-arena-grid {
+  .gcl-live-arena-grid,
+  .gcl-live-arena-grid.has-panel {
     grid-template-columns: minmax(0, 1fr) 369px;
     gap: 20px;
   }
@@ -431,11 +450,14 @@
 }
 
 @media (max-width: 1200px) {
-  .gcl-live-arena-grid {
+  .gcl-live-arena-grid,
+  .gcl-live-arena-grid.has-panel,
+  .gcl-live-arena-grid.no-panel {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  .gcl-live-bid-row {
+  .gcl-live-bid-row,
+  .gcl-live-arena-grid.no-panel .gcl-live-bid-row {
     grid-template-columns: 1fr;
     gap: 18px;
   }

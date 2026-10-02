@@ -285,16 +285,16 @@ export default function LiveView() {
     return teamsWithStats.find((t) => t.id === myTeamId) || null;
   }, [teamsWithStats, myTeamId]);
 
-  // Selected Team for Right Sidebar - Always available on desktop to match reference layout
+  // Selected Team for Right Sidebar - In guest mode, collapsed if no team chosen
   const selectedTeam = useMemo(() => {
     if (!availableTeams || availableTeams.length === 0) return null;
-    if (myTeamId) {
-      return availableTeams.find((t) => t.id === myTeamId) || availableTeams[0];
+    if (myTeamId && isTeamPanelOpen) {
+      return availableTeams.find((t) => t.id === myTeamId) || null;
     }
-    return availableTeams[0];
-  }, [availableTeams, myTeamId]);
+    return null;
+  }, [availableTeams, myTeamId, isTeamPanelOpen]);
 
-  const effectiveMyTeamId = myTeamId || (availableTeams.length > 0 ? availableTeams[0].id : '');
+  const effectiveMyTeamId = myTeamId || '';
 
   const selectedTeamMembers = useMemo(() => {
     if (!selectedTeam) return [];
@@ -303,28 +303,14 @@ export default function LiveView() {
 
   const displayMembers = useMemo(() => {
     if (!selectedTeam) return [];
-    const fromDb = teamMembersMap[selectedTeam.id] || [];
-    const list = [...fromDb];
-    for (let i = list.length; i < 5; i++) {
-      list.push({
-        id: `pad_${i + 1}`,
-        name: `Member ${i + 1}`,
-        is_captain: false,
-        team_id: selectedTeam.id,
-        usn: null,
-        email: null,
-        phone: null,
-        created_at: '',
-      });
-    }
-    return list.slice(0, 5);
+    return teamMembersMap[selectedTeam.id] || [];
   }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamLeader = useMemo(() => {
-    if (!selectedTeam) return 'Manthan Patel';
+    if (!selectedTeam) return '';
     const members = teamMembersMap[selectedTeam.id] || [];
     const captain = members.find((m) => m.is_captain);
-    return captain?.name || (captain as any)?.full_name || members[0]?.name || (members[0] as any)?.full_name || (selectedTeam as any).leader_name || 'Manthan Patel';
+    return captain?.name || (captain as any)?.full_name || members[0]?.name || (members[0] as any)?.full_name || (selectedTeam as any).leader_name || 'Team Leader';
   }, [selectedTeam, teamMembersMap]);
 
   const selectedTeamWonItems = useMemo(() => {
@@ -339,7 +325,7 @@ export default function LiveView() {
 
   const handleSelectTeam = (id: string) => {
     setMyTeamId(id);
-    setIsTeamPanelOpen(true);
+    setIsTeamPanelOpen(Boolean(id));
   };
 
   const handleCloseTeamPanel = () => {
@@ -350,17 +336,11 @@ export default function LiveView() {
   };
 
   const previousBidsList = useMemo(() => {
-    const fallbacks = [
-      { id: 'fb1', index: 1, teamName: 'New team 2', amount: '₹50.00 L', time: '14:28:10' },
-      { id: 'fb2', index: 2, teamName: 'Team Alpha', amount: '₹30.00 L', time: '14:27:42' },
-      { id: 'fb3', index: 3, teamName: 'New team 1', amount: '₹10.00 L', time: '14:26:15' },
-    ];
-
     if (!items || items.length === 0) {
-      return fallbacks;
+      return [];
     }
 
-    const realList = items.slice(0, 3).map((item, idx) => {
+    return items.slice(0, 3).map((item, idx) => {
       const team = teams.find((t) => t.id === item.team_id);
       const timeStr = item.created_at
         ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
@@ -373,12 +353,6 @@ export default function LiveView() {
         time: timeStr,
       };
     });
-
-    while (realList.length < 3) {
-      const fb = fallbacks[realList.length];
-      realList.push({ ...fb, index: realList.length + 1 });
-    }
-    return realList;
   }, [items, teams]);
 
   const gameState = eventState?.game_state || 'active';
@@ -488,9 +462,7 @@ export default function LiveView() {
               <span className="badge-official">Official Auction</span>
             </div>
             <h1 className="grand-title">
-              GEN<span className="brand-heading-accent">CODE</span>
-              <br />
-              LEAGUE
+              GEN <span className="brand-heading-accent">CODE</span> LEAGUE
             </h1>
             <div className="divider-red"></div>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-widest animate-bounce gcl-display">
@@ -522,8 +494,8 @@ export default function LiveView() {
       {/* 3. ACTIVE ROUND STATE (EXACT MATCH TO BLUEPRINT) */}
       {gameState === 'active' && (
         <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 28px 24px 28px' }}>
-          {/* Top Right Controls: Viewing as Guest Dropdown (270px x 35px) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px' }}>
+          {/* Top Right Controls: Viewing as Guest Dropdown & Fullscreen Button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
             {!isTeamLeader && (
               <div style={{ position: 'relative', width: '270px' }}>
                 <select
@@ -555,24 +527,52 @@ export default function LiveView() {
                 <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9a9aa3', pointerEvents: 'none' }} />
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="panel"
+              style={{
+                height: '35px',
+                padding: '0 14px',
+                borderRadius: '8px',
+                background: '#18181c',
+                border: '1px solid #2c2c33',
+                color: isFullscreen ? '#e8212e' : '#f4f4f6',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '7px',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '13px',
+                fontWeight: 600,
+                letterSpacing: '0.03em',
+              }}
+              title={isFullscreen ? 'Exit Fullscreen Presentation' : 'Enter Fullscreen Presentation'}
+            >
+              {isFullscreen ? <Minimize size={15} style={{ color: '#e8212e' }} /> : <Maximize size={15} />}
+              <span>{isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}</span>
+            </button>
           </div>
 
-          {/* Main Arena 2-Column Grid (Left 1156px, Right 369px, Gap 26px) */}
-          <div className="gcl-live-arena-grid">
+          {/* Main Arena Dynamic Grid (Left 1156px, Right 369px, Gap 26px / Full width if no panel) */}
+          <div className={`gcl-live-arena-grid ${isTeamPanelOpen && selectedTeam ? 'has-panel' : 'no-panel'}`}>
             {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
-              {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips (1156px x 158px) */}
+              {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
               <div
                 className="panel red"
                 style={{
                   minHeight: '158px',
-                  height: '158px',
+                  height: 'auto',
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '24px 28px',
+                  padding: '22px 28px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '20px',
                 }}
               >
                 {/* 3 Strips with exact blueprint clip-path */}
@@ -599,10 +599,10 @@ export default function LiveView() {
                   }}
                 />
 
-                {/* Left content: round meta + question text */}
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', flex: 1, minWidth: 0, paddingLeft: '8px', zIndex: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {/* Center content: round meta centered above question text */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, padding: '0 16px', zIndex: 10, textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <span style={{ fontSize: '16px', fontWeight: 500, color: '#e6e6ea', letterSpacing: '0.3px', fontFamily: "'Inter', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
                       </span>
@@ -616,15 +616,15 @@ export default function LiveView() {
 
                   <h2
                     style={{
-                      fontSize: '31px',
+                      fontSize: '28px',
                       fontWeight: 700,
                       color: '#f4f4f6',
-                      lineHeight: 1.15,
+                      lineHeight: 1.35,
                       margin: 0,
                       fontFamily: "'Rajdhani', sans-serif",
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      textAlign: 'center',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
                     }}
                   >
                     {eventState?.current_item_name
@@ -669,7 +669,7 @@ export default function LiveView() {
                       color: '#f4f4f6',
                     }}
                   >
-                    {isTimerRunning && timeLeft > 0 ? timerFormatted : '02:48'}
+                    {isTimerRunning && timeLeft > 0 ? timerFormatted : '00:00'}
                   </div>
                   <div style={{ width: '161px', height: '7px', borderRadius: '4px', background: '#26262c', marginTop: '6px', overflow: 'hidden' }}>
                     <div
@@ -679,7 +679,7 @@ export default function LiveView() {
                         background: '#e8212e',
                         width: (isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
                           ? `${Math.max(0, Math.min(100, (timeLeft / eventState.timer_duration_seconds) * 100))}%`
-                          : '45%',
+                          : '0%',
                         transition: 'width 1s linear',
                       }}
                     />
@@ -757,7 +757,7 @@ export default function LiveView() {
                             <p style={{ fontSize: '27px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                               {isBiddingActive
                                 ? (activeBidTeam?.name || 'Active Team')
-                                : (soldBuyerTeam?.name || 'New team 3')}
+                                : (isQuestionSold ? (soldBuyerTeam?.name || 'Winning Team') : 'Awaiting Bids')}
                             </p>
                           </div>
                         </div>
@@ -783,7 +783,7 @@ export default function LiveView() {
                           >
                             {isBiddingActive
                               ? formatCurrency(currentBidPreview?.amount || 0)
-                              : (alreadySoldItem?.cost ? formatCurrency(alreadySoldItem.cost) : '₹70.00 L')}
+                              : (alreadySoldItem?.cost ? formatCurrency(alreadySoldItem.cost) : formatCurrency(roundBasePrice))}
                           </p>
                         </div>
                       </div>
@@ -812,36 +812,42 @@ export default function LiveView() {
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', zIndex: 10 }}>
-                        {previousBidsList.map((bid) => (
-                          <div
-                            key={bid.id}
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '36px 1fr auto 75px',
-                              alignItems: 'center',
-                              gap: '14px',
-                              height: '28px',
-                              minHeight: '28px',
-                              background: '#1c1c21',
-                              border: '1px solid rgba(255, 255, 255, 0.05)',
-                              borderRadius: '4px',
-                              padding: '0 8px 0 0',
-                            }}
-                          >
-                            <div className="num" style={{ width: '36px', height: '28px', borderRadius: '4px', fontSize: '15px' }}>
-                              {bid.index}
-                            </div>
-                            <span style={{ fontSize: '16px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
-                              {bid.teamName}
-                            </span>
-                            <span style={{ fontSize: '18px', fontWeight: 600, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                              {bid.amount}
-                            </span>
-                            <span style={{ fontSize: '16px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                              {bid.time}
-                            </span>
+                        {previousBidsList.length === 0 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '90px', color: '#9a9aa3', fontSize: '15px', fontFamily: "'Inter', sans-serif" }}>
+                            No previous bids yet
                           </div>
-                        ))}
+                        ) : (
+                          previousBidsList.map((bid) => (
+                            <div
+                              key={bid.id}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '36px 1fr auto 75px',
+                                alignItems: 'center',
+                                gap: '14px',
+                                height: '28px',
+                                minHeight: '28px',
+                                background: '#1c1c21',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                borderRadius: '4px',
+                                padding: '0 8px 0 0',
+                              }}
+                            >
+                              <div className="num" style={{ width: '36px', height: '28px', borderRadius: '4px', fontSize: '15px' }}>
+                                {bid.index}
+                              </div>
+                              <span style={{ fontSize: '16px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                                {bid.teamName}
+                              </span>
+                              <span style={{ fontSize: '18px', fontWeight: 600, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                {bid.amount}
+                              </span>
+                              <span style={{ fontSize: '16px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                {bid.time}
+                              </span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}
@@ -856,67 +862,47 @@ export default function LiveView() {
               />
             </div>
 
-            {/* RIGHT COLUMN: 369px x 715px SELECTED TEAM & ITEMS WON */}
-            <div style={{ width: '100%', minWidth: 0 }}>
-              <div
-                className="panel red"
-                style={{
-                  width: '100%',
-                  minHeight: '715px',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  position: 'relative',
-                }}
-              >
-                {/* Header row: SELECTED TEAM + Change button */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
-                  <span style={{ fontSize: '21px', fontWeight: 700, letterSpacing: '0.3px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
-                    SELECTED TEAM
-                  </span>
-                  {!isTeamLeader && (
-                    <div style={{ position: 'relative' }}>
-                      <div
+            {/* RIGHT COLUMN: 369px x 715px SELECTED TEAM & ITEMS WON (Shown only when team is selected) */}
+            {isTeamPanelOpen && selectedTeam && (
+              <div style={{ width: '100%', minWidth: 0 }}>
+                <div
+                  className="panel red"
+                  style={{
+                    width: '100%',
+                    minHeight: '715px',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Header row: SELECTED TEAM (Change button removed, close button for guest) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                    <span style={{ fontSize: '21px', fontWeight: 700, letterSpacing: '0.3px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                      SELECTED TEAM
+                    </span>
+                    {!isTeamLeader && (
+                      <button
+                        type="button"
+                        onClick={handleCloseTeamPanel}
                         style={{
-                          width: '105px',
-                          height: '35px',
-                          borderRadius: '7px',
-                          background: '#25252b',
-                          border: '1px solid #34343b',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#9a9aa3',
+                          cursor: 'pointer',
+                          padding: '4px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0 8px 0 12px',
+                          justifyContent: 'center',
                         }}
+                        title="Close Team View"
                       >
-                        <span style={{ fontSize: '15px', color: '#f4f4f6', fontFamily: "'Inter', sans-serif" }}>Change</span>
-                        <div style={{ width: '1px', height: '35px', background: '#34343b' }} />
-                        <ChevronDown size={15} style={{ color: '#f4f4f6' }} />
-                      </div>
-                      <select
-                        value={myTeamId}
-                        onChange={(e) => handleSelectTeam(e.target.value)}
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          opacity: 0,
-                          cursor: 'pointer',
-                          width: '100%',
-                          height: '100%',
-                        }}
-                      >
-                        <option value="">Change</option>
-                        {sortedTeamsDropdown.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
+                        <X size={18} />
+                      </button>
+                    )}
+                  </div>
 
                 {/* Team Identity Card (340px x 358px, #18181c, border #25252b) */}
                 <div
@@ -1033,33 +1019,39 @@ export default function LiveView() {
                     </p>
                   </div>
 
-                  {/* 5 Member rows */}
+                  {/* Member rows (only real members, no fake Member 1..5) */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {displayMembers.slice(0, 5).map((member, i) => (
-                      <div
-                        key={member.id || i}
-                        style={{
-                          height: '32px',
-                          background: '#1b1b20',
-                          borderRadius: '5px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '0 8px 0 0',
-                        }}
-                      >
-                        <div className="num" style={{ width: '38px', height: '32px', borderRadius: '5px', fontSize: '15px' }}>
-                          {i + 1}
+                    {displayMembers.length === 0 ? (
+                      <p style={{ fontSize: '14px', color: '#9a9aa3', margin: '6px 0', fontStyle: 'italic', fontFamily: "'Inter', sans-serif" }}>
+                        No members registered
+                      </p>
+                    ) : (
+                      displayMembers.map((member, i) => (
+                        <div
+                          key={member.id || i}
+                          style={{
+                            height: '32px',
+                            background: '#1b1b20',
+                            borderRadius: '5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '0 8px 0 0',
+                          }}
+                        >
+                          <div className="num" style={{ width: '38px', height: '32px', borderRadius: '5px', fontSize: '15px' }}>
+                            {i + 1}
+                          </div>
+                          <span style={{ fontSize: '15px', color: '#e4e4e8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                            {member.name || (member as any).full_name || `Member ${i + 1}`}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '15px', color: '#e4e4e8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
-                          {member.name || (member as any).full_name || `Member ${i + 1}`}
-                        </span>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Dual Stats Row: Total Spent (164px x 76px) & Remaining (165px x 76px) */}
+                {/* Dual Stats Row: Total Spent & Remaining with fitted font-size */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {/* Total Spent */}
                   <div
@@ -1071,14 +1063,14 @@ export default function LiveView() {
                       padding: '0 10px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
+                      gap: '8px',
                     }}
                   >
                     <div
                       style={{
-                        width: '50px',
-                        height: '52px',
-                        borderRadius: '9px',
+                        width: '42px',
+                        height: '44px',
+                        borderRadius: '8px',
                         background: '#3a1015',
                         display: 'flex',
                         alignItems: 'center',
@@ -1086,7 +1078,7 @@ export default function LiveView() {
                         flexShrink: 0,
                       }}
                     >
-                      <svg width="36" height="32" viewBox="0 0 36 32">
+                      <svg width="28" height="26" viewBox="0 0 36 32">
                         <g fill="#e8212e">
                           <ellipse cx="18" cy="6" rx="14" ry="5"/>
                           <path d="M4 9v5c0 3 6 5 14 5s14-2 14-5V9c0 3-6 5-14 5S4 12 4 9z"/>
@@ -1094,11 +1086,11 @@ export default function LiveView() {
                         </g>
                       </svg>
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '14px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: '12px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                         Total Spent
                       </p>
-                      <p style={{ fontSize: '28px', fontWeight: 700, color: '#ff4350', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                      <p style={{ fontSize: '20px', fontWeight: 700, color: '#ff4350', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                         {formatCurrency(selectedTeamSpent)}
                       </p>
                     </div>
@@ -1114,15 +1106,28 @@ export default function LiveView() {
                       padding: '0 10px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
+                      gap: '8px',
                     }}
                   >
-                    <Wallet size={34} style={{ color: '#f4f4f6', flexShrink: 0 }} />
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '14px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '44px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Wallet size={24} style={{ color: '#f4f4f6' }} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: '12px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                         Remaining
                       </p>
-                      <p style={{ fontSize: '28px', fontWeight: 700, color: '#3fe085', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                      <p style={{ fontSize: '20px', fontWeight: 700, color: '#3fe085', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                         {formatCurrency(selectedTeam?.budget || 0)}
                       </p>
                     </div>
@@ -1200,6 +1205,7 @@ export default function LiveView() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
