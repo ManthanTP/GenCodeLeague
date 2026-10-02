@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS editions (
   questions_per_round INT NOT NULL DEFAULT 20,
   base_price BIGINT NOT NULL DEFAULT 2000000,
   min_increment BIGINT NOT NULL DEFAULT 1000000,
+  certificate_settings JSONB DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -514,6 +515,17 @@ CREATE POLICY "Admin all certificate_templates" ON certificate_templates FOR ALL
 CREATE POLICY "Public read certificates" ON certificates FOR SELECT USING (true);
 CREATE POLICY "Admin all certificates" ON certificates FOR ALL USING (true);
 CREATE POLICY "Admin all audit_log" ON audit_log FOR ALL USING (true);
+
+-- Ensure all modern certificate columns exist on existing databases
+ALTER TABLE editions ADD COLUMN IF NOT EXISTS certificate_settings JSONB DEFAULT NULL;
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS custom_title TEXT;
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS custom_subtitle TEXT;
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS achievement TEXT;
+DO $$
+BEGIN
+  ALTER TABLE certificates ALTER COLUMN template_id DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- ====================================================
 -- REALTIME PUBLICATIONS (Required for Live Sync)
