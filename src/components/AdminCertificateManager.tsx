@@ -246,6 +246,21 @@ export default function AdminCertificateManager({
     return teamMembers.filter((m) => m.team_id === selectedTeamId);
   }, [teamMembers, selectedTeamId]);
 
+  // Number of team members who don't yet have this certificate type
+  const unissuedCount = useMemo(() => {
+    const targetEditionId = selectedEditionId || activeEdition?.id;
+    return currentTeamMembers.filter((m) => {
+      const memberName = (m.full_name || m.name || '').trim().toLowerCase();
+      return !certificatesList.some(
+        (c) =>
+          c.recipient_name.trim().toLowerCase() === memberName &&
+          c.certificate_type === certificateType &&
+          c.edition_id === targetEditionId &&
+          c.status === 'valid'
+      );
+    }).length;
+  }, [currentTeamMembers, certificatesList, certificateType, selectedEditionId, activeEdition?.id]);
+
   // Load issued certificates
   const loadCertificates = async () => {
     setLoadingList(true);
@@ -442,8 +457,24 @@ export default function AdminCertificateManager({
         activeEdition?.name
       );
 
+      // If some members have not been issued certificates, issue for those remaining members;
+      // If unissuedCount is 0, user clicked to re-issue for all team members.
+      const membersToIssue =
+        unissuedCount > 0
+          ? currentTeamMembers.filter((m) => {
+              const memberName = (m.full_name || m.name || '').trim().toLowerCase();
+              return !certificatesList.some(
+                (c) =>
+                  c.recipient_name.trim().toLowerCase() === memberName &&
+                  c.certificate_type === certificateType &&
+                  c.edition_id === targetEditionId &&
+                  c.status === 'valid'
+              );
+            })
+          : currentTeamMembers;
+
       const records = [];
-      for (const m of currentTeamMembers) {
+      for (const m of membersToIssue) {
         const memberName = (m.full_name || m.name || '').trim();
         if (!memberName) continue;
 
@@ -464,7 +495,7 @@ export default function AdminCertificateManager({
       }
 
       if (records.length === 0) {
-        onShowToast('No members found with valid names.', 'error');
+        onShowToast('No members found with valid names to issue.', 'error');
         return;
       }
 
@@ -810,11 +841,25 @@ export default function AdminCertificateManager({
                           type="button"
                           onClick={handleBatchIssueTeamCertificates}
                           disabled={batchIssuing || generating}
-                          className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-black text-xs font-black flex items-center gap-1.5 shadow-glow-cyan cursor-pointer transition-all disabled:opacity-50"
-                          title={`Issue "${CERTIFICATE_TYPE_LABELS[certificateType]}" certificate to all ${currentTeamMembers.length} members`}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 ${
+                            unissuedCount === 0
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                              : 'bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-black shadow-glow-cyan'
+                          }`}
+                          title={
+                            unissuedCount === 0
+                              ? `All ${currentTeamMembers.length} members already have this certificate. Click to re-issue for all.`
+                              : `Issue "${CERTIFICATE_TYPE_LABELS[certificateType]}" certificate to ${unissuedCount} remaining member${unissuedCount > 1 ? 's' : ''}`
+                          }
                         >
                           <Award size={13} />
-                          {batchIssuing ? 'Issuing...' : `⚡ Issue All (${currentTeamMembers.length})`}
+                          {batchIssuing
+                            ? 'Issuing...'
+                            : unissuedCount === 0
+                            ? `✓ All Issued (${currentTeamMembers.length})`
+                            : unissuedCount < currentTeamMembers.length
+                            ? `⚡ Issue Remaining (${unissuedCount}/${currentTeamMembers.length})`
+                            : `⚡ Issue All (${currentTeamMembers.length})`}
                         </button>
                       )}
                     </div>
@@ -833,7 +878,8 @@ export default function AdminCertificateManager({
                               (c) =>
                                 c.recipient_name.trim().toLowerCase() === memberName.toLowerCase() &&
                                 c.certificate_type === certificateType &&
-                                c.edition_id === selectedEditionId
+                                c.edition_id === (selectedEditionId || activeEdition?.id) &&
+                                c.status === 'valid'
                             );
                             return (
                               <button
@@ -843,16 +889,20 @@ export default function AdminCertificateManager({
                                 className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                                   isSelected
                                     ? 'bg-cyan-500 text-black font-bold ring-2 ring-cyan-300 shadow-glow-cyan'
+                                    : isAlreadyIssued
+                                    ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-700/60 hover:border-emerald-400'
                                     : 'bg-slate-900 text-slate-300 border border-slate-700/80 hover:border-cyan-500/60 hover:text-white'
                                 }`}
                               >
                                 <span>{memberName}</span>
+                                {isAlreadyIssued && (
                                   <span title="Certificate of this type already issued for this edition">
                                     <CheckCircle2
                                       size={12}
                                       className={isSelected ? 'text-black' : 'text-emerald-400'}
                                     />
                                   </span>
+                                )}
                               </button>
                             );
                           })}
