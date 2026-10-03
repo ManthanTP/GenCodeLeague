@@ -83,26 +83,26 @@ export default function Header({
 
   return (
     <header className="gcl-header-glass w-full sticky top-0 z-50 transition-all">
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 md:px-8 w-full flex items-center justify-between gap-3 h-full">
+      <div className="w-full px-6 md:px-7 flex items-center justify-between gap-4 h-full">
         {/* Brand identity */}
         <div
           className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0"
           onClick={() => navigate('/')}
         >
           <div
-            className="flex items-baseline font-bold leading-none font-['Rajdhani',sans-serif]"
+            className="flex items-baseline font-bold leading-none font-['Barlow_Semi_Condensed',sans-serif]"
             style={{ letterSpacing: '-2px' }}
           >
-            <span className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">GC</span>
-            <span className="text-[#e8212e] text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">L</span>
+            <span className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-[56px]">GC</span>
+            <span className="text-[#ff2a3d] text-3xl sm:text-4xl md:text-5xl lg:text-[56px]">L</span>
           </div>
 
           <div className="flex flex-col border-l border-[#35353b] pl-2 sm:pl-3 ml-1">
-            <span className="text-sm sm:text-lg md:text-xl font-bold tracking-tight text-[#f4f4f6] uppercase leading-tight font-['Rajdhani',sans-serif]">
-              GEN CODE LEAGUE
+            <span className="text-sm sm:text-lg md:text-xl font-bold tracking-tight text-[#f5f5f7] uppercase leading-tight font-['Barlow_Semi_Condensed',sans-serif]">
+              GENCODE LEAGUE
             </span>
-            <span className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#9a9aa3] flex items-center gap-1.5 mt-0.5">
-              <span className="dot w-2 h-2 rounded-full bg-[#e8212e] shrink-0" />
+            <span className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#8e8e9a] flex items-center gap-1.5 mt-0.5">
+              <span className="dot w-2 h-2 rounded-full bg-[#ff2a3d] shrink-0" />
               LIVE AUCTION
             </span>
           </div>
@@ -133,8 +133,8 @@ export default function Header({
                       style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                     >
                       <IconComponent
-                        size={20}
-                        fill={link.label === 'Hall of Fame' ? (active && link.isLive ? '#ff4a56' : '#f4f4f6') : 'none'}
+                        size={19}
+                        fill={link.label === 'Hall of Fame' ? (active && link.isLive ? '#ff2a3d' : '#f5f5f7') : 'none'}
                         className="shrink-0"
                       />
                       <span>{link.label}</span>
@@ -149,11 +149,11 @@ export default function Header({
         {/* Center: Fullscreen Status Badge */}
         {isFullscreen && (
           <div className="gcl-glass px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold flex items-center gap-2 font-mono">
-            <span className="text-white border-b-2 border-[#e11d2e] pb-0.5">
+            <span className="text-white border-b-2 border-[#ff2a3d] pb-0.5">
               {(currentRoundName || 'ROUND 1').toUpperCase()}
             </span>
             <span className="text-slate-500">|</span>
-            <span className="text-[#9a9aa3]">
+            <span className="text-[#8e8e9a]">
               Q {(questionIdx !== undefined ? questionIdx + 1 : 1)}/{totalQuestions || 20}
             </span>
           </div>
@@ -164,26 +164,26 @@ export default function Header({
           {/* Desktop/Tablet Stat Cards (Shown on Large screens) */}
           <div className="hidden lg:flex items-center gap-2.5">
             {/* Remaining Budget glass card */}
-            <div className="panel red h-14 sm:h-16 rounded-xl px-3 sm:px-4 flex items-center gap-2.5 whitespace-nowrap shrink-0">
-              <Wallet size={24} className="text-[#f4f4f6] shrink-0" />
+            <div className="panel red h-11 sm:h-12 rounded-xl px-3 sm:px-4 flex items-center gap-2.5 whitespace-nowrap shrink-0">
+              <Wallet size={20} className="text-[#2fd16f] shrink-0" />
               <div>
-                <p className="text-[11px] text-[#b5b5bd] leading-none font-sans">
+                <p className="text-[11px] text-[#8e8e9a] leading-none font-sans">
                   Remaining Budget
                 </p>
-                <p className="text-lg sm:text-xl font-bold text-[#ff4350] mt-1 leading-none font-['Rajdhani',sans-serif] font-mono">
+                <p className="text-base sm:text-lg font-bold text-[#2fd16f] mt-1 leading-none font-['Barlow_Semi_Condensed',sans-serif] font-mono">
                   {displayBudget}
                 </p>
               </div>
             </div>
 
             {/* Total Teams glass card */}
-            <div className="panel h-14 sm:h-16 rounded-xl px-3 sm:px-4 flex items-center gap-2 whitespace-nowrap shrink-0">
-              <Users size={22} className="text-[#f4f4f6] shrink-0" />
+            <div className="panel h-11 sm:h-12 rounded-xl px-3 sm:px-4 flex items-center gap-2 whitespace-nowrap shrink-0">
+              <Users size={19} className="text-[#f5f5f7] shrink-0" />
               <div>
-                <p className="text-[11px] text-[#b5b5bd] leading-none font-sans">
+                <p className="text-[11px] text-[#8e8e9a] leading-none font-sans">
                   Total Teams
                 </p>
-                <p className="text-lg sm:text-xl font-bold text-[#f4f4f6] mt-1 leading-none font-['Rajdhani',sans-serif] font-mono">
+                <p className="text-base sm:text-lg font-bold text-[#f5f5f7] mt-1 leading-none font-['Barlow_Semi_Condensed',sans-serif] font-mono">
                   {displayTeams}
                 </p>
               </div>
@@ -205,7 +205,7 @@ export default function Header({
           {/* Mobile hamburger toggle (Large touch target) */}
           {!isFullscreen && viewMode === 'live' && (
             <button
-              className="xl:hidden w-11 h-11 flex items-center justify-center rounded-xl bg-[#18181c] border border-[#2c2c33] text-[#f4f4f6] hover:text-[#ff4d5a] hover:border-[#ff4d5a] transition-all cursor-pointer"
+              className="xl:hidden w-11 h-11 flex items-center justify-center rounded-xl bg-[#18181c] border border-[#282832] text-[#f5f5f7] hover:text-[#ff2a3d] hover:border-[#ff2a3d] transition-all cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
               aria-expanded={mobileMenuOpen}
@@ -220,17 +220,17 @@ export default function Header({
       {mobileMenuOpen && viewMode === 'live' && (
         <div
           id="mobile-nav-drawer"
-          className="xl:hidden absolute top-full left-0 right-0 z-50 bg-[#131317]/95 backdrop-blur-xl border-b border-[#35353b] p-4 shadow-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="xl:hidden absolute top-full left-0 right-0 z-50 bg-[#131317]/95 backdrop-blur-xl border-b border-[#282832] p-4 shadow-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {/* Mobile Stat Cards */}
-          <div className="grid grid-cols-2 gap-2.5 pb-2 border-b border-[#26262c]">
+          <div className="grid grid-cols-2 gap-2.5 pb-2 border-b border-[#24242e]">
             <div className="panel red p-3 rounded-xl flex items-center gap-2">
-              <Wallet size={20} className="text-[#ff4d5a] shrink-0" />
+              <Wallet size={20} className="text-[#2fd16f] shrink-0" />
               <div className="min-w-0">
-                <span className="text-[10px] text-[#9a9aa3] block truncate font-sans">
+                <span className="text-[10px] text-[#8e8e9a] block truncate font-sans">
                   Remaining Budget
                 </span>
-                <span className="text-base font-bold text-[#ff4d5a] block truncate font-['Rajdhani',sans-serif]">
+                <span className="text-base font-bold text-[#2fd16f] block truncate font-['Barlow_Semi_Condensed',sans-serif]">
                   {displayBudget}
                 </span>
               </div>
@@ -239,10 +239,10 @@ export default function Header({
             <div className="panel p-3 rounded-xl flex items-center gap-2">
               <Users size={18} className="text-white shrink-0" />
               <div className="min-w-0">
-                <span className="text-[10px] text-[#9a9aa3] block truncate font-sans">
+                <span className="text-[10px] text-[#8e8e9a] block truncate font-sans">
                   Registered Teams
                 </span>
-                <span className="text-base font-bold text-white block truncate font-['Rajdhani',sans-serif]">
+                <span className="text-base font-bold text-white block truncate font-['Barlow_Semi_Condensed',sans-serif]">
                   {displayTeams} Teams
                 </span>
               </div>
@@ -262,16 +262,16 @@ export default function Header({
                     handleNavClick(link.path);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full min-h-[48px] px-4 rounded-xl flex items-center gap-3 text-sm font-bold tracking-wide transition-all cursor-pointer font-['Rajdhani',sans-serif] ${
+                  className={`w-full min-h-[48px] px-4 rounded-xl flex items-center gap-3 text-sm font-bold tracking-wide transition-all cursor-pointer font-['Barlow_Semi_Condensed',sans-serif] ${
                     active && link.isLive
-                      ? 'bg-[linear-gradient(#45141b,#2a0c11)] text-[#ff4a56] border border-[#a6212c] shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                      : 'bg-[#18181c] text-[#f4f4f6] border border-[#2c2c33] hover:bg-[#222228] hover:border-[#3e3e48]'
+                      ? 'bg-[linear-gradient(180deg,#3d0c14,#24070c)] text-[#ff2a3d] border border-[#ff2a3d] shadow-[0_0_12px_rgba(255,42,61,0.3)]'
+                      : 'bg-[#18181c] text-[#f5f5f7] border border-[#282832] hover:bg-[#202028] hover:border-[#3e3e4a]'
                   }`}
                 >
                   <Icon
                     size={18}
                     className="shrink-0"
-                    style={{ color: active && link.isLive ? '#ff4a56' : '#9a9aa3' }}
+                    style={{ color: active && link.isLive ? '#ff2a3d' : '#8e8e9a' }}
                   />
                   <span className="uppercase text-sm">{link.label}</span>
                 </button>

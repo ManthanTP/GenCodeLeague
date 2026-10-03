@@ -42,7 +42,6 @@ export default function LiveTeamStatus({
       roundAllocated = effectiveStartingBudget + r2Remaining;
     }
     const calculatedRemaining = Math.max(0, roundAllocated - spent);
-    // Use calculatedRemaining for exact round accuracy
     const budget = calculatedRemaining;
 
     return {
@@ -56,10 +55,20 @@ export default function LiveTeamStatus({
   });
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {/* Title & Real-time pill outside the table card */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#f4f4f6', letterSpacing: '0.02em', margin: 0, lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px', flexShrink: 0 }}>
+        <h2
+          style={{
+            fontSize: '26px',
+            fontWeight: 700,
+            color: '#f5f5f7',
+            letterSpacing: '0.02em',
+            margin: 0,
+            lineHeight: 1,
+            fontFamily: "'Barlow Semi Condensed', sans-serif",
+          }}
+        >
           Live Team Status
         </h2>
         <div
@@ -68,14 +77,32 @@ export default function LiveTeamStatus({
             alignItems: 'center',
             gap: '7px',
             height: '26px',
-            border: '1px solid rgba(232, 33, 46, 0.55)',
+            border: '1px solid rgba(255, 42, 61, 0.55)',
             borderRadius: '9999px',
-            background: 'rgba(232, 33, 46, 0.12)',
+            background: 'rgba(255, 42, 61, 0.12)',
             padding: '0 11px',
           }}
         >
-          <div className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#e8212e', boxShadow: '0 0 6px #e8212e', flexShrink: 0 }} />
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ff4350', letterSpacing: '0.06em', fontFamily: "'Inter', sans-serif" }}>
+          <div
+            className="dot"
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: '#ff2a3d',
+              boxShadow: '0 0 6px #ff2a3d',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 700,
+              color: '#ff2a3d',
+              letterSpacing: '0.06em',
+              fontFamily: "'Barlow Semi Condensed', sans-serif",
+            }}
+          >
             REAL-TIME
           </span>
         </div>
@@ -86,34 +113,50 @@ export default function LiveTeamStatus({
         id="live-team-status-section"
         className="panel red"
         style={{
-          padding: '10px 14px',
+          padding: '16px 20px',
           position: 'relative',
+          borderRadius: '16px',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
-          borderRadius: '14px',
         }}
       >
-        {/* Table Container */}
-        <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', zIndex: 10 }}>
+        {/* Table Container with internal scroll */}
+        <div
+          className="gcl-thin-scrollbar"
+          style={{
+            width: '100%',
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            position: 'relative',
+            zIndex: 10,
+          }}
+        >
           <table
             style={{
               width: '100%',
               minWidth: '550px',
               borderCollapse: 'separate',
-              borderSpacing: '0 2px',
+              borderSpacing: '0 3px',
               textAlign: 'left',
             }}
           >
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
               <tr
                 style={{
-                  height: '34px',
-                  background: '#1a1a1f',
+                  height: '38px',
+                  background: '#15151b',
                   borderRadius: '6px',
-                  color: '#9a9aa3',
-                  fontSize: '15px',
+                  color: '#8e8e9a',
+                  fontSize: '14px',
                   fontWeight: 600,
                   letterSpacing: '0.8px',
-                  fontFamily: "'Rajdhani', sans-serif",
+                  fontFamily: "'Barlow Semi Condensed', sans-serif",
                 }}
               >
                 <th style={{ width: '60px', textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>#</th>
@@ -131,7 +174,7 @@ export default function LiveTeamStatus({
                     style={{
                       padding: '2rem 1rem',
                       textAlign: 'center',
-                      color: '#9a9aa3',
+                      color: '#8e8e9a',
                       fontSize: '15px',
                       fontFamily: "'Inter', sans-serif",
                     }}
@@ -144,13 +187,15 @@ export default function LiveTeamStatus({
                   const numStr = String(idx + 1).padStart(2, '0');
                   const isSelected = row.isYou;
                   const isEven = idx % 2 === 0;
-                  const rowBg = isSelected ? '#2b0e13' : (isEven ? '#18181d' : '#121216');
+                  const rowBg = isSelected
+                    ? 'rgba(255, 42, 61, 0.12)'
+                    : (isEven ? '#141419' : '#0e0e12');
 
                   return (
                     <tr
                       key={row.id}
                       style={{
-                        height: isSelected ? '38px' : '36px',
+                        height: '44px',
                         background: rowBg,
                         transition: 'background 0.2s ease',
                       }}
@@ -160,23 +205,25 @@ export default function LiveTeamStatus({
                         style={{
                           textAlign: 'center',
                           padding: '0 8px',
-                          borderTop: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderLeft: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderTopLeftRadius: '6px',
-                          borderBottomLeftRadius: '6px',
+                          borderTop: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderBottom: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderLeft: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderTopLeftRadius: '8px',
+                          borderBottomLeftRadius: '8px',
                         }}
                       >
                         <div
                           className="num"
                           style={{
-                            width: '40px',
-                            height: '24px',
-                            borderRadius: '5px',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
                             fontSize: '15px',
                             fontWeight: 700,
                             margin: '0 auto',
-                            background: isSelected ? '#3a1015' : undefined,
+                            background: isSelected ? 'rgba(255, 42, 61, 0.25)' : '#1c1c24',
+                            border: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : '1px solid rgba(255, 255, 255, 0.08)',
+                            color: '#f5f5f7',
                           }}
                         >
                           {numStr}
@@ -188,12 +235,12 @@ export default function LiveTeamStatus({
                         style={{
                           textAlign: 'left',
                           padding: '0 14px',
-                          borderTop: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
+                          borderTop: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderBottom: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '15px', color: '#f4f4f6', fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
+                          <span style={{ fontSize: '15px', color: '#f5f5f7', fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
                             {row.name}
                           </span>
                           {isSelected && (
@@ -201,9 +248,13 @@ export default function LiveTeamStatus({
                               className="chip"
                               style={{
                                 width: '38px',
-                                height: '20px',
+                                height: '22px',
                                 fontSize: '11px',
-                                fontWeight: 700,
+                                fontWeight: 800,
+                                background: '#ff2a3d',
+                                color: '#ffffff',
+                                borderRadius: '6px',
+                                boxShadow: '0 0 10px rgba(255, 42, 61, 0.4)',
                               }}
                             >
                               YOU
@@ -218,8 +269,8 @@ export default function LiveTeamStatus({
                           textAlign: 'center',
                           verticalAlign: 'middle',
                           padding: '4px 12px',
-                          borderTop: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
+                          borderTop: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderBottom: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
@@ -229,17 +280,17 @@ export default function LiveTeamStatus({
                               alignItems: 'center',
                               justifyContent: 'center',
                               width: '42px',
-                              height: '26px',
+                              height: '28px',
                               borderRadius: '6px',
                               fontSize: '15px',
                               fontWeight: 700,
-                              fontFamily: "'Rajdhani', sans-serif",
+                              fontFamily: "'Barlow Semi Condensed', sans-serif",
                               fontVariantNumeric: 'tabular-nums',
                               lineHeight: 1,
-                              background: row.itemsBought > 0 ? 'rgba(232, 33, 46, 0.22)' : '#19191f',
-                              color: row.itemsBought > 0 ? '#ff4d5a' : '#8a8a94',
-                              border: row.itemsBought > 0 ? '1px solid rgba(232, 33, 46, 0.55)' : '1px solid #282832',
-                              boxShadow: row.itemsBought > 0 ? '0 0 10px rgba(232, 33, 46, 0.3)' : 'none',
+                              background: row.itemsBought > 0 ? 'rgba(255, 42, 61, 0.18)' : '#18181f',
+                              color: row.itemsBought > 0 ? '#ff2a3d' : '#8e8e9a',
+                              border: row.itemsBought > 0 ? '1px solid rgba(255, 42, 61, 0.45)' : '1px solid #282832',
+                              boxShadow: row.itemsBought > 0 ? '0 0 10px rgba(255, 42, 61, 0.3)' : 'none',
                             }}
                           >
                             {row.itemsBought}
@@ -252,32 +303,33 @@ export default function LiveTeamStatus({
                         style={{
                           textAlign: 'center',
                           padding: '0 14px',
-                          fontSize: '16px',
-                          color: '#f4f4f6',
-                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: '17px',
+                          fontWeight: 700,
+                          color: '#f5f5f7',
+                          fontFamily: "'Barlow Semi Condensed', sans-serif",
                           fontVariantNumeric: 'tabular-nums',
-                          borderTop: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
+                          borderTop: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderBottom: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
                         }}
                       >
                         {formatCurrency(row.spent)}
                       </td>
 
-                      {/* Remaining */}
+                      {/* Remaining (Bright Green #2fd16f) */}
                       <td
                         style={{
                           textAlign: 'center',
                           padding: '0 14px',
-                          fontSize: '17px',
-                          fontWeight: 600,
-                          color: '#3fe085',
-                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          color: '#2fd16f',
+                          fontFamily: "'Barlow Semi Condensed', sans-serif",
                           fontVariantNumeric: 'tabular-nums',
-                          borderTop: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderRight: isSelected ? '1px solid #7a1a22' : 'none',
-                          borderTopRightRadius: '6px',
-                          borderBottomRightRadius: '6px',
+                          borderTop: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderBottom: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderRight: isSelected ? '1px solid rgba(255, 42, 61, 0.55)' : 'none',
+                          borderTopRightRadius: '8px',
+                          borderBottomRightRadius: '8px',
                         }}
                       >
                         {formatCurrency(row.budget)}
