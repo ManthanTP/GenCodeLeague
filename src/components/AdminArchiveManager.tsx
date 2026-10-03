@@ -338,6 +338,11 @@ export default function AdminArchiveManager({
       const { error } = await supabase.from('editions').delete().eq('id', selectedEditionId);
       if (error) throw error;
 
+      // Delete associated transaction log for this edition
+      try {
+        localStorage.removeItem(`gcl_transaction_history_${selectedEditionId}`);
+      } catch {}
+
       await logAdminAction('EDITION_DELETED', {
         edition_id: selectedEditionId,
         name: activeEdition.name,

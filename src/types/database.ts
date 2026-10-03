@@ -94,6 +94,7 @@ export interface TeamItem {
 
 export interface TransactionEntry {
   id: string | number;
+  edition_id?: string;
   time: string;
   action: string;
   details: string;

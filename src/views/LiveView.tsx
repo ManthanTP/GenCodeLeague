@@ -20,6 +20,7 @@ import {
   History,
   Trophy,
   Flame,
+  Lock,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -362,8 +363,8 @@ export default function LiveView() {
     if (!items || items.length === 0) return null;
     return items.find(
       (it) =>
-        it.round_index === roundIdx &&
-        it.question_index === questionIdx
+        Number(it.round_index) === Number(roundIdx) &&
+        Number(it.question_index) === Number(questionIdx)
     ) || null;
   }, [items, roundIdx, questionIdx]);
 
@@ -661,6 +662,29 @@ export default function LiveView() {
                     <span style={{ fontSize: '14px', letterSpacing: '0.4px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                       QUESTION {questionIdx + 1} OF {totalQuestions}
                     </span>
+                    {alreadySoldItem && (
+                      <>
+                        <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: 'rgba(232, 33, 46, 0.22)',
+                            border: '1px solid #e8212e',
+                            color: '#ff4d5a',
+                            fontSize: '13px',
+                            fontWeight: 800,
+                            fontFamily: "'Rajdhani', sans-serif",
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          <Lock size={13} /> QUESTION LOCKED — SOLD TO {soldBuyerTeam?.name?.toUpperCase() || 'TEAM'} ({formatCurrency(alreadySoldItem.cost)})
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   <h2
@@ -699,26 +723,32 @@ export default function LiveView() {
                     justifyContent: 'center',
                     flexShrink: 0,
                     zIndex: 10,
+                    border: alreadySoldItem ? '1px solid rgba(232, 33, 46, 0.5)' : undefined,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock size={22} style={{ color: '#e8212e' }} />
-                    <span style={{ fontSize: '19px', fontWeight: 600, color: '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
-                      BID TIMER
+                    {alreadySoldItem ? (
+                      <Lock size={22} style={{ color: '#e8212e' }} />
+                    ) : (
+                      <Clock size={22} style={{ color: '#e8212e' }} />
+                    )}
+                    <span style={{ fontSize: '19px', fontWeight: 600, color: alreadySoldItem ? '#ff4d5a' : '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
+                      {alreadySoldItem ? 'QUESTION SOLD' : 'BID TIMER'}
                     </span>
                   </div>
                   <div
                     style={{
-                      fontSize: '46px',
+                      fontSize: alreadySoldItem ? '34px' : '46px',
                       fontWeight: 700,
                       fontFamily: "'Rajdhani', sans-serif",
                       fontVariantNumeric: 'tabular-nums',
                       lineHeight: 1,
                       marginTop: '4px',
-                      color: '#f4f4f6',
+                      color: alreadySoldItem ? '#ff4d5a' : '#f4f4f6',
+                      letterSpacing: alreadySoldItem ? '0.05em' : 'normal',
                     }}
                   >
-                    {isTimerRunning && timeLeft > 0 ? timerFormatted : '00:00'}
+                    {alreadySoldItem ? 'LOCKED' : (isTimerRunning && timeLeft > 0 ? timerFormatted : '00:00')}
                   </div>
                   <div style={{ width: '161px', height: '7px', borderRadius: '4px', background: '#26262c', marginTop: '6px', overflow: 'hidden' }}>
                     <div
@@ -726,9 +756,9 @@ export default function LiveView() {
                         height: '7px',
                         borderRadius: '4px',
                         background: '#e8212e',
-                        width: (isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
+                        width: alreadySoldItem ? '100%' : ((isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
                           ? `${Math.max(0, Math.min(100, (timeLeft / eventState.timer_duration_seconds) * 100))}%`
-                          : '0%',
+                          : '0%'),
                         transition: 'width 1s linear',
                       }}
                     />
@@ -761,23 +791,6 @@ export default function LiveView() {
                         minWidth: '320px',
                       }}
                     >
-                      {/* Top-right corner strips */}
-                      <div
-                        className="strip"
-                        style={{
-                          clipPath: 'polygon(calc(100% - 100px) 0, calc(100% - 46px) 0, 100% 46px, 100% 100px)',
-                          background: 'repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 1px,rgba(0,0,0,.14) 1px 3px),linear-gradient(225deg,rgba(255,255,255,.13),rgba(255,255,255,.03))',
-                        }}
-                      />
-                      <div
-                        className="strip"
-                        style={{
-                          clipPath: 'polygon(calc(100% - 50px) 0, calc(100% - 46px) 0, 100% 46px, 100% 50px)',
-                          background: '#ff2a38',
-                          filter: 'drop-shadow(0 0 4px rgba(232,33,46,.8))',
-                        }}
-                      />
-
                       {/* Header: Pulsing red dot + CURRENT BID + Question Ref */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -904,16 +917,6 @@ export default function LiveView() {
                         borderColor: '#2f2f38',
                       }}
                     >
-                      {/* Corner laser strip */}
-                      <div
-                        className="strip"
-                        style={{
-                          clipPath: 'polygon(calc(100% - 50px) 0, calc(100% - 46px) 0, 100% 46px, 100% 50px)',
-                          background: '#22c55e',
-                          filter: 'drop-shadow(0 0 4px rgba(34,197,94,.8))',
-                        }}
-                      />
-
                       {/* Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -1177,6 +1180,7 @@ export default function LiveView() {
                 myTeamId={effectiveMyTeamId}
                 items={items}
                 currentRoundIndex={roundIdx}
+                startingBudget={edition?.starting_budget || 50000000}
               />
             </div>
 
@@ -1565,7 +1569,7 @@ export default function LiveView() {
                     const position = i + 1;
                     const reveal = effectiveReveals.find((r) => r.position === position);
                     const isRevealed = Boolean(reveal?.is_revealed);
-                    const r1Result = r1Snapshot?.results?.[position - 1] || r1Snapshot?.results?.find((r) => r.id === reveal?.team_id);
+                    const r1Result = (reveal?.team_id ? r1Snapshot?.results?.find((r) => r.id === reveal.team_id) : null) || r1Snapshot?.results?.[position - 1];
                     const teamObj = teams.find((t) => t.id === reveal?.team_id) || (r1Result?.id ? teams.find((t) => t.id === r1Result.id) : undefined);
 
                     // Robust fallback for team name: never blank during reveal time
@@ -1578,11 +1582,11 @@ export default function LiveView() {
                     const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
 
                     const teamId = reveal?.team_id || teamObj?.id || r1Result?.id;
-                    const r1TeamItems = items.filter((it) => it.team_id === teamId && it.round_index === 0);
+                    const r1TeamItems = items.filter((it) => it.team_id === teamId && Number(it.round_index) === 0);
                     const r1ItemsCount = r1Result?.itemsCount ?? r1TeamItems.length;
                     const r1TotalSpent = r1Result?.totalSpent ?? r1TeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
                     const startingBudget = edition?.starting_budget || 50000000;
-                    const r1Remaining = r1Result?.remainingBudget ?? (teamObj?.budget ?? Math.max(0, startingBudget - r1TotalSpent));
+                    const r1Remaining = r1Result?.remainingBudget !== undefined ? r1Result.remainingBudget : Math.max(0, startingBudget - r1TotalSpent);
 
                     if (!isRevealed) {
                       return (

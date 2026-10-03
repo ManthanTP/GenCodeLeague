@@ -12,26 +12,45 @@ interface LiveTeamStatusProps {
 
 export default function LiveTeamStatus({
   teams = [],
+  startingBudget,
   myTeamId,
   items = [],
   currentRoundIndex = 0,
 }: LiveTeamStatusProps) {
+  const effectiveStartingBudget = startingBudget || 50000000;
+  const currentRIdx = Number(currentRoundIndex ?? 0);
+
   const displayRows = (teams || []).map((team) => {
     // Only items bought in the specified round
     const roundItems = (items || []).filter(
-      (it) => it.team_id === team.id && it.round_index === currentRoundIndex
+      (it) => it.team_id === team.id && Number(it.round_index) === currentRIdx
     );
     const itemsBought = roundItems.length;
     const spent = roundItems.reduce((acc, it) => acc + (it.cost || 0), 0);
     const isMyTeam = Boolean(
       myTeamId && (team.id === myTeamId || (team.linked_team_id && team.linked_team_id === myTeamId))
     );
+
+    // Calculate exact remaining budget for this round
+    let roundAllocated = effectiveStartingBudget;
+    if (currentRIdx === 2) {
+      // Round 3 budget includes Round 2 remaining budget carryover
+      const r2Spent = (items || [])
+        .filter((it) => it.team_id === team.id && Number(it.round_index) === 1)
+        .reduce((acc, it) => acc + (it.cost || 0), 0);
+      const r2Remaining = Math.max(0, effectiveStartingBudget - r2Spent);
+      roundAllocated = effectiveStartingBudget + r2Remaining;
+    }
+    const calculatedRemaining = Math.max(0, roundAllocated - spent);
+    // Use calculatedRemaining for exact round accuracy
+    const budget = calculatedRemaining;
+
     return {
       id: team.id,
       name: team.name,
       itemsBought,
       spent,
-      budget: team.budget,
+      budget,
       isYou: isMyTeam,
     };
   });
@@ -196,31 +215,35 @@ export default function LiveTeamStatus({
                       <td
                         style={{
                           textAlign: 'center',
-                          padding: '0 12px',
+                          verticalAlign: 'middle',
+                          padding: '4px 12px',
                           borderTop: isSelected ? '1px solid #7a1a22' : 'none',
                           borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
                         }}
                       >
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '26px',
-                            height: '22px',
-                            padding: '0 8px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            fontWeight: 700,
-                            fontFamily: "'Rajdhani', sans-serif",
-                            fontVariantNumeric: 'tabular-nums',
-                            background: row.itemsBought > 0 ? 'rgba(232, 33, 46, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                            color: row.itemsBought > 0 ? '#ff4d5a' : '#8a8a94',
-                            border: row.itemsBought > 0 ? '1px solid rgba(232, 33, 46, 0.35)' : '1px solid rgba(255, 255, 255, 0.05)',
-                          }}
-                        >
-                          {row.itemsBought}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '42px',
+                              height: '26px',
+                              borderRadius: '6px',
+                              fontSize: '15px',
+                              fontWeight: 700,
+                              fontFamily: "'Rajdhani', sans-serif",
+                              fontVariantNumeric: 'tabular-nums',
+                              lineHeight: 1,
+                              background: row.itemsBought > 0 ? 'rgba(232, 33, 46, 0.22)' : '#19191f',
+                              color: row.itemsBought > 0 ? '#ff4d5a' : '#8a8a94',
+                              border: row.itemsBought > 0 ? '1px solid rgba(232, 33, 46, 0.55)' : '1px solid #282832',
+                              boxShadow: row.itemsBought > 0 ? '0 0 10px rgba(232, 33, 46, 0.3)' : 'none',
+                            }}
+                          >
+                            {row.itemsBought}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Total Spent this round */}

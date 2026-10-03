@@ -108,6 +108,7 @@ export default function AdminPanel() {
   // 4 Confirmation Dialog States (Point 7)
   const [isConfirmingSold, setIsConfirmingSold] = useState(false);
   const [isConfirmingUndo, setIsConfirmingUndo] = useState(false);
+  const [isTeamManagementModalOpen, setIsTeamManagementModalOpen] = useState(false);
   const [editingTeamNames, setEditingTeamNames] = useState<Record<string, string>>({});
   const [teamPendingEdit, setTeamPendingEdit] = useState<{ id: string; oldName: string; newName: string } | null>(null);
 
@@ -126,15 +127,21 @@ export default function AdminPanel() {
   const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean>(false);
   const [currentItem, setCurrentItem] = useState<string>('');
 
-  // Persistent Transaction History across page reloads
-  const [localHistory, setLocalHistory] = useState<TransactionEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem('gcl_transaction_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+  // Persistent Transaction History scoped strictly to current active edition
+  const [localHistory, setLocalHistory] = useState<TransactionEntry[]>([]);
+
+  useEffect(() => {
+    if (!edition?.id) {
+      setLocalHistory([]);
+      return;
     }
-  });
+    try {
+      const saved = localStorage.getItem(`gcl_transaction_history_${edition.id}`);
+      setLocalHistory(saved ? JSON.parse(saved) : []);
+    } catch {
+      setLocalHistory([]);
+    }
+  }, [edition?.id]);
 
   // Podium Management State (matches Old GCL Admin UI)
   const [podiumState, setPodiumState] = useState({
@@ -254,6 +261,7 @@ export default function AdminPanel() {
   };
 
   const addHistory = useCallback((action: string, details: string) => {
+    if (!edition?.id) return;
     const timestamp = new Date().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -261,6 +269,7 @@ export default function AdminPanel() {
     });
     const entry: TransactionEntry = {
       id: Date.now(),
+      edition_id: edition.id,
       time: timestamp,
       action,
       details,
@@ -268,11 +277,11 @@ export default function AdminPanel() {
     setLocalHistory((prev) => {
       const updated = [entry, ...prev];
       try {
-        localStorage.setItem('gcl_transaction_history', JSON.stringify(updated.slice(0, 100)));
+        localStorage.setItem(`gcl_transaction_history_${edition.id}`, JSON.stringify(updated.slice(0, 100)));
       } catch {}
       return updated;
     });
-  }, []);
+  }, [edition?.id]);
 
   // Compute team stats (spent, won count)
   const teamsWithStats = useMemo(() => {
@@ -440,10 +449,10 @@ export default function AdminPanel() {
     [teams, lastItem]
   );
 
-  const currentQIndex = eventState?.current_question_index ?? 0;
+  const currentQIndex = Number(eventState?.current_question_index ?? 0);
   const alreadySoldItem = useMemo(() => {
     return items.find(
-      (item) => item.round_index === currentRoundIndex && item.question_index === currentQIndex
+      (item) => Number(item.round_index) === Number(currentRoundIndex) && Number(item.question_index) === currentQIndex
     );
   }, [items, currentRoundIndex, currentQIndex]);
 
@@ -827,28 +836,34 @@ export default function AdminPanel() {
   // --- GCL ROUND SYSTEM STATE MACHINE HANDLERS ---
 
   // 1. Round 1 Completion: Finalize internally, lock results, enter manual reveal
-  const handleCompleteRound1 = async () => {
+  const handleCompleteRound1 = async (itemsOverride?: TeamItem[], teamsOverride?: Team[]) => {
     if (!eventState?.id || !edition?.id) return;
 
+    const sourceItems = itemsOverride || items;
+    const sourceTeams = teamsOverride || teams;
+    const startingBudget = edition.starting_budget || 50000000;
+
     // Snapshot Round 1 results internally
-    const r1Results = teamsWithStats.map((t) => {
-      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 0);
+    const r1Results = sourceTeams.map((t) => {
+      const tItems = sourceItems.filter((it) => it.team_id === t.id && Number(it.round_index) === 0);
       const score = tItems.filter((it) => it.is_correct).length;
       const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const remainingBudget = Math.max(0, startingBudget - spent);
       return {
         id: t.id,
         name: t.name,
         score,
         itemsCount: tItems.length,
         totalSpent: spent,
-        remainingBudget: t.budget,
-        startingBudget: edition.starting_budget,
+        remainingBudget,
+        startingBudget,
       };
     });
 
-    // Internal ranking for Round 1 (Score DESC -> Remaining Budget DESC -> Name ASC)
+    // Internal ranking for Round 1 (Score DESC -> Items Count DESC -> Remaining Budget DESC -> Name ASC)
     const sortedR1 = [...r1Results].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
+      if (b.itemsCount !== a.itemsCount) return b.itemsCount - a.itemsCount;
       if (b.remainingBudget !== a.remainingBudget) return b.remainingBudget - a.remainingBudget;
       return a.name.localeCompare(b.name);
     });
@@ -945,6 +960,13 @@ export default function AdminPanel() {
       return;
     }
 
+    // Check if chosenTeam was previously assigned to another unrevealed position
+    // If so, swap with the team currently at targetPosition to prevent duplicates or missing teams
+    const currentTargetEntry = r1Reveals.find((r) => r.position === targetPosition);
+    const prevAssignedPos = r1Reveals.find(
+      (r) => r.position !== targetPosition && r.team_id === chosenTeam.id && !r.is_revealed
+    );
+
     const updatedReveals = r1Reveals.map((r) => {
       if (r.position === targetPosition) {
         return {
@@ -954,6 +976,13 @@ export default function AdminPanel() {
           is_revealed: true,
           revealed_by: 'admin',
           revealed_at: new Date().toISOString(),
+        };
+      }
+      if (prevAssignedPos && r.position === prevAssignedPos.position && currentTargetEntry) {
+        return {
+          ...r,
+          team_id: currentTargetEntry.team_id,
+          team_name: currentTargetEntry.team_name,
         };
       }
       return r;
@@ -1078,22 +1107,27 @@ export default function AdminPanel() {
   };
 
   // 5. Round 2 Completion: Direct to Intermission (NO reveal)
-  const handleCompleteRound2 = async () => {
+  const handleCompleteRound2 = async (itemsOverride?: TeamItem[], teamsOverride?: Team[]) => {
     if (!eventState?.id || !edition?.id) return;
 
+    const sourceItems = itemsOverride || items;
+    const sourceTeams = teamsOverride || teams;
+    const startingBudget = edition.starting_budget || 50000000;
+
     // Snapshot Round 2 results internally
-    const r2Results = teamsWithStats.map((t) => {
-      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 1);
+    const r2Results = sourceTeams.map((t) => {
+      const tItems = sourceItems.filter((it) => it.team_id === t.id && Number(it.round_index) === 1);
       const score = tItems.filter((it) => it.is_correct).length;
       const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const remainingBudget = Math.max(0, startingBudget - spent);
       return {
         id: t.id,
         name: t.name,
         score,
         itemsCount: tItems.length,
         totalSpent: spent,
-        remainingBudget: t.budget, // Team's remaining budget at end of Round 2
-        startingBudget: edition.starting_budget,
+        remainingBudget,
+        startingBudget,
       };
     });
 
@@ -1291,20 +1325,30 @@ export default function AdminPanel() {
   };
 
   // 8. Round 3 Completion: Final results & Podium transition
-  const handleCompleteRound3 = async () => {
+  const handleCompleteRound3 = async (itemsOverride?: TeamItem[], teamsOverride?: Team[]) => {
     if (!eventState?.id || !edition?.id) return;
 
-    const r3Results = teamsWithStats.map((t) => {
-      const tItems = items.filter((it) => it.team_id === t.id && it.round_index === 2);
+    const sourceItems = itemsOverride || items;
+    const sourceTeams = teamsOverride || teams;
+    const startingBudget = edition.starting_budget || 50000000;
+
+    const r3Results = sourceTeams.map((t) => {
+      const tItems = sourceItems.filter((it) => it.team_id === t.id && Number(it.round_index) === 2);
       const score = tItems.filter((it) => it.is_correct).length;
       const spent = tItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+      const r2Spent = sourceItems
+        .filter((it) => it.team_id === t.id && Number(it.round_index) === 1)
+        .reduce((acc, it) => acc + (it.cost || 0), 0);
+      const r2Remaining = Math.max(0, startingBudget - r2Spent);
+      const r3Allocated = startingBudget + r2Remaining;
+      const remainingBudget = Math.max(0, r3Allocated - spent);
       return {
         id: t.id,
         name: t.name,
         score,
         itemsCount: tItems.length,
         totalSpent: spent,
-        remainingBudget: t.budget,
+        remainingBudget,
       };
     });
 
@@ -1369,14 +1413,14 @@ export default function AdminPanel() {
   };
 
   // 9. Centralized router to advance stages based on current round
-  const handleAdvanceToNextStage = async () => {
+  const handleAdvanceToNextStage = async (itemsOverride?: TeamItem[], teamsOverride?: Team[]) => {
     const rIdx = eventState?.current_round_index ?? 0;
     if (rIdx === 0) {
-      await handleCompleteRound1();
+      await handleCompleteRound1(itemsOverride, teamsOverride);
     } else if (rIdx === 1) {
-      await handleCompleteRound2();
+      await handleCompleteRound2(itemsOverride, teamsOverride);
     } else if (rIdx === 2) {
-      await handleCompleteRound3();
+      await handleCompleteRound3(itemsOverride, teamsOverride);
     } else {
       await handleGoToWinnerReveal();
     }
@@ -1986,7 +2030,7 @@ export default function AdminPanel() {
     let nextItemText = '';
 
     if (isLastQuestionOfRound) {
-      await handleAdvanceToNextStage();
+      await handleAdvanceToNextStage(updatedItems, updatedTeams);
     } else {
       // Advance to next question in same round (starts hidden until admin starts timer)
       nextItemText = currentRoundData.questions[nextQuestionIdx] || '';
@@ -2428,7 +2472,7 @@ export default function AdminPanel() {
   );
 
   return (
-    <div className="min-h-screen text-white pb-16 font-sans relative" style={{ paddingTop: '84px' }}>
+    <div className="min-h-screen text-white pb-16 font-sans relative">
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -2572,6 +2616,15 @@ export default function AdminPanel() {
             >
               <KeyRound size={13} className="text-[#e1e1e6]" />
               <span>Password</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTeamManagementModalOpen(true)}
+              className="text-xs font-mono px-3 py-1.5 rounded-lg text-white bg-[#18181c] hover:bg-[#222228] border border-[#2e2e36] hover:border-[var(--accent-red)] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title="Add or Manage Team Members at any time"
+            >
+              <Users size={14} className="text-[var(--accent-red)]" />
+              <span>Team Management ({teams.length})</span>
             </button>
             <span className="text-xs font-mono text-[#71717a] px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
               Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
@@ -2895,9 +2948,20 @@ export default function AdminPanel() {
             {/* 1. Round Progression Card */}
             <div className="admin-card space-y-4 flex flex-col justify-between">
               <div>
-                <h2 className="card-title text-indigo-400">
-                  <RefreshCw size={22} /> Round Progression
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="card-title text-indigo-400 mb-0">
+                    <RefreshCw size={22} /> Round Progression
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setIsTeamManagementModalOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#222228] border border-[#2a2a34] text-xs font-semibold text-[#f4f4f6] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Add or manage team members during the live event"
+                  >
+                    <Users size={14} className="text-[var(--accent-red)]" />
+                    <span>Manage Teams ({teams.length})</span>
+                  </button>
+                </div>
                 <div className="round-progress-banner mt-3">
                   {isRoundEnd ? (
                     <span className="font-mono text-2xl font-bold text-red-300">
@@ -2983,7 +3047,7 @@ export default function AdminPanel() {
                   </div>
                   <button
                     type="button"
-                    onClick={handleAdvanceToNextStage}
+                    onClick={() => void handleAdvanceToNextStage()}
                     className="btn-advance-intermission"
                   >
                     <ChevronRight size={20} />
@@ -3000,7 +3064,7 @@ export default function AdminPanel() {
                 <div className="mt-4 pt-3 border-t border-slate-800/80 flex justify-end">
                   <button
                     type="button"
-                    onClick={handleAdvanceToNextStage}
+                    onClick={() => void handleAdvanceToNextStage()}
                     className="text-xs text-slate-400 hover:text-yellow-400 flex items-center gap-1 font-semibold transition-colors"
                   >
                     <ChevronRight size={14} /> End {currentRoundData.name || `Round ${roundIdx + 1}`} Early
@@ -3621,6 +3685,129 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {/* Round 1 Standings & Analysis Table (Issue 6: full analysis with score, items won, total spent, and remaining budget) */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calculator size={18} className="text-[#d4af37]" />
+                    <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
+                      Round 1 Performance & Analysis Table
+                    </h3>
+                  </div>
+                  <span className="text-xs text-[#71717a] font-mono">
+                    Official Round 1 totals — review metrics before confirming positions
+                  </span>
+                </div>
+
+                <div className="border border-[#26262b] rounded-xl overflow-hidden bg-[#0a0a0c]">
+                  <table className="w-full text-left border-collapse text-xs font-sans">
+                    <thead>
+                      <tr className="bg-[#141418] border-b border-[#26262b] text-[#71717a] uppercase font-mono tracking-wider">
+                        <th className="py-2.5 px-3 text-center w-12 font-bold">#</th>
+                        <th className="py-2.5 px-4 font-bold">Team Name</th>
+                        <th className="py-2.5 px-3 text-center font-bold">Items Won</th>
+                        <th className="py-2.5 px-3 text-center font-bold">Score</th>
+                        <th className="py-2.5 px-4 text-right font-bold">Total Spent</th>
+                        <th className="py-2.5 px-4 text-right font-bold">Remaining Budget</th>
+                        <th className="py-2.5 px-3 text-center font-bold">Live Status</th>
+                        <th className="py-2.5 px-3 text-center font-bold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1c1c22]">
+                      {(() => {
+                        const startingBudget = edition?.starting_budget || 50000000;
+                        const r1List = teams.map((team) => {
+                          const r1Items = items.filter((it) => it.team_id === team.id && Number(it.round_index) === 0);
+                          const score = r1Items.filter((it) => it.is_correct).length;
+                          const itemsCount = r1Items.length;
+                          const totalSpent = r1Items.reduce((acc, it) => acc + (it.cost || 0), 0);
+                          const remainingBudget = Math.max(0, startingBudget - totalSpent);
+                          const rev = r1Reveals.find((r) => r.team_id === team.id);
+                          return {
+                            ...team,
+                            score,
+                            itemsCount,
+                            totalSpent,
+                            remainingBudget,
+                            isRevealed: Boolean(rev?.is_revealed),
+                            position: rev?.position,
+                          };
+                        }).sort((a, b) => {
+                          if (b.score !== a.score) return b.score - a.score;
+                          if (b.itemsCount !== a.itemsCount) return b.itemsCount - a.itemsCount;
+                          if (b.remainingBudget !== a.remainingBudget) return b.remainingBudget - a.remainingBudget;
+                          return a.name.localeCompare(b.name);
+                        });
+
+                        const unrevealed = r1Reveals.filter((r) => !r.is_revealed);
+                        const sortedUnrevealed = [...unrevealed].sort((a, b) => b.position - a.position);
+                        const nextTarget = sortedUnrevealed[0];
+
+                        return r1List.map((tm, idx) => (
+                          <tr
+                            key={tm.id}
+                            className={`transition-colors ${
+                              tm.isRevealed
+                                ? 'bg-[#121216]/60 text-slate-300'
+                                : 'bg-[#0d0d10] hover:bg-[#16161b]'
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
+                            <td className="py-2.5 px-4 font-bold text-white text-sm">
+                              {tm.name}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#1c1c24] text-slate-300 font-mono font-bold">
+                                {tm.itemsCount}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="inline-flex items-center gap-1 font-bold text-yellow-400 font-mono text-sm">
+                                ★ {tm.score}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-red-400">
+                              {formatCurrency(tm.totalSpent)}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400">
+                              {formatCurrency(tm.remainingBudget)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {tm.isRevealed ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 text-[11px]">
+                                  <Check size={11} /> Revealed ({formatOrdinal(tm.position || idx + 1)})
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#18181c] text-slate-400 border border-[#282830] text-[11px]">
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {!tm.isRevealed && nextTarget && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRevealTeamId(tm.id);
+                                    handleConfirmAndRevealPosition(nextTarget.position, tm.id);
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white font-bold text-[11px] transition-colors cursor-pointer shadow-sm"
+                                  title={`Reveal ${tm.name} as ${formatOrdinal(nextTarget.position)} place`}
+                                >
+                                  Assign {formatOrdinal(nextTarget.position)}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Reveal Controls */}
               {(() => {
                 const totalCount = teams.length || r1Reveals.length;
@@ -3661,7 +3848,7 @@ export default function AdminPanel() {
                       </p>
                       <button
                         type="button"
-                        onClick={handleCompleteRound1}
+                        onClick={() => void handleCompleteRound1()}
                         className="btn-advance-intermission py-2 px-4"
                       >
                         Initialize Round 1 Reveal Table
@@ -4508,6 +4695,216 @@ export default function AdminPanel() {
           onConfirm={handleConfirmRemoveTeam}
           onCancel={() => setTeamToRemove(null)}
         />
+      )}
+
+      {/* 6. Universal Team & Member Management Modal (Available Anytime: Issue 3) */}
+      {isTeamManagementModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#121216] border border-[#282830] rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#24242c] bg-[#16161c] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/30 flex items-center justify-center text-[var(--accent-red)]">
+                  <Users size={22} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white m-0 font-sans">Team & Member Management</h3>
+                  <p className="text-xs text-[#a1a1aa] m-0 mt-0.5">
+                    Add new members, edit rosters, or register teams anytime during the live auction.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTeamManagementModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-[#202028] hover:bg-[#282834] text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body: Scrollable team list */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Teams & Members Roster */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs uppercase font-bold tracking-wider text-[#a1a1aa] font-mono">
+                    Participating Teams ({teams.length})
+                  </span>
+                  <span className="text-xs text-[#71717a]">
+                    Total registered members: {Object.values(teamMembersMap).reduce((acc, m) => acc + (m?.length || 0), 0)}
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {teams.map((team) => {
+                    const members = teamMembersMap[team.id] || [];
+                    const isExpanded = expandedTeamMembers[team.id] ?? true;
+
+                    return (
+                      <div
+                        key={team.id}
+                        className="p-3.5 rounded-xl bg-[#17171d] border border-[#262630] space-y-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="font-bold text-white text-base truncate">{team.name}</span>
+                            <span className="text-xs px-2 py-0.5 rounded bg-[#202028] text-slate-300 font-mono">
+                              {members.length} {members.length === 1 ? 'member' : 'members'}
+                            </span>
+                            <span className="text-xs text-emerald-400 font-mono font-semibold">
+                              {formatCurrency(team.budget)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedTeamMembers((prev) => ({
+                                  ...prev,
+                                  [team.id]: !isExpanded,
+                                }))
+                              }
+                              className="text-xs text-[#a1a1aa] hover:text-white underline cursor-pointer"
+                            >
+                              {isExpanded ? 'Collapse' : 'Expand'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingTeamNames((prev) => ({ ...prev, [team.id]: team.name }));
+                                setTeamPendingEdit({ id: team.id, oldName: team.name, newName: team.name });
+                              }}
+                              className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
+                            >
+                              Rename
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTeamToRemove(team)}
+                              className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded Member Chips + Inline Add */}
+                        {isExpanded && (
+                          <div className="pt-2 border-t border-[#22222a] space-y-2">
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                              {members.map((m) => (
+                                <span
+                                  key={m.id}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#202028] text-xs text-white border border-[#2d2d38]"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"></span>
+                                  {m.full_name || m.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMemberFromTeam(m.id, team.id)}
+                                    className="text-[#71717a] hover:text-red-400 transition-colors ml-0.5 cursor-pointer font-bold"
+                                    title="Remove member"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                              {members.length === 0 && (
+                                <span className="text-xs text-[#71717a] italic">
+                                  No members registered yet. Type names below to add.
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Add Member inline input */}
+                            <div className="flex gap-2 pt-1">
+                              <input
+                                type="text"
+                                placeholder="Add member name (or comma-separated, e.g. Aman, Priya)..."
+                                value={newMemberInputs[team.id] || ''}
+                                onChange={(e) =>
+                                  setNewMemberInputs((prev) => ({
+                                    ...prev,
+                                    [team.id]: e.target.value,
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddMemberToTeam(team.id);
+                                  }
+                                }}
+                                className="gcl-input flex-1 py-1.5 text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddMemberToTeam(team.id)}
+                                disabled={!newMemberInputs[team.id]?.trim() || addingMemberTeamId === team.id}
+                                className="px-3.5 py-1.5 rounded-lg bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                              >
+                                <Plus size={13} /> Add Member
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add New Team Form */}
+              <form onSubmit={handleAddTeam} className="p-4 rounded-xl bg-[#15151b] border border-[#24242c] space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <Plus size={15} className="text-blue-400" /> Add New Team
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    placeholder="Team Name * (e.g. Code Warriors)"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    className="gcl-input flex-1 py-2 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newTeamName.trim()}
+                    className="btn-primary-add shrink-0"
+                  >
+                    <Plus size={18} /> Add Team
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-mono text-slate-400 block mb-1">
+                    Member Names (Optional, comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rahul Sharma, Priya Patel, Aman Gupta"
+                    value={newTeamMembers}
+                    onChange={(e) => setNewTeamMembers(e.target.value)}
+                    className="gcl-input w-full py-1.5 text-xs text-slate-200"
+                  />
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-[#24242c] bg-[#16161c] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsTeamManagementModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-[#22222a] hover:bg-[#2c2c36] text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
