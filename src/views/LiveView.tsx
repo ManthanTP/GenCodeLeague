@@ -658,7 +658,7 @@ export default function LiveView() {
                     justifyContent: 'center',
                     flex: 1,
                     minWidth: 0,
-                    padding: '8px 24px 8px clamp(72px, 5.5vw, 92px)',
+                    padding: '6px 20px 6px 42px',
                     zIndex: 10,
                     textAlign: 'left',
                   }}

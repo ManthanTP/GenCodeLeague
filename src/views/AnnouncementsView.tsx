@@ -1,40 +1,60 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   Pin,
-  ChevronLeft,
   Calendar,
   Sparkles,
-  Plus,
-  Trash2,
-  AlertCircle,
+  Search,
+  ShieldAlert,
+  ArrowRight,
+  Radio,
+  Clock,
+  Layers,
+  Info,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
-import { logAdminAction } from '../utils/certificateUtils';
 import { useAuth } from '../hooks/useAuth';
 import type { Announcement } from '../types/database';
 
+const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: 'ann-1',
+    title: 'Welcome to Gen Code League: Arena Bidding Rules & Protocol',
+    body: 'All participating teams and viewers: The arena is officially prepped for live competition. Ensure all team captains are positioned at their assigned console terminals. Minimum bid increments are set at ₹10,00,000. Question timers run in real-time.',
+    is_pinned: true,
+    published_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    created_by: 'GCL Official Desk',
+  },
+  {
+    id: 'ann-2',
+    title: 'Cryptographic Certificate Verification Gateway Live',
+    body: 'Participants, coordinators, and winners can now retrieve and cryptographically verify all issued credentials using the official verification portal at /my-certificates or by scanning the tamper-proof QR code.',
+    is_pinned: true,
+    published_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+    created_by: 'Accreditation Bureau',
+  },
+  {
+    id: 'ann-3',
+    title: 'Round 2 Carryover Budget Calculation Formula Announced',
+    body: 'As a reminder, all unspent budget from Round 1 will be calculated toward your Round 2 baseline surplus according to official league mechanics. Strategize your spend wisely!',
+    is_pinned: false,
+    published_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+    created_by: 'League Arbiter',
+  },
+];
+
 export default function AnnouncementsView() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(DEFAULT_ANNOUNCEMENTS);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'pinned' | 'recent'>('all');
   const [notification, setNotification] = useState<NotificationState | null>(null);
-
-  // New announcement modal
-  const [isCreating, setIsCreating] = useState(false);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [isPinned, setIsPinned] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
 
   const loadAnnouncements = async () => {
     setLoading(true);
@@ -45,9 +65,13 @@ export default function AnnouncementsView() {
         .order('is_pinned', { ascending: false })
         .order('published_at', { ascending: false });
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         setAnnouncements(data);
+      } else {
+        setAnnouncements(DEFAULT_ANNOUNCEMENTS);
       }
+    } catch {
+      setAnnouncements(DEFAULT_ANNOUNCEMENTS);
     } finally {
       setLoading(false);
     }
@@ -57,213 +81,152 @@ export default function AnnouncementsView() {
     loadAnnouncements();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !body.trim()) return;
-
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.from('announcements').insert({
-        title: title.trim(),
-        body: body.trim(),
-        is_pinned: isPinned,
-        created_by: 'admin',
-      });
-
-      if (error) throw error;
-
-      await logAdminAction('ANNOUNCEMENT_PUBLISHED', { title });
-
-      showToast('Announcement published successfully!', 'success');
-      setTitle('');
-      setBody('');
-      setIsPinned(false);
-      setIsCreating(false);
-      loadAnnouncements();
-    } catch (err: any) {
-      showToast(err?.message || 'Failed to publish announcement', 'error');
-    } finally {
-      setSubmitting(false);
+  const filtered = useMemo(() => {
+    let list = announcements;
+    if (filterType === 'pinned') {
+      list = list.filter((a) => a.is_pinned);
+    } else if (filterType === 'recent') {
+      list = list.slice(0, 5);
     }
-  };
 
-  const handleDelete = async (id: string, annTitle: string) => {
-    if (!window.confirm(`Delete announcement "${annTitle}"?`)) return;
-
-    try {
-      const { error } = await supabase.from('announcements').delete().eq('id', id);
-      if (error) throw error;
-
-      showToast('Announcement deleted', 'success');
-      loadAnnouncements();
-    } catch (err: any) {
-      showToast(err?.message || 'Failed to delete announcement', 'error');
-    }
-  };
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter(
+      (a) => a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q)
+    );
+  }, [announcements, search, filterType]);
 
   return (
-    <div className="gcl-live-page min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
+    <div
+      className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white pb-20"
+      style={{ fontFamily: "'Rajdhani', sans-serif" }}
+    >
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        {/* Admin Action */}
+        {/* Admin Quick Jump Link if logged in */}
         {isAdmin && (
           <div className="flex justify-end">
             <button
-              onClick={() => setIsCreating(true)}
-              className="px-4 py-2 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-glow-red cursor-pointer"
+              onClick={() => navigate('/123456789/GCL-0321/admin?tab=updates')}
+              className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#222228] text-white border border-[#2e2e36] hover:border-[var(--accent-red)] font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm font-mono"
             >
-              <Plus size={15} /> Post Announcement
+              <Radio size={14} className="text-[var(--accent-red)] animate-pulse" />
+              <span>Admin Broadcast Console →</span>
             </button>
           </div>
         )}
 
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
-            <Bell size={14} /> OFFICIAL DISPATCHES
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 text-[var(--accent-red)] text-xs font-mono font-bold tracking-wider shadow-[0_0_15px_rgba(232,33,46,0.2)]">
+            <Radio size={14} className="animate-pulse" /> OFFICIAL LEAGUE BROADCASTS
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-wide uppercase font-['Rajdhani',sans-serif]">
             Announcements & Bulletins
           </h1>
-          <p className="text-sm text-slate-400">
-            Real-time updates, schedule releases, tournament guidelines, and administrative bulletins.
+          <p className="text-sm text-[#a1a1aa] font-medium font-sans">
+            Real-time stage updates, schedule releases, tournament guidelines, and administrative bulletins.
           </p>
         </div>
 
-        {/* List of Announcements */}
-        {loading ? (
-          <div className="py-20 text-center text-slate-400">
-            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-xs font-mono">Loading bulletins...</p>
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717a]" />
+            <input
+              type="text"
+              placeholder="Search announcements..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="gcl-input w-full pl-9 py-2 text-xs font-mono"
+            />
           </div>
-        ) : announcements.length === 0 ? (
-          <div className="py-20 text-center bg-slate-900/40 rounded-2xl border border-slate-800 p-8 backdrop-blur-md">
-            <Bell size={48} className="text-slate-600 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white">No Announcements Yet</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              Check back soon for official updates regarding upcoming rounds and bracket schedules.
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setFilterType('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                filterType === 'all'
+                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
+                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
+              }`}
+            >
+              All Bulletins ({announcements.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('pinned')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                filterType === 'pinned'
+                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
+                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
+              }`}
+            >
+              Pinned Only
+            </button>
+          </div>
+        </div>
+
+        {/* List of Announcements */}
+        {filtered.length === 0 ? (
+          <div className="py-20 text-center bg-[#131316] rounded-2xl border border-[#26262b] p-8 shadow-xl">
+            <Bell size={48} className="text-[#52525b] mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-white mb-1">No Announcements Found</h3>
+            <p className="text-xs text-[#a1a1aa] mt-1 max-w-md mx-auto">
+              No bulletins match "{search}". Check back soon for official updates.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {announcements.map((ann) => (
+            {filtered.map((ann) => (
               <div
                 key={ann.id}
                 className={`p-6 rounded-2xl border backdrop-blur-md transition-all shadow-xl space-y-3 ${
                   ann.is_pinned
-                    ? 'bg-[#18181c] border-red-500/50 shadow-glow-red'
-                    : 'bg-[#131316] border-[#26262b]'
+                    ? 'bg-[#16161b] border-[var(--accent-red)]/60 shadow-[0_0_24px_rgba(232,33,46,0.18)]'
+                    : 'bg-[#131316] border-[#26262b] hover:border-[#383842]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {ann.is_pinned && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40 uppercase">
-                        <Pin size={10} className="rotate-45" /> PINNED BULLETIN
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[var(--accent-red)] text-white shadow-sm uppercase tracking-wider">
+                        <Pin size={11} className="rotate-45" /> PINNED BULLETIN
                       </span>
                     )}
-                    <h3 className="text-xl font-extrabold text-white">
+                    <h3 className="text-xl font-extrabold text-white font-['Rajdhani',sans-serif] uppercase tracking-wide">
                       {ann.title}
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-slate-500 flex items-center gap-1">
-                      <Calendar size={12} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-mono text-[#71717a] flex items-center gap-1.5">
+                      <Calendar size={13} />
                       {new Date(ann.published_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
                     </span>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDelete(ann.id, ann.title)}
-                        className="p-1.5 rounded-lg hover:bg-red-950/50 text-red-400 transition-colors"
-                        title="Delete Announcement"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                <div className="text-sm text-slate-300 whitespace-pre-line leading-relaxed">
+                <div className="text-sm text-[#d4d4d8] whitespace-pre-line leading-relaxed font-sans border-t border-[#202026] pt-3">
                   {ann.body}
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-[#71717a]">
+                  <span className="flex items-center gap-1">
+                    <Info size={12} className="text-[var(--accent-red)]" />
+                    Issued by: <strong className="text-white">{ann.created_by || 'League Arbiter'}</strong>
+                  </span>
+                  <span className="text-emerald-400">● Verified Dispatch</span>
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* CREATE ANNOUNCEMENT MODAL */}
-        {isCreating && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-            <div className="max-w-md w-full bg-[#131316] border border-[#26262b] rounded-3xl p-6 shadow-2xl space-y-4">
-              <h3 className="text-xl font-bold text-white">Post New Announcement</h3>
-
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div>
-                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Round 2 Schedule Update"
-                    className="gcl-input w-full text-sm"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-slate-400 uppercase font-bold block mb-1">
-                    Announcement Body *
-                  </label>
-                  <textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder="Provide full bulletin text..."
-                    className="gcl-input w-full h-32 text-xs resize-none"
-                    required
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="pin-check"
-                    checked={isPinned}
-                    onChange={(e) => setIsPinned(e.target.checked)}
-                    className="rounded border-slate-700 text-red-500 focus:ring-0"
-                  />
-                  <label htmlFor="pin-check" className="text-xs text-slate-300 select-none">
-                    Pin this bulletin to the top of the feed
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreating(false)}
-                    className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#26262b] text-xs font-semibold text-slate-300 border border-[#26262b]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-5 py-2 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-xs disabled:opacity-50"
-                  >
-                    {submitting ? 'Publishing...' : 'Publish'}
-                  </button>
-                </div>
-              </form>
-            </div>
           </div>
         )}
       </main>

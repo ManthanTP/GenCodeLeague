@@ -40,6 +40,10 @@ import {
   Save,
   Sparkles,
   Filter,
+  Radio,
+  Pin,
+  Megaphone,
+  Bell,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
@@ -56,7 +60,7 @@ import ConnectionHealth from '../components/ConnectionHealth';
 import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
-import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry, TeamMember } from '../types/database';
+import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry, TeamMember, Announcement } from '../types/database';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -84,20 +88,20 @@ export default function AdminPanel() {
   // UI States & URL Tab Sync
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const validTab: 'auction' | 'teams' | 'certificates' | 'archive' =
-    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams'
+  const validTab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive' =
+    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates'
       ? urlTab
       : 'auction';
 
-  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'teams' | 'certificates' | 'archive'>(validTab);
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'teams' | 'updates' | 'certificates' | 'archive'>(validTab);
 
   useEffect(() => {
-    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams')) {
+    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates')) {
       setAdminActiveTab(urlTab);
     }
   }, [urlTab]);
 
-  const handleTabChange = (tab: 'auction' | 'teams' | 'certificates' | 'archive') => {
+  const handleTabChange = (tab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive') => {
     setAdminActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -133,6 +137,15 @@ export default function AdminPanel() {
   const [showAddTeamPanel, setShowAddTeamPanel] = useState<boolean>(true);
   const [editingBudgetTeamId, setEditingBudgetTeamId] = useState<string | null>(null);
   const [editingBudgetValue, setEditingBudgetValue] = useState<string>('');
+
+  // Dedicated Updates & Announcements tab states
+  const [adminAnnouncements, setAdminAnnouncements] = useState<Announcement[]>([]);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annBody, setAnnBody] = useState('');
+  const [annIsPinned, setAnnIsPinned] = useState(false);
+  const [annSearch, setAnnSearch] = useState('');
+  const [isPublishingAnn, setIsPublishingAnn] = useState(false);
+  const [editingAnnItem, setEditingAnnItem] = useState<Announcement | null>(null);
 
   // Active round auction states
   const [bidAmount, setBidAmount] = useState<string>('');
@@ -826,6 +839,102 @@ export default function AdminPanel() {
     await supabase.from('teams').update({ budget: newBudget }).eq('id', teamId);
     showNotification(`${targetTeam.name}: ${delta > 0 ? '+' : ''}${formatCurrency(delta)} (New: ${formatCurrency(newBudget)})`, 'success');
     addHistory('Budget Adjusted', `${targetTeam.name} budget changed by ${formatCurrency(delta)} to ${formatCurrency(newBudget)}`);
+  };
+
+  const loadAdminAnnouncements = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('published_at', { ascending: false });
+      if (data) {
+        setAdminAnnouncements(data);
+      }
+    } catch (err) {
+      console.error('Error loading announcements:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (adminActiveTab === 'updates') {
+      loadAdminAnnouncements();
+    }
+  }, [adminActiveTab, loadAdminAnnouncements]);
+
+  const handlePublishAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!annTitle.trim() || !annBody.trim()) {
+      showNotification('Please enter announcement title and details', 'error');
+      return;
+    }
+    setIsPublishingAnn(true);
+    try {
+      if (editingAnnItem) {
+        const { error } = await supabase
+          .from('announcements')
+          .update({
+            title: annTitle.trim(),
+            body: annBody.trim(),
+            is_pinned: annIsPinned,
+          })
+          .eq('id', editingAnnItem.id);
+        if (error) throw error;
+        showNotification('Broadcast updated successfully!', 'success');
+        addHistory('Broadcast Updated', `Title: "${annTitle.trim()}"`);
+        setEditingAnnItem(null);
+      } else {
+        const newRecord = {
+          id: crypto.randomUUID(),
+          title: annTitle.trim(),
+          body: annBody.trim(),
+          is_pinned: annIsPinned,
+          published_at: new Date().toISOString(),
+          created_by: profile?.email || 'GCL Official',
+        };
+        const { error } = await supabase.from('announcements').insert(newRecord);
+        if (error) throw error;
+        showNotification('Broadcast published successfully!', 'success');
+        addHistory('Broadcast Published', `Title: "${annTitle.trim()}"`);
+      }
+      setAnnTitle('');
+      setAnnBody('');
+      setAnnIsPinned(false);
+      await loadAdminAnnouncements();
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to publish announcement', 'error');
+    } finally {
+      setIsPublishingAnn(false);
+    }
+  };
+
+  const handleTogglePinAnnouncement = async (ann: Announcement) => {
+    try {
+      const updatedPin = !ann.is_pinned;
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_pinned: updatedPin })
+        .eq('id', ann.id);
+      if (error) throw error;
+      showNotification(`Announcement ${updatedPin ? 'pinned to top' : 'unpinned'}.`, 'success');
+      await loadAdminAnnouncements();
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to update pin', 'error');
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string, title?: string) => {
+    const promptMsg = title ? `Delete announcement "${title}"?` : 'Delete this announcement?';
+    if (!window.confirm(promptMsg)) return;
+    try {
+      const { error } = await supabase.from('announcements').delete().eq('id', id);
+      if (error) throw error;
+      showNotification('Announcement deleted.', 'success');
+      addHistory('Announcement Deleted', `Deleted "${title || id}"`);
+      await loadAdminAnnouncements();
+    } catch (err: any) {
+      showNotification(err?.message || 'Failed to delete announcement', 'error');
+    }
   };
 
   const handleStartLiveAuction = async () => {
@@ -2694,6 +2803,22 @@ export default function AdminPanel() {
 
             <button
               type="button"
+              onClick={() => handleTabChange('updates')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
+                adminActiveTab === 'updates'
+                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)] shadow-[0_0_12px_rgba(232,33,46,0.25)]'
+                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
+              }`}
+            >
+              <Radio size={16} className={adminActiveTab === 'updates' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
+              <span>UPDATES & BROADCASTS</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'updates' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
+                {adminAnnouncements.length} POSTS
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleTabChange('certificates')}
               className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
                 adminActiveTab === 'certificates'
@@ -3249,6 +3374,340 @@ export default function AdminPanel() {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* UPDATES & LIVE BROADCAST WORKSTATION */}
+      {adminActiveTab === 'updates' && (
+        <div className="max-w-7xl mx-auto px-4 py-4 space-y-6">
+          {/* Header Banner */}
+          <div className="p-6 rounded-2xl bg-[#131316] border border-[#26262b] shadow-2xl relative overflow-hidden backdrop-blur-xl">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 flex items-center justify-center text-[var(--accent-red)] shadow-[0_0_20px_rgba(232,33,46,0.2)]">
+                  <Radio size={26} className="animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black text-white tracking-wide uppercase font-['Rajdhani',sans-serif]">
+                    UPDATES & BROADCAST CONSOLE
+                  </h1>
+                  <p className="text-xs md:text-sm text-[#a1a1aa] font-medium font-sans">
+                    Publish official bulletins, real-time round announcements, score alerts & rule updates to the public feed.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => loadAdminAnnouncements()}
+                  className="px-4 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#222228] text-white border border-[#2e2e36] text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <RefreshCw size={14} />
+                  <span>REFRESH FEED</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/announcements')}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--accent-red)] hover:bg-[#c91824] text-white text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(232,33,46,0.3)]"
+                >
+                  <Megaphone size={14} />
+                  <span>VIEW PUBLIC DISPATCH ↗</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[#222228]">
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Bell size={13} className="text-[var(--accent-red)]" />
+                  <span>Total Broadcasts</span>
+                </div>
+                <div className="text-2xl font-black text-white font-mono">
+                  {adminAnnouncements.length}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Pin size={13} className="text-[#d4af37]" />
+                  <span>Pinned Priority</span>
+                </div>
+                <div className="text-2xl font-black text-[#d4af37] font-mono">
+                  {adminAnnouncements.filter((a) => a.is_pinned).length}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Radio size={13} className="text-emerald-400" />
+                  <span>Audience Stream</span>
+                </div>
+                <div className="text-sm font-black text-emerald-400 font-mono flex items-center gap-2 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>SYNCED TO VIEWERS</span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Clock size={13} className="text-[#a1a1aa]" />
+                  <span>Latest Broadcast</span>
+                </div>
+                <div className="text-xs font-mono text-[#e1e1e6] font-semibold truncate mt-1">
+                  {adminAnnouncements[0]
+                    ? new Date(adminAnnouncements[0].published_at).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'No Dispatches Yet'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-Column Grid: Form on Left, Stream on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Compose Card (5 Cols) */}
+            <div className="lg:col-span-5 bg-[#131316] border border-[#26262b] rounded-2xl p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#222228]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/30 flex items-center justify-center text-[var(--accent-red)]">
+                    {editingAnnItem ? <Edit3 size={16} /> : <Plus size={16} />}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-white uppercase font-['Rajdhani',sans-serif] tracking-wide">
+                      {editingAnnItem ? 'EDIT BROADCAST' : 'COMPOSE NEW BROADCAST'}
+                    </h3>
+                    <p className="text-[11px] text-[#71717a]">
+                      {editingAnnItem ? `Editing broadcast #${editingAnnItem.id.slice(0, 8)}` : 'Instant public dispatch'}
+                    </p>
+                  </div>
+                </div>
+
+                {editingAnnItem && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAnnItem(null);
+                      setAnnTitle('');
+                      setAnnBody('');
+                      setAnnIsPinned(false);
+                    }}
+                    className="text-xs font-mono text-[#71717a] hover:text-white px-2 py-1 rounded bg-[#18181c]"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={handlePublishAnnouncement} className="space-y-4">
+                <div>
+                  <label className="text-xs font-mono font-bold text-[#a1a1aa] uppercase tracking-wider block mb-1.5">
+                    Broadcast Headline / Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={annTitle}
+                    onChange={(e) => setAnnTitle(e.target.value)}
+                    placeholder="e.g. Round 2 Schedule Clarification & Rules"
+                    className="gcl-input w-full font-semibold"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-mono font-bold text-[#a1a1aa] uppercase tracking-wider block mb-1.5">
+                    Announcement Body / Content *
+                  </label>
+                  <textarea
+                    value={annBody}
+                    onChange={(e) => setAnnBody(e.target.value)}
+                    placeholder="Write your official dispatch text here. Viewers will see this in the public announcements feed instantly..."
+                    rows={6}
+                    className="gcl-input w-full font-sans text-sm resize-none"
+                    required
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#0e0e11] border border-[#202026] flex items-center justify-between cursor-pointer" onClick={() => setAnnIsPinned(!annIsPinned)}>
+                  <div className="flex items-center gap-2.5">
+                    <Pin size={16} className={annIsPinned ? 'text-[#d4af37]' : 'text-[#71717a]'} />
+                    <div>
+                      <div className="text-xs font-bold text-white font-mono">Pin to Top of Viewer Feed</div>
+                      <div className="text-[11px] text-[#71717a]">Keep this post prominently visible at the top</div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={annIsPinned}
+                    onChange={(e) => setAnnIsPinned(e.target.checked)}
+                    className="w-4 h-4 accent-[var(--accent-red)] rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={isPublishingAnn || !annTitle.trim() || !annBody.trim()}
+                    className="flex-1 py-3 rounded-xl bg-[var(--accent-red)] hover:bg-[#c91824] disabled:opacity-50 text-white font-bold font-mono tracking-wider text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(232,33,46,0.3)]"
+                  >
+                    {isPublishingAnn ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>BROADCASTING...</span>
+                      </>
+                    ) : editingAnnItem ? (
+                      <>
+                        <Save size={16} />
+                        <span>UPDATE BROADCAST</span>
+                      </>
+                    ) : (
+                      <>
+                        <Radio size={16} />
+                        <span>PUBLISH BROADCAST DISPATCH</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Dispatches Stream Card (7 Cols) */}
+            <div className="lg:col-span-7 bg-[#131316] border border-[#26262b] rounded-2xl p-6 shadow-2xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#222228]">
+                <div className="flex items-center gap-2">
+                  <Megaphone size={18} className="text-[var(--accent-red)]" />
+                  <h3 className="text-base font-black text-white uppercase font-['Rajdhani',sans-serif] tracking-wide">
+                    ACTIVE BROADCASTS FEED
+                  </h3>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-[#18181c] text-[#71717a] border border-[#2e2e36]">
+                    {adminAnnouncements.length} TOTAL
+                  </span>
+                </div>
+
+                {/* Search */}
+                <div className="relative min-w-[200px]">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#71717a]" />
+                  <input
+                    type="text"
+                    value={annSearch}
+                    onChange={(e) => setAnnSearch(e.target.value)}
+                    placeholder="Search dispatches..."
+                    className="w-full bg-[#0a0a0c] border border-[#222228] text-xs text-white rounded-xl pl-8 pr-3 py-1.5 focus:border-[var(--accent-red)] focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Announcements List */}
+              <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                {adminAnnouncements
+                  .filter((a) => {
+                    if (!annSearch.trim()) return true;
+                    const q = annSearch.toLowerCase();
+                    return a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q);
+                  })
+                  .length === 0 ? (
+                  <div className="p-12 text-center border border-dashed border-[#26262b] rounded-xl bg-[#0e0e11]/50">
+                    <Radio size={32} className="mx-auto text-[#71717a]/40 mb-3" />
+                    <p className="text-sm font-mono text-[#71717a]">
+                      {annSearch ? 'No broadcasts match your search.' : 'No announcements published yet.'}
+                    </p>
+                    <p className="text-xs text-[#52525b] mt-1">
+                      Compose a message on the left to broadcast it live to all viewers.
+                    </p>
+                  </div>
+                ) : (
+                  adminAnnouncements
+                    .filter((a) => {
+                      if (!annSearch.trim()) return true;
+                      const q = annSearch.toLowerCase();
+                      return a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q);
+                    })
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className={`p-4 rounded-xl border transition-all ${
+                          item.is_pinned
+                            ? 'bg-[#18150f] border-[#d4af37]/40 shadow-[0_0_15px_rgba(212,175,55,0.06)]'
+                            : 'bg-[#0e0e11] border-[#222228] hover:border-[#33333d]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {item.is_pinned && (
+                                <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/40 flex items-center gap-1">
+                                  <Pin size={10} /> PINNED
+                                </span>
+                              )}
+                              <span className="text-[11px] font-mono text-[#71717a] flex items-center gap-1">
+                                <Clock size={11} />
+                                {new Date(item.published_at).toLocaleString([], {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short',
+                                })}
+                              </span>
+                            </div>
+
+                            <h4 className="text-base font-bold text-white font-['Rajdhani',sans-serif] tracking-wide">
+                              {item.title}
+                            </h4>
+
+                            <p className="text-xs text-[#a1a1aa] font-sans leading-relaxed whitespace-pre-wrap line-clamp-4 hover:line-clamp-none transition-all">
+                              {item.body}
+                            </p>
+                          </div>
+
+                          {/* Quick Actions */}
+                          <div className="flex items-center gap-1.5 shrink-0 self-start">
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePinAnnouncement(item)}
+                              className={`p-2 rounded-lg border text-xs font-mono transition-all cursor-pointer ${
+                                item.is_pinned
+                                  ? 'bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/40 hover:bg-[#d4af37]/25'
+                                  : 'bg-[#18181c] text-[#71717a] border-[#2e2e36] hover:text-white hover:border-[#444]'
+                              }`}
+                              title={item.is_pinned ? 'Unpin this broadcast' : 'Pin to top of feed'}
+                            >
+                              <Pin size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingAnnItem(item);
+                                setAnnTitle(item.title);
+                                setAnnBody(item.body);
+                                setAnnIsPinned(Boolean(item.is_pinned));
+                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                              }}
+                              className="p-2 rounded-lg bg-[#18181c] text-[#71717a] border border-[#2e2e36] hover:text-white hover:border-[#444] text-xs font-mono transition-all cursor-pointer"
+                              title="Edit this broadcast"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAnnouncement(item.id, item.title)}
+                              className="p-2 rounded-lg bg-[#18181c] text-[#71717a] border border-[#2e2e36] hover:text-[var(--accent-red)] hover:border-[var(--accent-red)]/50 text-xs font-mono transition-all cursor-pointer"
+                              title="Delete announcement"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
