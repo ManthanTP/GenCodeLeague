@@ -34,6 +34,12 @@ import {
   Calculator,
   Lock,
   KeyRound,
+  Search,
+  Trash2,
+  Edit3,
+  Save,
+  Sparkles,
+  Filter,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
@@ -78,20 +84,20 @@ export default function AdminPanel() {
   // UI States & URL Tab Sync
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const validTab: 'auction' | 'certificates' | 'archive' =
-    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction'
+  const validTab: 'auction' | 'teams' | 'certificates' | 'archive' =
+    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams'
       ? urlTab
       : 'auction';
 
-  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'certificates' | 'archive'>(validTab);
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'teams' | 'certificates' | 'archive'>(validTab);
 
   useEffect(() => {
-    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction')) {
+    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams')) {
       setAdminActiveTab(urlTab);
     }
   }, [urlTab]);
 
-  const handleTabChange = (tab: 'auction' | 'certificates' | 'archive') => {
+  const handleTabChange = (tab: 'auction' | 'teams' | 'certificates' | 'archive') => {
     setAdminActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -120,6 +126,13 @@ export default function AdminPanel() {
   const [expandedTeamMembers, setExpandedTeamMembers] = useState<Record<string, boolean>>({});
   const [newMemberInputs, setNewMemberInputs] = useState<Record<string, string>>({});
   const [addingMemberTeamId, setAddingMemberTeamId] = useState<string | null>(null);
+
+  // Dedicated Team Management tab states
+  const [teamSearchQuery, setTeamSearchQuery] = useState<string>('');
+  const [teamFilterStatus, setTeamFilterStatus] = useState<'all' | 'with-members' | 'no-members'>('all');
+  const [showAddTeamPanel, setShowAddTeamPanel] = useState<boolean>(true);
+  const [editingBudgetTeamId, setEditingBudgetTeamId] = useState<string | null>(null);
+  const [editingBudgetValue, setEditingBudgetValue] = useState<string>('');
 
   // Active round auction states
   const [bidAmount, setBidAmount] = useState<string>('');
@@ -439,6 +452,36 @@ export default function AdminPanel() {
     });
   }, [teams, items, pastRounds, edition?.starting_budget, budgetInput]);
 
+  // Filtered teams & computed stats for Dedicated Team Management Studio
+  const teamManagementMetrics = useMemo(() => {
+    let totalParticipants = 0;
+    Object.values(teamMembersMap).forEach((mList) => {
+      totalParticipants += (mList || []).length;
+    });
+    const totalCommittedBudget = teams.reduce((acc, t) => acc + (t.budget || 0), 0);
+    const totalItemsWon = items.length;
+
+    const filtered = teams.filter((t) => {
+      const members = teamMembersMap[t.id] || [];
+      const query = teamSearchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        t.name.toLowerCase().includes(query) ||
+        members.some((m) => (m.full_name || m.name || '').toLowerCase().includes(query));
+      if (!matchesSearch) return false;
+      if (teamFilterStatus === 'with-members') return members.length > 0;
+      if (teamFilterStatus === 'no-members') return members.length === 0;
+      return true;
+    });
+
+    return {
+      totalParticipants,
+      totalCommittedBudget,
+      totalItemsWon,
+      filteredTeams: filtered,
+    };
+  }, [teams, teamMembersMap, items.length, teamSearchQuery, teamFilterStatus]);
+
   const selectedWinningTeam = useMemo(
     () => teams.find((t) => t.id === selectedTeamId),
     [teams, selectedTeamId]
@@ -755,6 +798,34 @@ export default function AdminPanel() {
       return copy;
     });
     setTeamToRemove(null);
+  };
+
+  const handleSaveTeamBudget = async (teamId: string) => {
+    const parsed = parseInt(editingBudgetValue.replace(/[^0-9]/g, ''), 10);
+    if (isNaN(parsed) || parsed < 0) {
+      showNotification('Please enter a valid budget amount.', 'error');
+      return;
+    }
+    const targetTeam = teams.find((t) => t.id === teamId);
+    const updated = teams.map((t) => (t.id === teamId ? { ...t, budget: parsed } : t));
+    setTeams(updated);
+    broadcastTeamsChange(updated, edition?.id);
+    await supabase.from('teams').update({ budget: parsed }).eq('id', teamId);
+    showNotification(`Updated budget for ${targetTeam?.name || 'team'} to ${formatCurrency(parsed)}`, 'success');
+    addHistory('Budget Adjusted', `${targetTeam?.name || 'Team'} budget adjusted to ${formatCurrency(parsed)}`);
+    setEditingBudgetTeamId(null);
+  };
+
+  const handleQuickAdjustTeamBudget = async (teamId: string, delta: number) => {
+    const targetTeam = teams.find((t) => t.id === teamId);
+    if (!targetTeam) return;
+    const newBudget = Math.max(0, targetTeam.budget + delta);
+    const updated = teams.map((t) => (t.id === teamId ? { ...t, budget: newBudget } : t));
+    setTeams(updated);
+    broadcastTeamsChange(updated, edition?.id);
+    await supabase.from('teams').update({ budget: newBudget }).eq('id', teamId);
+    showNotification(`${targetTeam.name}: ${delta > 0 ? '+' : ''}${formatCurrency(delta)} (New: ${formatCurrency(newBudget)})`, 'success');
+    addHistory('Budget Adjusted', `${targetTeam.name} budget changed by ${formatCurrency(delta)} to ${formatCurrency(newBudget)}`);
   };
 
   const handleStartLiveAuction = async () => {
@@ -2510,7 +2581,7 @@ export default function AdminPanel() {
   );
 
   return (
-    <div className="min-h-screen text-white pb-16 font-sans relative">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] pb-16 relative flex flex-col font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -2587,7 +2658,7 @@ export default function AdminPanel() {
       {/* Cyber Admin Command Bar */}
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 relative z-30">
         <div className="p-2.5 rounded-2xl bg-[#131316] border border-[#26262b] backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
-          {/* Main 3 Module Tabs */}
+          {/* Main 4 Module Tabs */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
@@ -2602,6 +2673,22 @@ export default function AdminPanel() {
               <span>LIVE AUCTION CONSOLE</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'auction' ? 'bg-[#0a0a0c]/60 text-white border border-white/20' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
                 LIVE
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('teams')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
+                adminActiveTab === 'teams'
+                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)] shadow-[0_0_12px_rgba(232,33,46,0.25)]'
+                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
+              }`}
+            >
+              <Users size={16} className={adminActiveTab === 'teams' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
+              <span>TEAM MANAGEMENT</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'teams' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
+                {teams.length} TEAMS
               </span>
             </button>
 
@@ -2657,12 +2744,16 @@ export default function AdminPanel() {
             </button>
             <button
               type="button"
-              onClick={() => setIsTeamManagementModalOpen(true)}
-              className="text-xs font-mono px-3 py-1.5 rounded-lg text-white bg-[#18181c] hover:bg-[#222228] border border-[#2e2e36] hover:border-[var(--accent-red)] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              onClick={() => handleTabChange('teams')}
+              className={`text-xs font-mono px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                adminActiveTab === 'teams'
+                  ? 'bg-[#222228] text-white border border-[var(--accent-red)]'
+                  : 'text-white bg-[#18181c] hover:bg-[#222228] border border-[#2e2e36] hover:border-[var(--accent-red)]'
+              }`}
               title="Add or Manage Team Members at any time"
             >
               <Users size={14} className="text-[var(--accent-red)]" />
-              <span>Team Management ({teams.length})</span>
+              <span>Team Roster ({teams.length})</span>
             </button>
             <span className="text-xs font-mono text-[#71717a] px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
               Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
@@ -2684,6 +2775,483 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+
+      {/* TEAM MANAGEMENT TAB */}
+      {adminActiveTab === 'teams' && (
+        <div className="max-w-7xl mx-auto px-4 py-4 space-y-6">
+          {/* Header Banner */}
+          <div className="p-6 rounded-2xl bg-[#131316] border border-[#26262b] shadow-2xl relative overflow-hidden backdrop-blur-xl">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 flex items-center justify-center text-[var(--accent-red)] shadow-[0_0_20px_rgba(232,33,46,0.2)]">
+                    <Users size={26} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-black text-white tracking-wide uppercase font-['Rajdhani',sans-serif]">
+                      TEAM ROSTER & MANAGEMENT
+                    </h1>
+                    <p className="text-xs md:text-sm text-[#a1a1aa] font-medium font-sans">
+                      Register teams, manage player rosters, calibrate budgets & auto-sync participants with live certificates.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowAddTeamPanel((prev) => !prev)}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--accent-red)] hover:bg-[#c91824] text-white text-xs font-bold font-mono tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(232,33,46,0.3)]"
+                >
+                  <Plus size={16} />
+                  <span>{showAddTeamPanel ? 'HIDE REGISTRATION' : '+ REGISTER NEW TEAM'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[#222228]">
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Trophy size={13} className="text-[#d4af37]" />
+                  <span>Total Teams</span>
+                </div>
+                <div className="text-2xl font-black text-white font-mono">
+                  {teams.length}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Users size={13} className="text-[var(--accent-red)]" />
+                  <span>Total Participants</span>
+                </div>
+                <div className="text-2xl font-black text-[var(--accent-red)] font-mono">
+                  {teamManagementMetrics.totalParticipants}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Calculator size={13} className="text-emerald-400" />
+                  <span>Total Team Budget</span>
+                </div>
+                <div className="text-2xl font-black text-emerald-400 font-mono">
+                  {formatCurrency(teamManagementMetrics.totalCommittedBudget)}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#0e0e11] border border-[#202026]">
+                <div className="text-[11px] font-mono text-[#71717a] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Award size={13} className="text-purple-400" />
+                  <span>Items Acquired</span>
+                </div>
+                <div className="text-2xl font-black text-purple-400 font-mono">
+                  {teamManagementMetrics.totalItemsWon}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Collapsible Register Team Form */}
+          {showAddTeamPanel && (
+            <div className="p-6 rounded-2xl bg-[#131316] border border-[#26262b] shadow-2xl relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-white font-black font-['Rajdhani',sans-serif] text-lg uppercase tracking-wider">
+                  <Plus size={18} className="text-[var(--accent-red)]" />
+                  <span>Register New Team</span>
+                </div>
+                <span className="text-[11px] font-mono text-[#71717a]">
+                  Automatic Certificate ID generation enabled
+                </span>
+              </div>
+
+              <form onSubmit={handleAddTeam} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-mono uppercase text-[#a1a1aa] block mb-1.5 font-bold">
+                      Team Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Code Warriors, Byte Busters"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      className="gcl-input w-full text-sm font-semibold"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono uppercase text-[#a1a1aa] block mb-1.5 font-bold">
+                      Starting Budget (₹)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="50000000"
+                      value={budgetInput}
+                      onChange={(e) => setBudgetInput(e.target.value)}
+                      className="gcl-input w-full text-sm font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-mono uppercase text-[#a1a1aa] block mb-1.5 font-bold flex items-center justify-between">
+                    <span>Member Names (Optional, comma or newline separated)</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Will be available for 1-click certificates</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Rahul Sharma, Priya Patel, Aman Gupta"
+                    value={newTeamMembers}
+                    onChange={(e) => setNewTeamMembers(e.target.value)}
+                    className="gcl-input w-full text-xs text-white font-mono resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={!newTeamName.trim()}
+                    className="px-6 py-2.5 rounded-xl bg-[var(--accent-red)] hover:bg-[#c91824] disabled:opacity-50 text-white font-bold font-mono tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(232,33,46,0.3)]"
+                  >
+                    <Plus size={16} />
+                    <span>CREATE TEAM & SAVE ROSTER</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Search & Filter Bar */}
+          <div className="p-3.5 rounded-xl bg-[#131316] border border-[#26262b] flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
+            <div className="relative w-full sm:w-80">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#71717a]" />
+              <input
+                type="text"
+                placeholder="Search team or member..."
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                className="gcl-input w-full pl-9 py-2 text-xs font-mono"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setTeamFilterStatus('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  teamFilterStatus === 'all'
+                    ? 'bg-[#26262f] text-white border border-white/20'
+                    : 'text-[#71717a] hover:text-white bg-transparent border border-transparent'
+                }`}
+              >
+                All ({teams.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTeamFilterStatus('with-members')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  teamFilterStatus === 'with-members'
+                    ? 'bg-[#26262f] text-white border border-white/20'
+                    : 'text-[#71717a] hover:text-white bg-transparent border border-transparent'
+                }`}
+              >
+                With Members ({teams.filter((t) => (teamMembersMap[t.id] || []).length > 0).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTeamFilterStatus('no-members')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                  teamFilterStatus === 'no-members'
+                    ? 'bg-[#26262f] text-white border border-white/20'
+                    : 'text-[#71717a] hover:text-white bg-transparent border border-transparent'
+                }`}
+              >
+                No Members ({teams.filter((t) => (teamMembersMap[t.id] || []).length === 0).length})
+              </button>
+            </div>
+          </div>
+
+          {/* Teams Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {teamManagementMetrics.filteredTeams.length === 0 ? (
+              <div className="col-span-full p-12 text-center rounded-2xl bg-[#131316] border border-[#26262b]">
+                <Users size={40} className="mx-auto text-[#52525b] mb-3" />
+                <h3 className="text-lg font-bold text-white mb-1">No matching teams found</h3>
+                <p className="text-xs text-[#71717a]">
+                  Try adjusting your search query or register a new team above.
+                </p>
+              </div>
+            ) : (
+              teamManagementMetrics.filteredTeams.map((team, idx) => {
+                const members = teamMembersMap[team.id] || [];
+                const teamItems = items.filter((it) => it.team_id === team.id);
+                const isEditingBudget = editingBudgetTeamId === team.id;
+
+                return (
+                  <div
+                    key={team.id}
+                    className="p-5 rounded-2xl bg-[#131316] border border-[#26262b] hover:border-[#383842] shadow-xl flex flex-col justify-between transition-all relative overflow-hidden group"
+                  >
+                    <div>
+                      {/* Top Bar: Team Number & Actions */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-8 h-8 rounded-lg bg-[#18181c] border border-[#2a2a32] flex items-center justify-center font-mono font-bold text-xs text-[var(--accent-red)] shrink-0">
+                            #{String(idx + 1).padStart(2, '0')}
+                          </span>
+
+                          <div className="min-w-0">
+                            {editingTeamNames[team.id] !== undefined ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={editingTeamNames[team.id]}
+                                  onChange={(e) =>
+                                    setEditingTeamNames((prev) => ({
+                                      ...prev,
+                                      [team.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleConfirmTeamRename();
+                                    }
+                                  }}
+                                  className="gcl-input py-1 text-sm font-bold w-40"
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleConfirmTeamRename}
+                                  className="p-1 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 cursor-pointer"
+                                  title="Save Name"
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTeamNames((prev) => {
+                                      const copy = { ...prev };
+                                      delete copy[team.id];
+                                      return copy;
+                                    });
+                                    setTeamPendingEdit(null);
+                                  }}
+                                  className="p-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <XCircle size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <h3
+                                className="font-extrabold text-white text-lg tracking-wide truncate uppercase font-['Rajdhani',sans-serif] cursor-pointer hover:text-[var(--accent-red)] transition-colors"
+                                onClick={() => {
+                                  setEditingTeamNames((prev) => ({ ...prev, [team.id]: team.name }));
+                                  setTeamPendingEdit({ id: team.id, oldName: team.name, newName: team.name });
+                                }}
+                                title="Click to rename"
+                              >
+                                {team.name}
+                              </h3>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTeamNames((prev) => ({ ...prev, [team.id]: team.name }));
+                              setTeamPendingEdit({ id: team.id, oldName: team.name, newName: team.name });
+                            }}
+                            className="p-1.5 rounded-lg text-[#71717a] hover:text-cyan-400 hover:bg-[#1f1f26] transition-colors cursor-pointer"
+                            title="Rename Team"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTeamToRemove(team)}
+                            className="p-1.5 rounded-lg text-[#71717a] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Remove Team"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Financial Strip */}
+                      <div className="p-3 rounded-xl bg-[#0e0e11] border border-[#202026] mb-4 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-[#71717a] uppercase font-bold">Current Budget</span>
+                          {isEditingBudget ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editingBudgetValue}
+                                onChange={(e) => setEditingBudgetValue(e.target.value)}
+                                className="gcl-input py-0.5 px-2 text-xs font-mono w-28 text-right"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveTeamBudget(team.id)}
+                                className="p-1 rounded bg-emerald-500/20 text-emerald-400 cursor-pointer"
+                                title="Save"
+                              >
+                                <Check size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingBudgetTeamId(null)}
+                                className="p-1 rounded bg-red-500/20 text-red-400 cursor-pointer"
+                                title="Cancel"
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-emerald-400 font-mono text-sm">
+                                {formatCurrency(team.budget)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingBudgetTeamId(team.id);
+                                  setEditingBudgetValue(team.budget.toString());
+                                }}
+                                className="text-[10px] text-[#71717a] hover:text-emerald-400 underline font-mono cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick Adjust Buttons */}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#1a1a20] text-[11px] font-mono">
+                          <span className="text-[#71717a]">Quick Adjust:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdjustTeamBudget(team.id, -1000000)}
+                              className="px-1.5 py-0.5 rounded bg-[#18181c] hover:bg-red-500/20 hover:text-red-400 text-[#a1a1aa] border border-[#2a2a32] transition-colors cursor-pointer"
+                              title="Decrease budget by ₹10L"
+                            >
+                              -10L
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdjustTeamBudget(team.id, 1000000)}
+                              className="px-1.5 py-0.5 rounded bg-[#18181c] hover:bg-emerald-500/20 hover:text-emerald-400 text-[#a1a1aa] border border-[#2a2a32] transition-colors cursor-pointer"
+                              title="Increase budget by ₹10L"
+                            >
+                              +10L
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdjustTeamBudget(team.id, 5000000)}
+                              className="px-1.5 py-0.5 rounded bg-[#18181c] hover:bg-emerald-500/20 hover:text-emerald-400 text-[#a1a1aa] border border-[#2a2a32] transition-colors cursor-pointer"
+                              title="Increase budget by ₹50L"
+                            >
+                              +50L
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Stats Summary */}
+                        <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-[#a1a1aa]">
+                          <span>Items Won: <strong className="text-white">{teamItems.length}</strong></span>
+                          <span>Score: <strong className="text-[var(--accent-red)]">{team.score || 0} PTS</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Roster Members Section */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-[#a1a1aa] uppercase font-bold tracking-wider">
+                            Roster ({members.length})
+                          </span>
+                          <span className="text-[10px] text-emerald-400/80 font-mono">
+                            ⚡ Synced to Certificates
+                          </span>
+                        </div>
+
+                        {/* Member Chips */}
+                        <div className="flex flex-wrap gap-1.5 min-h-[32px] max-h-36 overflow-y-auto pr-1">
+                          {members.map((m) => (
+                            <span
+                              key={m.id}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#18181c] border border-[#26262f] text-xs text-white font-medium shadow-sm group/chip hover:border-[var(--accent-red)]/50 transition-colors"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"></span>
+                              <span className="max-w-[120px] truncate">{m.full_name || m.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMemberFromTeam(m.id, team.id)}
+                                className="text-[#71717a] hover:text-red-400 font-bold ml-0.5 cursor-pointer transition-colors"
+                                title="Remove member"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                          {members.length === 0 && (
+                            <p className="text-xs text-[#71717a] italic py-1">
+                              No members yet. Type below to add.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inline Add Member Bar */}
+                    <div className="pt-3 mt-3 border-t border-[#202026]">
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder="Add member name..."
+                          value={newMemberInputs[team.id] || ''}
+                          onChange={(e) =>
+                            setNewMemberInputs((prev) => ({
+                              ...prev,
+                              [team.id]: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddMemberToTeam(team.id);
+                            }
+                          }}
+                          className="gcl-input flex-1 py-1.5 text-xs font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddMemberToTeam(team.id)}
+                          disabled={!newMemberInputs[team.id]?.trim() || addingMemberTeamId === team.id}
+                          className="px-3 py-1.5 rounded-lg bg-[var(--accent-red)] hover:bg-[#c91824] text-white text-xs font-bold font-mono transition-all disabled:opacity-40 flex items-center gap-1 cursor-pointer shrink-0"
+                          title="Add Member"
+                        >
+                          <Plus size={13} />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* CERTIFICATES TAB */}
       {adminActiveTab === 'certificates' && (

@@ -403,7 +403,7 @@ Priya Sharma,,volunteer`;
   }
 
   return (
-    <div className="min-h-screen text-white font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -412,7 +412,7 @@ Priya Sharma,,volunteer`;
         <div className="flex items-center justify-between">
           <Link
             to="/123456789/GCL-0321/admin"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-[#a1a1aa] hover:text-[var(--accent-red)] transition-colors font-mono"
           >
             <ChevronLeft size={16} /> Back to Admin Panel
           </Link>
@@ -421,12 +421,12 @@ Priya Sharma,,volunteer`;
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-              <Layers size={22} className="text-cyan-400" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 flex items-center justify-center text-[var(--accent-red)] shadow-[0_0_15px_rgba(232,33,46,0.2)]">
+              <Layers size={22} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white">Bulk Certificate Generator</h1>
-              <p className="text-xs text-slate-400 font-mono">
+              <h1 className="text-2xl font-black text-white uppercase tracking-wider font-['Rajdhani',sans-serif]">Bulk Certificate Generator</h1>
+              <p className="text-xs text-[#a1a1aa] font-mono">
                 Upload CSV → Validate → Issue all at once
               </p>
             </div>

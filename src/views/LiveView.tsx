@@ -614,15 +614,15 @@ export default function LiveView() {
               <div
                 className="panel red"
                 style={{
-                  minHeight: '158px',
+                  minHeight: '185px',
                   height: 'auto',
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '22px 28px',
+                  padding: '24px 30px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '20px',
+                  gap: '24px',
                 }}
               >
                 {/* 3 Strips with exact blueprint clip-path */}
@@ -650,38 +650,50 @@ export default function LiveView() {
                 />
 
                 {/* Left-aligned content: round meta and question text */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', flex: 1, minWidth: 0, padding: '0 16px', zIndex: 10, textAlign: 'left' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
-                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#e6e6ea', letterSpacing: '0.4px', fontFamily: "'Rajdhani', sans-serif" }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'center',
+                    flex: 1,
+                    minWidth: 0,
+                    padding: '8px 24px 8px clamp(72px, 5.5vw, 92px)',
+                    zIndex: 10,
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                      <span style={{ fontSize: '17px', fontWeight: 700, color: '#e6e6ea', letterSpacing: '0.6px', fontFamily: "'Rajdhani', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
                       </span>
-                      <div style={{ width: '48px', height: '2px', background: '#e8212e' }} />
+                      <div style={{ width: '56px', height: '3px', background: '#e8212e' }} />
                     </div>
-                    <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
-                    <span style={{ fontSize: '14px', letterSpacing: '0.4px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
+                    <div style={{ width: '1px', height: '20px', background: '#3a3a41' }} />
+                    <span style={{ fontSize: '15px', fontWeight: 600, letterSpacing: '0.5px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                       QUESTION {questionIdx + 1} OF {totalQuestions}
                     </span>
                     {alreadySoldItem && (
                       <>
-                        <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
+                        <div style={{ width: '1px', height: '20px', background: '#3a3a41' }} />
                         <span
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '3px 10px',
+                            padding: '4px 12px',
                             borderRadius: '6px',
                             background: 'rgba(232, 33, 46, 0.22)',
                             border: '1px solid #e8212e',
                             color: '#ff4d5a',
-                            fontSize: '13px',
+                            fontSize: '14px',
                             fontWeight: 800,
                             fontFamily: "'Rajdhani', sans-serif",
                             letterSpacing: '0.04em',
                           }}
                         >
-                          <Lock size={13} /> QUESTION LOCKED — SOLD TO {soldBuyerTeam?.name?.toUpperCase() || 'TEAM'} ({formatCurrency(alreadySoldItem.cost)})
+                          <Lock size={14} /> QUESTION LOCKED — SOLD TO {soldBuyerTeam?.name?.toUpperCase() || 'TEAM'} ({formatCurrency(alreadySoldItem.cost)})
                         </span>
                       </>
                     )}
@@ -690,15 +702,16 @@ export default function LiveView() {
                   {alreadySoldItem ? (
                     <h2
                       style={{
-                        fontSize: '26px',
-                        fontWeight: 700,
+                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontWeight: 800,
                         color: '#f4f4f6',
-                        lineHeight: 1.35,
+                        lineHeight: 1.25,
                         margin: 0,
                         fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-wrap',
+                        letterSpacing: '0.01em',
                       }}
                     >
                       {renderMultiLineText(alreadySoldItem.item_name || eventState?.current_item_name || '')}
@@ -706,15 +719,16 @@ export default function LiveView() {
                   ) : isRevealed ? (
                     <h2
                       style={{
-                        fontSize: '26px',
-                        fontWeight: 700,
+                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontWeight: 800,
                         color: '#f4f4f6',
-                        lineHeight: 1.35,
+                        lineHeight: 1.25,
                         margin: 0,
                         fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-wrap',
+                        letterSpacing: '0.01em',
                       }}
                     >
                       {renderMultiLineText(eventState?.current_item_name || 'No question text set')}
@@ -722,14 +736,15 @@ export default function LiveView() {
                   ) : (
                     <h2
                       style={{
-                        fontSize: '26px',
+                        fontSize: 'clamp(28px, 2.3vw, 38px)',
                         fontWeight: 700,
                         color: '#80808a',
-                        lineHeight: 1.35,
+                        lineHeight: 1.25,
                         margin: 0,
                         fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         fontStyle: 'italic',
+                        letterSpacing: '0.02em',
                       }}
                     >
                       Awaiting for Next Question...

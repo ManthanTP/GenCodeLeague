@@ -75,12 +75,12 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen text-white font-sans">
+    <div className="gcl-live-page min-h-screen text-white font-sans">
       <Header viewMode="admin" onToggleView={() => navigate('/')} />
       <Notification notification={notification} />
 
       <div className="auth-centered-wrapper">
-        <div className="auth-card max-w-md w-full">
+        <div className="panel max-w-md w-full">
           <div className="auth-icon-badge">
             <Lock size={36} className="text-red-400" />
           </div>

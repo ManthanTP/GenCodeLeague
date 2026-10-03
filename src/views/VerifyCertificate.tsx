@@ -172,7 +172,7 @@ export default function VerifyCertificate() {
   };
 
   return (
-    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white pb-16" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 

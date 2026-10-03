@@ -115,7 +115,7 @@ export default function EditionDetail() {
   }, {});
 
   return (
-    <div className="min-h-screen text-white font-sans selection:bg-[var(--accent-red)] selection:text-white pb-20">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white pb-20" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 

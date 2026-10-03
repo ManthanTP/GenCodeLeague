@@ -143,27 +143,17 @@ export default function StudentCertificateLookup() {
   };
 
   return (
-    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-16">
+    <div className="gcl-live-page min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-16">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
       <main className="max-w-5xl mx-auto px-4 py-10">
-        {/* Navigation Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
-          >
-            <ChevronLeft size={16} /> Back to Live Event
-          </Link>
-        </div>
-
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <Award size={14} /> PUBLIC CREDENTIAL PORTAL
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
             Find Your Certificate
           </h1>
           <p className="text-sm text-slate-400">

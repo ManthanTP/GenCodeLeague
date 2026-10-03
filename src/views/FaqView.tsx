@@ -64,31 +64,17 @@ export default function FaqView() {
   }, [faqs, search]);
 
   return (
-    <div className="min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
+    <div className="gcl-live-page min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/hall-of-fame"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
-          >
-            <ChevronLeft size={16} /> Back to Hall of Fame
-          </Link>
-
-          <span className="text-xs font-mono text-red-400">
-            KNOWLEDGE BASE
-          </span>
-        </div>
-
         {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <HelpCircle size={14} /> FREQUENTLY ASKED QUESTIONS
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
             Everything You Need To Know
           </h1>
           <p className="text-sm text-slate-400">
