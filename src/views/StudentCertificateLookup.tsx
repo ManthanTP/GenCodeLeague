@@ -143,41 +143,52 @@ export default function StudentCertificateLookup() {
   };
 
   return (
-    <div className="gcl-live-page min-h-screen text-white font-sans selection:bg-red-500 selection:text-white pb-16">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[#ff2a38] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-5xl mx-auto px-4 py-10">
-        {/* Hero Section */}
-        <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
-            <Award size={14} /> PUBLIC CREDENTIAL PORTAL
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {/* Cyber Hero Banner */}
+        <div className="panel red relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
+          <div className="relative z-10 max-w-2xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.15)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider shadow-[0_0_12px_rgba(232,33,46,0.25)] uppercase">
+              <Award size={15} /> PUBLIC CREDENTIAL PORTAL
+            </div>
+            <h1
+              className="text-4xl sm:text-6xl font-black text-white tracking-wide uppercase"
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+            >
+              Find Your Certificate
+            </h1>
+            <div className="w-16 h-1 bg-[#e8212e] mx-auto rounded-full" />
+            <p className="text-sm text-[#9a9aa3] font-medium font-sans max-w-xl mx-auto leading-relaxed">
+              Search by your full name to view, verify, and download your official GenCode League certificates across all editions. No login required.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-            Find Your Certificate
-          </h1>
-          <p className="text-sm text-slate-400">
-            Search by your full name to view, verify, and download your official GenCode League certificates across all editions. No login required.
-          </p>
         </div>
 
-        {/* Search Bar & Filter Form */}
+        {/* Search Bar & Filter Form with Red Opposite Corner Glow (.panel.red) */}
         <form
           onSubmit={handleSearch}
-          className="bg-[#131316] border border-[#26262b] rounded-2xl p-4 sm:p-6 backdrop-blur-md shadow-2xl mb-10 max-w-3xl mx-auto"
+          className="panel red p-6 sm:p-8 max-w-3xl mx-auto space-y-4"
         >
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             <div className="relative flex-1">
               <Search
                 size={18}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9a9aa3]"
               />
               <input
                 type="text"
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
                 placeholder="Enter your name as registered (e.g. Alex Rivera)..."
-                className="gcl-input w-full pl-10 py-3 text-sm font-medium"
+                className="gcl-input w-full pl-10 py-3 text-sm font-semibold"
+                style={{
+                  borderRadius: '10px',
+                  background: '#18181c',
+                  border: '1px solid #3e3e48',
+                }}
                 autoFocus
               />
             </div>
@@ -187,6 +198,11 @@ export default function StudentCertificateLookup() {
                 value={selectedEditionId}
                 onChange={(e) => setSelectedEditionId(e.target.value)}
                 className="gcl-input w-full py-3 text-xs font-mono"
+                style={{
+                  borderRadius: '10px',
+                  background: '#18181c',
+                  border: '1px solid #3e3e48',
+                }}
               >
                 <option value="all">All Editions</option>
                 {editions.map((ed) => (
@@ -200,7 +216,7 @@ export default function StudentCertificateLookup() {
             <button
               type="submit"
               disabled={loading || !searchName.trim()}
-              className="px-6 py-3 rounded-xl bg-[#e0263f] hover:bg-[#ff3b53] text-white font-extrabold text-sm shadow-glow-red disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0"
+              className="gcl-nav-btn-active text-sm font-bold uppercase tracking-wider px-6 py-3 rounded-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
               <Search size={16} />
               {loading ? 'Searching...' : 'Search'}
@@ -208,7 +224,7 @@ export default function StudentCertificateLookup() {
           </div>
 
           {rateLimited && (
-            <p className="text-xs text-amber-400 font-mono mt-3 flex items-center gap-1.5 justify-center">
+            <p className="text-xs text-amber-400 font-mono flex items-center gap-1.5 justify-center">
               <AlertCircle size={14} /> Search rate limit active. Please wait 30 seconds before searching again.
             </p>
           )}
@@ -218,19 +234,22 @@ export default function StudentCertificateLookup() {
         {hasSearched && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2
+                className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2"
+                style={{ fontFamily: "'Rajdhani', sans-serif" }}
+              >
                 <span>Search Results</span>
-                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[#18181c] text-[#ff4d5a] border border-[#2c2c33]">
                   {results.length} found
                 </span>
               </h2>
             </div>
 
             {results.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 p-8 backdrop-blur-md">
-                <ShieldAlert size={44} className="text-slate-500 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-white">No Certificates Found</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+              <div className="text-center py-16 panel red p-8">
+                <ShieldAlert size={44} className="text-[#52525b] mx-auto mb-3" />
+                <h3 className="text-xl font-bold text-white">No Certificates Found</h3>
+                <p className="text-xs text-[#9a9aa3] mt-1 max-w-md mx-auto">
                   We could not find any certificates issued under "{searchName}". Please check for spelling differences or try selecting "All Editions".
                 </p>
               </div>
@@ -241,52 +260,55 @@ export default function StudentCertificateLookup() {
                   return (
                     <div
                       key={cert.id}
-                      className="bg-[#131316] border border-[#26262b] hover:border-red-500/40 rounded-2xl p-5 backdrop-blur-md shadow-xl transition-all flex flex-col justify-between"
+                      className="panel red p-5 flex flex-col justify-between"
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#9a9aa3]">
                               {cert.edition?.name || 'GenCode League'}
                             </span>
-                            <h3 className="text-xl font-extrabold text-white mt-0.5">
+                            <h3
+                              className="text-2xl font-black text-white mt-0.5 uppercase"
+                              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                            >
                               {cert.recipient_name}
                             </h3>
                           </div>
 
                           {isValid ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
                               <ShieldCheck size={12} /> VALID
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
                               <ShieldAlert size={12} /> REVOKED
                             </span>
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                          <div className="bg-[#18181c] p-2 rounded-lg border border-[#26262b]">
-                            <span className="text-[10px] uppercase font-mono text-slate-500 block">
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1 font-mono">
+                          <div className="bg-[#18181c] p-2.5 rounded-lg border border-[#26262b]">
+                            <span className="text-[10px] uppercase text-[#9a9aa3] block font-bold">
                               Type
                             </span>
-                            <span className="font-semibold text-red-400 capitalize">
+                            <span className="font-bold text-[#ff4d5a] capitalize">
                               {cert.certificate_type.replace('_', ' ')}
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-mono text-slate-500 block">
+                          <div className="bg-[#18181c] p-2.5 rounded-lg border border-[#26262b]">
+                            <span className="text-[10px] uppercase text-[#9a9aa3] block font-bold">
                               Team
                             </span>
-                            <span className="font-semibold text-slate-300 truncate block">
+                            <span className="font-bold text-white truncate block">
                               {cert.team?.name || 'Individual'}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
-                          <span className="text-amber-400 font-bold">
+                        <div className="flex items-center justify-between text-[11px] font-mono text-[#9a9aa3] pt-1">
+                          <span className="text-[#ffd700] font-bold">
                             {cert.certificate_id}
                           </span>
                           <span>
@@ -300,18 +322,20 @@ export default function StudentCertificateLookup() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-[#35353b]">
                         <button
+                          type="button"
                           onClick={() => setPreviewCert(cert)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <Eye size={13} /> View
                         </button>
 
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => handleCopyVerifyUrl(cert.certificate_id)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                            className="p-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-[#9a9aa3] hover:text-white transition-colors cursor-pointer"
                             title="Copy Public Verification Link"
                           >
                             {copiedId === cert.certificate_id ? (
@@ -322,12 +346,13 @@ export default function StudentCertificateLookup() {
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => handleDownload(cert)}
                             disabled={downloadingId === cert.certificate_id}
-                            className="px-3 py-1.5 rounded-lg bg-[#e0263f] hover:bg-[#ff3b53] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-glow-red"
+                            className="gcl-nav-btn-active text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                           >
                             <Download size={13} />
-                            {downloadingId === cert.certificate_id ? 'Downloading...' : 'Download'}
+                            {downloadingId === cert.certificate_id ? 'Downloading...' : 'Download PDF'}
                           </button>
                         </div>
                       </div>
@@ -342,23 +367,24 @@ export default function StudentCertificateLookup() {
         {/* Modal Certificate Preview */}
         {previewCert && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-4xl w-full flex flex-col items-center space-y-4 my-8">
-              <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="panel red p-6 sm:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-8">
+              <div className="w-full flex items-center justify-between pb-3 border-b border-[#35353b]">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-cyan-400 font-bold">
+                  <span className="font-mono text-[#ffd700] font-bold">
                     {previewCert.certificate_id}
                   </span>
                   <Link
                     to={`/verify/${previewCert.certificate_id}`}
                     target="_blank"
-                    className="text-xs text-slate-400 hover:text-cyan-300 flex items-center gap-1 font-mono"
+                    className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono"
                   >
                     Public Verify <ExternalLink size={12} />
                   </Link>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setPreviewCert(null)}
-                  className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold"
+                  className="px-3 py-1 rounded bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold cursor-pointer"
                 >
                   Close ✕
                 </button>
@@ -387,20 +413,21 @@ export default function StudentCertificateLookup() {
                     status={previewCert.status}
                     scale={0.8}
                   />
-
                 </div>
               </div>
 
-              <div className="w-full flex justify-between items-center pt-2 border-t border-slate-800">
+              <div className="w-full flex justify-between items-center pt-2 border-t border-[#35353b]">
                 <button
+                  type="button"
                   onClick={() => handleCopyVerifyUrl(previewCert.certificate_id)}
-                  className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Copy size={13} /> Copy Verification Link
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownload(previewCert)}
-                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-glow-cyan"
+                  className="gcl-nav-btn-active text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer"
                 >
                   <Download size={14} /> Download PDF
                 </button>

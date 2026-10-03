@@ -98,33 +98,36 @@ export default function FaqView() {
   }, [faqs, search, activeCategory]);
 
   return (
-    <div
-      className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white pb-20"
-      style={{ fontFamily: "'Rajdhani', sans-serif" }}
-    >
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[#ff2a38] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        {/* Hero Section */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 text-[var(--accent-red)] text-xs font-mono font-bold tracking-wider shadow-[0_0_15px_rgba(232,33,46,0.2)]">
-            <HelpCircle size={15} /> OFFICIAL LEAGUE KNOWLEDGE BASE
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        {/* Cyber Hero Banner with Red Opposite Corner Glow (.panel.red) */}
+        <div className="panel red relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
+          <div className="relative z-10 max-w-2xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.15)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider shadow-[0_0_12px_rgba(232,33,46,0.25)] uppercase">
+              <HelpCircle size={15} /> OFFICIAL LEAGUE KNOWLEDGE BASE
+            </div>
+            <h1
+              className="text-4xl sm:text-6xl font-black text-white tracking-wide uppercase"
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+            >
+              Frequently Asked Questions
+            </h1>
+            <div className="w-16 h-1 bg-[#e8212e] mx-auto rounded-full" />
+            <p className="text-sm text-[#9a9aa3] font-medium font-sans max-w-xl mx-auto leading-relaxed">
+              Authoritative documentation for technical auction bidding mechanics, budget equations, cryptographic certificate verification, and podium protocols.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-wide uppercase font-['Rajdhani',sans-serif]">
-            FREQUENTLY ASKED QUESTIONS
-          </h1>
-          <p className="text-sm text-[#a1a1aa] font-medium font-sans">
-            Authoritative documentation for technical auction bidding mechanics, budget equations, cryptographic certificate verification, and podium protocols.
-          </p>
         </div>
 
-        {/* Search & Category Pills */}
+        {/* Search & Category Navigation Pills */}
         <div className="space-y-4">
           <div className="relative max-w-xl mx-auto">
             <Search
               size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#71717a]"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9a9aa3]"
             />
             <input
               type="text"
@@ -132,6 +135,11 @@ export default function FaqView() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by keywords (e.g. budget, certificate, tie breaker)..."
               className="gcl-input w-full pl-11 py-3 text-sm font-mono"
+              style={{
+                borderRadius: '10px',
+                background: '#18181c',
+                border: '1px solid #3e3e48',
+              }}
             />
           </div>
 
@@ -139,106 +147,99 @@ export default function FaqView() {
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                activeCategory === 'all'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
+              className={activeCategory === 'all' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
             >
               All Topics ({faqs.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('auction')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                activeCategory === 'auction'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
+              className={activeCategory === 'auction' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
             >
               Bidding & Rounds
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('budget')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                activeCategory === 'budget'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
+              className={activeCategory === 'budget' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
             >
-              Budgets & Scoring
+              Budgets & Mechanics
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('certs')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                activeCategory === 'certs'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
+              className={activeCategory === 'certs' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
             >
               Certificates & Verification
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('teams')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                activeCategory === 'teams'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
+              className={activeCategory === 'teams' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
             >
               Teams & Roster
             </button>
           </div>
         </div>
 
-        {/* FAQ Accordion List */}
+        {/* FAQ Accordion List with Opposite Corner Glow on Open Panels */}
         {filteredFaqs.length === 0 ? (
-          <div className="py-16 text-center bg-[#131316] rounded-2xl border border-[#26262b] p-8 shadow-xl">
+          <div className="py-16 text-center panel red p-8 shadow-xl">
             <FileQuestion size={44} className="text-[#52525b] mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white mb-1">No Matching Answers</h3>
-            <p className="text-xs text-[#a1a1aa] mt-1 max-w-md mx-auto">
+            <h3 className="text-xl font-bold text-white mb-1">No Matching Answers</h3>
+            <p className="text-xs text-[#9a9aa3] mt-1 max-w-md mx-auto">
               We couldn't find questions matching "{search}". Try searching for keywords like "budget", "certificate", "timer", or "auction".
             </p>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             {filteredFaqs.map((faq, index) => {
               const isOpen = openIds.has(faq.id);
               return (
                 <div
                   key={faq.id}
-                  className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-lg ${
-                    isOpen
-                      ? 'bg-[#15151a] border-[var(--accent-red)]/50 shadow-[0_0_20px_rgba(232,33,46,0.12)]'
-                      : 'bg-[#131316] border-[#26262b] hover:border-[#383842]'
+                  className={`transition-all duration-200 overflow-hidden ${
+                    isOpen ? 'panel red' : 'panel'
                   }`}
+                  style={{
+                    borderRadius: '14px',
+                    padding: '2px',
+                  }}
                 >
                   <button
                     type="button"
                     onClick={() => toggleFaq(faq.id)}
-                    className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base text-white hover:text-[var(--accent-red)] transition-colors cursor-pointer"
+                    className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base text-white hover:text-[#ff4d5a] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="font-mono text-xs text-[var(--accent-red)] shrink-0 font-bold">
-                        {String(index + 1).padStart(2, '0')}.
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span
+                        className="num"
+                        style={{
+                          fontSize: '13px',
+                          color: '#ff4d5a',
+                          padding: '2px 8px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {String(index + 1).padStart(2, '0')}
                       </span>
-                      <span className="font-['Rajdhani',sans-serif] text-lg tracking-wide uppercase font-extrabold truncate">
+                      <span
+                        className="text-lg sm:text-xl tracking-wide uppercase font-extrabold truncate"
+                        style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                      >
                         {faq.question}
                       </span>
                     </div>
                     <ChevronDown
                       size={20}
-                      className={`text-[#71717a] shrink-0 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180 text-[var(--accent-red)]' : ''
+                      className={`text-[#9a9aa3] shrink-0 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-[#ff4d5a]' : ''
                       }`}
                     />
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 pt-1 text-sm text-[#d4d4d8] leading-relaxed border-t border-[#222228] font-sans">
+                    <div className="px-5 pb-5 pt-1 text-sm text-[#e1e1e6] leading-relaxed border-t border-[#35353b] font-sans">
                       {faq.answer}
                     </div>
                   )}

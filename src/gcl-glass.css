@@ -34,15 +34,72 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.22) 100%) padding-box,
     repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px) padding-box,
     linear-gradient(145deg, #303038 0%, #25252c 35%, #1b1b20 70%, #202026 100%) padding-box,
-    radial-gradient(circle 65px at 0 0, #ff2a38 0, rgba(232, 33, 46, 0.6) 16px, transparent 65px) border-box,
-    radial-gradient(circle 65px at 100% 100%, #ff2a38 0, rgba(232, 33, 46, 0.6) 16px, transparent 65px) border-box,
+    radial-gradient(circle 75px at 0 0, #ff2a38 0, rgba(232, 33, 46, 0.6) 18px, transparent 75px) border-box,
+    radial-gradient(circle 75px at 100% 100%, #ff2a38 0, rgba(232, 33, 46, 0.6) 18px, transparent 75px) border-box,
     linear-gradient(#4a4a55, #3a3a44) border-box;
   box-shadow:
-    -3px -3px 12px -6px rgba(232, 33, 46, 0.5),
-    3px 3px 12px -6px rgba(232, 33, 46, 0.5),
+    -3px -3px 14px -5px rgba(232, 33, 46, 0.55),
+    3px 3px 14px -5px rgba(232, 33, 46, 0.55),
     0 0 24px rgba(175, 175, 195, 0.12),
     inset 0 0 30px rgba(195, 195, 215, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* Glass panel with gold glow border (.gold for 01 Winner) */
+.gcl-glass-gold, .panel.gold, .gold {
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.28) 100%) padding-box,
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px) padding-box,
+    linear-gradient(145deg, #342a18 0%, #262014 35%, #19150e 70%, #201a11 100%) padding-box,
+    radial-gradient(circle 85px at 0 0, #ffd700 0, rgba(245, 158, 11, 0.75) 24px, transparent 85px) border-box,
+    radial-gradient(circle 85px at 100% 100%, #ffd700 0, rgba(245, 158, 11, 0.75) 24px, transparent 85px) border-box,
+    linear-gradient(#604d22, #3c2e12) border-box;
+  box-shadow:
+    -4px -4px 16px -4px rgba(245, 158, 11, 0.6),
+    4px 4px 16px -4px rgba(245, 158, 11, 0.6),
+    0 0 32px rgba(212, 175, 55, 0.25),
+    inset 0 0 30px rgba(245, 158, 11, 0.1),
+    inset 0 1px 0 rgba(255, 245, 190, 0.3);
+}
+
+/* Glass panel with silver glow border (.silver for 02 Runner Up) */
+.gcl-glass-silver, .panel.silver, .silver {
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.24) 100%) padding-box,
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px) padding-box,
+    linear-gradient(145deg, #2c3038 0%, #21242c 35%, #16181e 70%, #1c1f26 100%) padding-box,
+    radial-gradient(circle 80px at 0 0, #ffffff 0, rgba(203, 213, 225, 0.8) 22px, transparent 80px) border-box,
+    radial-gradient(circle 80px at 100% 100%, #ffffff 0, rgba(203, 213, 225, 0.8) 22px, transparent 80px) border-box,
+    linear-gradient(#565e6d, #353b47) border-box;
+  box-shadow:
+    -3px -3px 14px -5px rgba(203, 213, 225, 0.5),
+    3px 3px 14px -5px rgba(203, 213, 225, 0.5),
+    0 0 26px rgba(148, 163, 184, 0.18),
+    inset 0 0 30px rgba(203, 213, 225, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Glass panel with bronze/brown glow border (.bronze for 03 Third Place) */
+.gcl-glass-bronze, .panel.bronze, .bronze {
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.26) 100%) padding-box,
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px) padding-box,
+    linear-gradient(145deg, #302118 0%, #241811 35%, #18100a 70%, #1e130c 100%) padding-box,
+    radial-gradient(circle 80px at 0 0, #ea580c 0, rgba(180, 83, 9, 0.8) 22px, transparent 80px) border-box,
+    radial-gradient(circle 80px at 100% 100%, #ea580c 0, rgba(180, 83, 9, 0.8) 22px, transparent 80px) border-box,
+    linear-gradient(#5e3922, #3c2211) border-box;
+  box-shadow:
+    -3px -3px 14px -5px rgba(217, 119, 6, 0.5),
+    3px 3px 14px -5px rgba(217, 119, 6, 0.5),
+    0 0 26px rgba(180, 83, 9, 0.18),
+    inset 0 0 30px rgba(217, 119, 6, 0.07),
+    inset 0 1px 0 rgba(255, 210, 170, 0.2);
 }
 
 /* Strip container for geometric overlays */

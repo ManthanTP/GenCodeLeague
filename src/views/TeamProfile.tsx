@@ -15,6 +15,7 @@ import {
   Coins,
   History,
   Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
@@ -121,18 +122,20 @@ export default function TeamProfile() {
     if (!members || members.length === 0) return [];
     const hasExplicitCaptain = members.some((m) => m.is_captain);
 
-    return members.map((m, idx) => ({
-      ...m,
-      isCaptain: hasExplicitCaptain ? Boolean(m.is_captain) : idx === 0,
-    })).sort((a, b) => {
-      if (a.isCaptain && !b.isCaptain) return -1;
-      if (!a.isCaptain && b.isCaptain) return 1;
-      return 0;
-    });
+    return members
+      .map((m, idx) => ({
+        ...m,
+        isCaptain: hasExplicitCaptain ? Boolean(m.is_captain) : idx === 0,
+      }))
+      .sort((a, b) => {
+        if (a.isCaptain && !b.isCaptain) return -1;
+        if (!a.isCaptain && b.isCaptain) return 1;
+        return 0;
+      });
   }, [members]);
 
   return (
-    <div className="gcl-live-page min-h-screen text-white font-sans selection:bg-[#ff2a38] selection:text-white pb-20">
+    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[#ff2a38] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
@@ -151,8 +154,8 @@ export default function TeamProfile() {
           </span>
         </div>
 
-        {/* Team Profile Header Banner with Cyber Styling */}
-        <div className="bg-[#131316] border-l-4 border-l-[#e8212e] border-y border-r border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+        {/* Team Profile Header Banner with Red Opposite Corner Glow (.panel.red) */}
+        <div className="panel red relative overflow-hidden p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="text-xs font-mono text-[#ff4d5a] uppercase tracking-widest block font-bold">
@@ -169,25 +172,25 @@ export default function TeamProfile() {
             {/* Podium Placement Badge */}
             {podiumPosition && (
               <div
-                className={`px-5 py-3 rounded-2xl border text-center ${
+                className={`px-5 py-3 rounded-2xl text-center ${
                   podiumPosition === '1st'
-                    ? 'bg-[#d4af37]/15 border-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.25)]'
+                    ? 'panel gold'
                     : podiumPosition === '2nd'
-                    ? 'bg-slate-800/40 border-slate-500'
-                    : 'bg-amber-950/30 border-amber-600'
+                    ? 'panel silver'
+                    : 'panel bronze'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                  {podiumPosition === '1st' && <Crown size={18} className="text-[#fbbf24]" />}
-                  {podiumPosition === '2nd' && <Medal size={18} className="text-slate-300" />}
-                  {podiumPosition === '3rd' && <Award size={18} className="text-amber-500" />}
+                  {podiumPosition === '1st' && <Crown size={18} className="text-[#ffd700]" />}
+                  {podiumPosition === '2nd' && <Medal size={18} className="text-slate-100" />}
+                  {podiumPosition === '3rd' && <Award size={18} className="text-[#f97316]" />}
                   <span
                     className={`text-[10px] font-mono uppercase font-black tracking-widest ${
                       podiumPosition === '1st'
-                        ? 'text-[#fbbf24]'
+                        ? 'text-[#ffd700]'
                         : podiumPosition === '2nd'
-                        ? 'text-slate-300'
-                        : 'text-amber-400'
+                        ? 'text-slate-200'
+                        : 'text-[#f97316]'
                     }`}
                   >
                     Official Podium
@@ -198,59 +201,59 @@ export default function TeamProfile() {
                   style={{ fontFamily: "'Rajdhani', sans-serif" }}
                 >
                   {podiumPosition === '1st'
-                    ? '1ST PLACE'
+                    ? '01 • GRAND CHAMPION'
                     : podiumPosition === '2nd'
-                    ? '2ND PLACE'
-                    : '3RD PLACE'}
+                    ? '02 • RUNNER UP'
+                    : '03 • THIRD PLACE'}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Tournament Metrics Row (No numerical marks/scores) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#26262b]">
-            <div className="p-3 rounded-xl bg-[#18181c] border border-[#26262b]">
-              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block">
-                Items / Lots Won
+          {/* Tournament Metrics Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#3a3a44]">
+            <div className="p-3.5 rounded-xl bg-[#18181c] border border-[#2c2c33]">
+              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block font-bold">
+                Items Won
               </span>
               <strong
-                className="text-xl font-black text-[#ff4d5a] font-mono block mt-0.5"
+                className="text-2xl font-black text-[#ff4d5a] font-mono block mt-0.5"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
                 {items.length} Lots
               </strong>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#18181c] border border-[#26262b]">
-              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block">
+            <div className="p-3.5 rounded-xl bg-[#18181c] border border-[#2c2c33]">
+              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block font-bold">
                 Total Spent
               </span>
               <strong
-                className="text-xl font-black text-rose-400 font-mono block mt-0.5"
+                className="text-2xl font-black text-rose-400 font-mono block mt-0.5"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
                 {formatCurrency(totalSpent)}
               </strong>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#18181c] border border-[#26262b]">
-              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block">
+            <div className="p-3.5 rounded-xl bg-[#18181c] border border-[#2c2c33]">
+              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block font-bold">
                 Remaining Budget
               </span>
               <strong
-                className="text-xl font-black text-emerald-400 font-mono block mt-0.5"
+                className="text-2xl font-black text-[#3fe085] font-mono block mt-0.5"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
                 {formatCurrency(remainingBudget)}
               </strong>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#18181c] border border-[#26262b]">
-              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block">
+            <div className="p-3.5 rounded-xl bg-[#18181c] border border-[#2c2c33]">
+              <span className="text-[10px] font-mono uppercase text-[#9a9aa3] block font-bold">
                 Starting Purse
               </span>
               <strong
-                className="text-xl font-black text-white font-mono block mt-0.5"
+                className="text-2xl font-black text-white font-mono block mt-0.5"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
                 {formatCurrency(initialBudget > 0 ? initialBudget : 150000000)}
@@ -260,13 +263,13 @@ export default function TeamProfile() {
         </div>
 
         {/* TEAM MEMBERS & CAPTAIN ROSTER */}
-        <section className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#26262b]">
+        <section className="panel red p-6 sm:p-8 space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-[#35353b]">
             <h2
-              className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2"
+              className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide flex items-center gap-2"
               style={{ fontFamily: "'Rajdhani', sans-serif" }}
             >
-              <Users size={20} className="text-[#ff4d5a]" />
+              <Users size={22} className="text-[#ff4d5a]" />
               Team Roster & Leadership
             </h2>
             <span className="text-xs font-mono text-[#9a9aa3]">
@@ -283,16 +286,16 @@ export default function TeamProfile() {
               {designatedMembers.map((member) => (
                 <div
                   key={member.id}
-                  className={`p-4 rounded-xl transition-all space-y-2 relative overflow-hidden ${
+                  className={`p-5 transition-all space-y-2 relative overflow-hidden ${
                     member.isCaptain
-                      ? 'bg-gradient-to-b from-[#2a2208]/40 via-[#18181c] to-[#131316] border-2 border-[#d4af37] shadow-[0_0_16px_rgba(212,175,55,0.25)]'
-                      : 'bg-[#18181c] border border-[#26262b]'
+                      ? 'panel gold'
+                      : 'panel'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`font-bold text-base truncate ${
-                        member.isCaptain ? 'text-[#fbbf24]' : 'text-white'
+                      className={`font-bold text-lg truncate ${
+                        member.isCaptain ? 'text-[#ffd700]' : 'text-white'
                       }`}
                       style={{ fontFamily: "'Rajdhani', sans-serif" }}
                     >
@@ -300,19 +303,19 @@ export default function TeamProfile() {
                     </span>
 
                     {member.isCaptain && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-[#d4af37]/20 text-[#fbbf24] border border-[#d4af37]/50 shadow-[0_0_8px_rgba(212,175,55,0.3)] inline-flex items-center gap-1 uppercase shrink-0">
-                        <Crown size={11} /> CAPTAIN
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-black bg-[#ffd700]/20 text-[#ffd700] border border-[#ffd700]/60 shadow-[0_0_10px_rgba(255,215,0,0.4)] inline-flex items-center gap-1 uppercase shrink-0">
+                        <Crown size={12} /> CAPTAIN
                       </span>
                     )}
                   </div>
 
                   {member.college && (
-                    <div className="text-[11px] text-[#9a9aa3] truncate">
+                    <div className="text-xs text-[#9a9aa3] truncate font-sans">
                       {member.college}
                     </div>
                   )}
                   {member.department && (
-                    <div className="text-[10px] font-mono text-[#71717a]">
+                    <div className="text-[11px] font-mono text-[#71717a]">
                       Dept: {member.department}
                     </div>
                   )}
@@ -323,13 +326,13 @@ export default function TeamProfile() {
         </section>
 
         {/* ACQUIRED AUCTION ITEMS / LOTS WON */}
-        <section className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#26262b]">
+        <section className="panel red p-6 sm:p-8 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#35353b]">
             <h2
-              className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2"
+              className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide flex items-center gap-2"
               style={{ fontFamily: "'Rajdhani', sans-serif" }}
             >
-              <Package size={20} className="text-[#ff4d5a]" />
+              <Package size={22} className="text-[#ff4d5a]" />
               Acquired Auction Lots ({items.length})
             </h2>
             <span className="text-xs font-mono text-[#9a9aa3]">
@@ -342,45 +345,78 @@ export default function TeamProfile() {
               No auction items recorded for this team.
             </p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {items.map((it, idx) => (
-                <div
-                  key={it.id || idx}
-                  className="p-3.5 rounded-xl bg-[#18181c] border border-[#26262b] flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-mono text-[#ff4d5a] uppercase font-bold block">
-                      {it.question_ref || `Round ${(it.round_index ?? 0) + 1} - Question ${(it.question_index ?? 0) + 1}`}
-                    </span>
-                    <h4
-                      className="font-bold text-white text-sm truncate mt-0.5"
-                      style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                    >
-                      {it.item_name || 'Auction Lot'}
-                    </h4>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-[10px] font-mono text-[#9a9aa3] block uppercase">
-                      Gavel Drop
-                    </span>
-                    <strong className="text-sm font-mono font-bold text-rose-400">
-                      {formatCurrency(it.cost)}
-                    </strong>
-                  </div>
-                </div>
-              ))}
+            <div className="w-full overflow-x-auto">
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'separate',
+                  borderSpacing: '0 3px',
+                  textAlign: 'left',
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      height: '36px',
+                      background: '#1a1a1f',
+                      borderRadius: '6px',
+                      color: '#9a9aa3',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      letterSpacing: '0.8px',
+                      fontFamily: "'Rajdhani', sans-serif",
+                    }}
+                  >
+                    <th style={{ width: '80px', textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>REF</th>
+                    <th style={{ textAlign: 'left', padding: '0 14px' }}>ITEM / QUESTION LOT</th>
+                    <th style={{ width: '120px', textAlign: 'center', padding: '0 10px' }}>ROUND</th>
+                    <th style={{ width: '180px', textAlign: 'right', padding: '0 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>HAMMER DROP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((it, idx) => {
+                    const isEven = idx % 2 === 0;
+                    return (
+                      <tr
+                        key={it.id || idx}
+                        style={{
+                          height: '40px',
+                          background: isEven ? '#18181d' : '#121216',
+                          fontFamily: "'Rajdhani', sans-serif",
+                        }}
+                        className="transition-colors hover:brightness-110"
+                      >
+                        <td style={{ textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>
+                          <span className="num" style={{ padding: '2px 6px', fontSize: '11px', color: '#ff4d5a' }}>
+                            {it.question_ref || `Q${idx + 1}`}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0 14px', fontWeight: 700, color: '#ffffff', fontSize: '15px' }}>
+                          {it.item_name || 'Auction Lot'}
+                        </td>
+                        <td style={{ textAlign: 'center', padding: '0 10px', color: '#9a9aa3', fontSize: '13px' }}>
+                          Round {(it.round_index ?? 0) + 1}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '0 14px', fontWeight: 700, color: '#ff4d5a', fontSize: '15px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>
+                          {formatCurrency(it.cost)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
 
         {/* ISSUED CERTIFICATES */}
-        <section className="bg-[#131316] border border-[#26262b] rounded-2xl p-6 sm:p-8 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#26262b]">
+        <section className="panel red p-6 sm:p-8 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#35353b]">
             <h2
-              className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2"
+              className="text-xl sm:text-2xl font-black text-white uppercase tracking-wide flex items-center gap-2"
               style={{ fontFamily: "'Rajdhani', sans-serif" }}
             >
-              <Award size={20} className="text-[#fbbf24]" />
+              <Award size={22} className="text-[#ffd700]" />
               Official Certificates Issued ({certificates.length})
             </h2>
           </div>
@@ -394,10 +430,10 @@ export default function TeamProfile() {
               {certificates.map((cert) => (
                 <div
                   key={cert.id}
-                  className="p-4 rounded-xl bg-[#18181c] border border-[#26262b] flex items-center justify-between gap-4"
+                  className="panel p-4 flex items-center justify-between gap-4"
                 >
                   <div>
-                    <span className="text-[10px] font-mono font-bold text-[#fbbf24] block">
+                    <span className="text-[10px] font-mono font-bold text-[#ffd700] block">
                       {cert.certificate_id}
                     </span>
                     <h4
@@ -414,7 +450,7 @@ export default function TeamProfile() {
                   <Link
                     to={`/verify/${cert.certificate_id}`}
                     target="_blank"
-                    className="px-3 py-1.5 rounded-lg bg-[#131316] hover:bg-[#202025] text-xs font-semibold text-[#e1e1e6] flex items-center gap-1.5 transition-colors border border-[#26262b] shrink-0 font-mono"
+                    className="px-3 py-1.5 rounded-lg bg-[#2a2a32] hover:bg-[#383842] text-xs font-semibold text-[#e1e1e6] flex items-center gap-1.5 transition-colors border border-[rgba(255,255,255,0.09)] shrink-0 font-mono"
                   >
                     Verify <ExternalLink size={12} />
                   </Link>
