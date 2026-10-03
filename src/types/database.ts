@@ -76,6 +76,7 @@ export interface Team {
   sort_order: number;
   created_at: string;
   linked_team_id?: string | null;
+  logo_url?: string | null;
 }
 
 export interface TeamItem {

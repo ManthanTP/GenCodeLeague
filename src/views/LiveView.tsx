@@ -18,6 +18,8 @@ import {
   ChevronDown,
   X,
   History,
+  Trophy,
+  Flame,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -313,10 +315,21 @@ export default function LiveView() {
     return captain?.name || (captain as any)?.full_name || members[0]?.name || (members[0] as any)?.full_name || (selectedTeam as any).leader_name || 'Team Leader';
   }, [selectedTeam, teamMembersMap]);
 
+  const gameState = eventState?.game_state || 'active';
+  const roundIdx = eventState?.current_round_index ?? 0;
+  const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
+  const questionIdx = eventState?.current_question_index ?? 0;
+  const currentRound = DEFAULT_ROUNDS_DATA[roundIdx] || {
+    name: `Round ${roundIdx + 1}`,
+    questions: [],
+  };
+  const totalQuestions = currentRound.questions.length || 20;
+
+  // Selected Team items won & spent strictly scoped to the CURRENT round (Resets every new round)
   const selectedTeamWonItems = useMemo(() => {
     if (!selectedTeam) return [];
-    return items.filter((it) => it.team_id === selectedTeam.id);
-  }, [selectedTeam, items]);
+    return items.filter((it) => it.team_id === selectedTeam.id && it.round_index === roundIdx);
+  }, [selectedTeam, items, roundIdx]);
 
   const selectedTeamSpent = useMemo(() => {
     if (!selectedTeam) return 0;
@@ -334,36 +347,6 @@ export default function LiveView() {
       setMyTeamId('');
     }
   };
-
-  const previousBidsList = useMemo(() => {
-    if (!items || items.length === 0) {
-      return [];
-    }
-
-    return items.slice(0, 3).map((item, idx) => {
-      const team = teams.find((t) => t.id === item.team_id);
-      const timeStr = item.created_at
-        ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
-        : '--:--:--';
-      return {
-        id: item.id || String(idx),
-        index: idx + 1,
-        teamName: team?.name || 'Unknown Team',
-        amount: formatCurrency(item.cost),
-        time: timeStr,
-      };
-    });
-  }, [items, teams]);
-
-  const gameState = eventState?.game_state || 'active';
-  const roundIdx = eventState?.current_round_index ?? 0;
-  const isAfterRound3 = pastRounds.some((r) => r.roundIndex === 2) || roundIdx >= 3;
-  const questionIdx = eventState?.current_question_index ?? 0;
-  const currentRound = DEFAULT_ROUNDS_DATA[roundIdx] || {
-    name: `Round ${roundIdx + 1}`,
-    questions: [],
-  };
-  const totalQuestions = currentRound.questions.length || 20;
 
   // Active bid preview
   const currentBidPreview = eventState?.current_bid_preview;
@@ -390,11 +373,81 @@ export default function LiveView() {
   }, [alreadySoldItem, teams]);
 
   const isQuestionSold = Boolean(alreadySoldItem);
-  const isBiddingActive = Boolean(currentBidPreview && currentBidPreview.amount > 0);
-  // Always true on desktop so Current Bid and Previous Bids remain side-by-side matching reference
-  const hasCurrentBid = true;
-  const hasPreviousBids = true;
-  const showBidRow = true;
+  const isBiddingActive = Boolean(currentBidPreview && currentBidPreview.amount > 0 && !alreadySoldItem);
+
+  // =========================================================================
+  // DYNAMIC AUCTION BID DISPLAY LOGIC (SCOPED TO CURRENT ROUND ONLY)
+  // =========================================================================
+
+  // 1. Successful purchases in CURRENT round only, newest first
+  const currentRoundSuccessfulBids = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    return items
+      .filter((it) => it.round_index === roundIdx && Boolean(it.team_id))
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }, [items, roundIdx]);
+
+  // 2. Active Current Bid (visible ONLY while bid is active and NOT sold)
+  const activeCurrentBid = useMemo(() => {
+    if (!currentBidPreview || currentBidPreview.amount <= 0 || Boolean(alreadySoldItem)) {
+      return null;
+    }
+    const team = teams.find((t) => t.id === currentBidPreview.teamId);
+    return {
+      round: roundIdx + 1,
+      question: questionIdx + 1,
+      teamName: team?.name || 'Active Team',
+      amount: currentBidPreview.amount,
+      questionRef: `Round ${roundIdx + 1} • Question ${questionIdx + 1}`,
+      compactRef: `R${roundIdx + 1}-Q${questionIdx + 1}`,
+    };
+  }, [currentBidPreview, alreadySoldItem, teams, roundIdx, questionIdx]);
+
+  // 3. Last Successful Bid (most recently sold question of the round)
+  const lastSuccessfulBid = useMemo(() => {
+    if (currentRoundSuccessfulBids.length === 0) return null;
+    const latest = currentRoundSuccessfulBids[0];
+    const team = teams.find((t) => t.id === latest.team_id);
+    const qNum = (latest.question_index ?? 0) + 1;
+    const rNum = (latest.round_index ?? roundIdx) + 1;
+    return {
+      id: latest.id,
+      round: rNum,
+      question: qNum,
+      teamName: team?.name || 'Winning Team',
+      amount: latest.cost,
+      questionRef: `Round ${rNum} • Question ${qNum}`,
+      compactRef: `R${rNum}-Q${qNum}`,
+    };
+  }, [currentRoundSuccessfulBids, teams, roundIdx]);
+
+  // 4. Previous Bids Display List
+  // CASE 5 & 8 (no current bid, >=2 sales): older purchases only (slice(1)) to prevent duplicate of Last Successful Bid
+  // CASE 6 & 7 (active current bid, >=2 sales): all successful purchases with newest at top
+  const previousBidsDisplayList = useMemo(() => {
+    if (currentRoundSuccessfulBids.length < 2) return [];
+
+    const source = activeCurrentBid
+      ? currentRoundSuccessfulBids
+      : currentRoundSuccessfulBids.slice(1);
+
+    return source.map((item) => {
+      const team = teams.find((t) => t.id === item.team_id);
+      const qNum = (item.question_index ?? 0) + 1;
+      const rNum = (item.round_index ?? roundIdx) + 1;
+      const timeStr = item.created_at
+        ? new Date(item.created_at).toLocaleTimeString('en-US', { hour12: false })
+        : '--:--:--';
+      return {
+        id: item.id,
+        compactRef: `R${rNum}-Q${qNum}`,
+        questionRef: `Round ${rNum} • Question ${qNum}`,
+        teamName: team?.name || 'Unknown Team',
+        amount: item.cost,
+        time: timeStr,
+      };
+    });
+  }, [currentRoundSuccessfulBids, activeCurrentBid, teams, roundIdx]);
 
   if (stateLoading) {
     return (
@@ -493,9 +546,9 @@ export default function LiveView() {
 
       {/* 3. ACTIVE ROUND STATE (EXACT MATCH TO BLUEPRINT) */}
       {gameState === 'active' && (
-        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 28px 24px 28px' }}>
-          {/* Top Right Controls: Viewing as Guest Dropdown & Fullscreen Button */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '6px 28px 24px 28px' }}>
+          {/* Top Right Controls: Viewing as Guest Dropdown & Icon-only Fullscreen Button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '6px' }}>
             {!isTeamLeader && (
               <div style={{ position: 'relative', width: '270px' }}>
                 <select
@@ -533,8 +586,9 @@ export default function LiveView() {
               onClick={toggleFullscreen}
               className="panel"
               style={{
+                width: '35px',
                 height: '35px',
-                padding: '0 14px',
+                padding: 0,
                 borderRadius: '8px',
                 background: '#18181c',
                 border: '1px solid #2c2c33',
@@ -543,16 +597,11 @@ export default function LiveView() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '7px',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.03em',
+                flexShrink: 0,
               }}
-              title={isFullscreen ? 'Exit Fullscreen Presentation' : 'Enter Fullscreen Presentation'}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
-              {isFullscreen ? <Minimize size={15} style={{ color: '#e8212e' }} /> : <Maximize size={15} />}
-              <span>{isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}</span>
+              {isFullscreen ? <Minimize size={17} style={{ color: '#e8212e' }} /> : <Maximize size={17} />}
             </button>
           </div>
 
@@ -599,30 +648,30 @@ export default function LiveView() {
                   }}
                 />
 
-                {/* Center content: round meta centered above question text */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, padding: '0 16px', zIndex: 10, textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ fontSize: '16px', fontWeight: 500, color: '#e6e6ea', letterSpacing: '0.3px', fontFamily: "'Inter', sans-serif" }}>
+                {/* Left-aligned content: round meta and question text */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', flex: 1, minWidth: 0, padding: '0 16px', zIndex: 10, textAlign: 'left' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#e6e6ea', letterSpacing: '0.4px', fontFamily: "'Rajdhani', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
                       </span>
-                      <div style={{ width: '64px', height: '2px', background: '#e8212e' }} />
+                      <div style={{ width: '48px', height: '2px', background: '#e8212e' }} />
                     </div>
-                    <div style={{ width: '1px', height: '20px', background: '#3a3a41' }} />
-                    <span style={{ fontSize: '16px', letterSpacing: '0.3px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
+                    <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
+                    <span style={{ fontSize: '14px', letterSpacing: '0.4px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                       QUESTION {questionIdx + 1} OF {totalQuestions}
                     </span>
                   </div>
 
                   <h2
                     style={{
-                      fontSize: '28px',
+                      fontSize: '26px',
                       fontWeight: 700,
                       color: '#f4f4f6',
                       lineHeight: 1.35,
                       margin: 0,
                       fontFamily: "'Rajdhani', sans-serif",
-                      textAlign: 'center',
+                      textAlign: 'left',
                       wordBreak: 'break-word',
                       whiteSpace: 'pre-wrap',
                     }}
@@ -687,22 +736,29 @@ export default function LiveView() {
                 </div>
               </div>
 
-              {/* 2. Middle Row: CURRENT BID & PREVIOUS BIDS side by side (Height 161px) */}
-              {showBidRow && (
-                <div className="gcl-live-bid-row">
-                  {/* Current Bid Card (581px x 161px) */}
-                  {hasCurrentBid && (
+              {/* 2. Middle Row: Dynamic Auction Display State Machine */}
+              {(() => {
+                const soldCount = currentRoundSuccessfulBids.length;
+                const hasCurrent = Boolean(activeCurrentBid);
+
+                // Helper to render Current Bid Card
+                const renderCurrentBidCard = () => {
+                  if (!activeCurrentBid) return null;
+                  const isFireActive = activeCurrentBid.amount >= 5000000 && activeCurrentBid.amount % 5000000 === 0;
+
+                  return (
                     <div
-                      className="panel red"
+                      className="panel red gcl-card-animate"
                       style={{
                         minHeight: '161px',
-                        height: '161px',
                         position: 'relative',
                         overflow: 'hidden',
                         padding: '16px 24px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
+                        flex: 1,
+                        minWidth: '320px',
                       }}
                     >
                       {/* Top-right corner strips */}
@@ -722,22 +778,182 @@ export default function LiveView() {
                         }}
                       />
 
-                      {/* Header: 19px pulsing red dot + CURRENT BID */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '18px', zIndex: 10 }}>
-                        <div className="dot" style={{ width: '19px', height: '19px', borderRadius: '50%', background: '#e8212e' }} />
-                        <span style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
-                          {isQuestionSold && !isBiddingActive ? 'WINNING BID (SOLD)' : 'CURRENT BID'}
-                        </span>
+                      {/* Header: Pulsing red dot + CURRENT BID + Question Ref */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="dot" style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#e8212e' }} />
+                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                            CURRENT BID
+                          </span>
+                          {isFireActive && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                background: 'linear-gradient(90deg, #ff4500, #ff8c00)',
+                                color: '#fff',
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                fontFamily: "'Rajdhani', sans-serif",
+                                letterSpacing: '0.05em',
+                                boxShadow: '0 0 10px rgba(255, 69, 0, 0.8)',
+                              }}
+                            >
+                              <Flame size={13} style={{ color: '#fff' }} />
+                              HOT BID
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
+                            Question Ref:
+                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                            {activeCurrentBid.questionRef}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Content row: Gavel Tile, Bidding Team, Divider, Current Amount */}
+                      {/* Content: Vertical Gavel Tile, Bidding Team, Divider, Current Amount */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '22px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
+                          <div
+                            className={`panel ${isFireActive ? 'gcl-fire-aura' : ''}`}
+                            style={{
+                              width: '80px',
+                              height: '76px',
+                              borderRadius: '10px',
+                              background: 'linear-gradient(180deg, #24242a, #18181c)',
+                              border: isFireActive ? '1px solid #ff4500' : '1px solid #383844',
+                              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.10)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              position: 'relative',
+                            }}
+                          >
+                            <Hammer
+                              size={40}
+                              style={{
+                                color: isFireActive ? '#ff5722' : '#e8212e',
+                                strokeWidth: 1.8,
+                                transform: 'rotate(0deg)',
+                                filter: isFireActive ? 'drop-shadow(0 0 8px rgba(255,87,34,0.9))' : 'none',
+                              }}
+                            />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                              Bidding Team
+                            </p>
+                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                              {activeCurrentBid.teamName}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Vertical divider */}
+                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
+
+                        <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                            Current Amount
+                          </p>
+                          <p
+                            style={{
+                              fontSize: '40px',
+                              fontWeight: 700,
+                              color: '#ff3b47',
+                              fontFamily: "'Rajdhani', sans-serif",
+                              fontVariantNumeric: 'tabular-nums',
+                              margin: '6px 0 0 0',
+                              lineHeight: 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {formatCurrency(activeCurrentBid.amount)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                };
+
+                // Helper to render Last Successful Bid Card
+                const renderLastSuccessfulBidCard = () => {
+                  if (!lastSuccessfulBid) return null;
+
+                  return (
+                    <div
+                      className="panel gcl-card-animate"
+                      style={{
+                        minHeight: '161px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        padding: '16px 24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        flex: 1,
+                        minWidth: '320px',
+                        background: '#18181d',
+                        borderColor: '#2f2f38',
+                      }}
+                    >
+                      {/* Corner laser strip */}
+                      <div
+                        className="strip"
+                        style={{
+                          clipPath: 'polygon(calc(100% - 50px) 0, calc(100% - 46px) 0, 100% 46px, 100% 50px)',
+                          background: '#22c55e',
+                          filter: 'drop-shadow(0 0 4px rgba(34,197,94,.8))',
+                        }}
+                      />
+
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
+                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                            LAST SUCCESSFUL BID
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(34,197,94,0.15)',
+                              border: '1px solid rgba(34,197,94,0.3)',
+                              color: '#3fe085',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              fontFamily: "'Rajdhani', sans-serif",
+                            }}
+                          >
+                            SOLD
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
+                            Question Ref:
+                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                            {lastSuccessfulBid.questionRef}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
                           <div
                             className="panel"
                             style={{
-                              width: '83px',
-                              height: '78px',
+                              width: '80px',
+                              height: '76px',
                               borderRadius: '10px',
                               background: 'linear-gradient(180deg, #24242a, #18181c)',
                               border: '1px solid #383844',
@@ -748,32 +964,38 @@ export default function LiveView() {
                               flexShrink: 0,
                             }}
                           >
-                            <Hammer size={44} style={{ color: '#e8212e', strokeWidth: 1.8, transform: 'rotate(-45deg)' }} />
+                            <Hammer
+                              size={40}
+                              className="gcl-hammer-strike"
+                              style={{
+                                color: '#22c55e',
+                                strokeWidth: 1.8,
+                                transform: 'rotate(0deg)',
+                              }}
+                            />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '13px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                              {isQuestionSold && !isBiddingActive ? 'WINNING TEAM' : 'BIDDING TEAM'}
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                              Winning Team
                             </p>
-                            <p style={{ fontSize: '27px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
-                              {isBiddingActive
-                                ? (activeBidTeam?.name || 'Active Team')
-                                : (isQuestionSold ? (soldBuyerTeam?.name || 'Winning Team') : 'Awaiting Bids')}
+                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                              {lastSuccessfulBid.teamName}
                             </p>
                           </div>
                         </div>
 
                         {/* Vertical divider */}
-                        <div style={{ width: '1px', height: '76px', background: '#2e2e34' }} />
+                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
 
                         <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
-                          <p style={{ fontSize: '13px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                            {isBiddingActive ? 'CURRENT AMOUNT' : (isQuestionSold ? 'FINAL PRICE' : 'CURRENT AMOUNT')}
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                            Final Bid
                           </p>
                           <p
                             style={{
-                              fontSize: '44px',
+                              fontSize: '40px',
                               fontWeight: 700,
-                              color: '#ff3b47',
+                              color: '#3fe085',
                               fontFamily: "'Rajdhani', sans-serif",
                               fontVariantNumeric: 'tabular-nums',
                               margin: '6px 0 0 0',
@@ -781,90 +1003,186 @@ export default function LiveView() {
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {isBiddingActive
-                              ? formatCurrency(currentBidPreview?.amount || 0)
-                              : (alreadySoldItem?.cost ? formatCurrency(alreadySoldItem.cost) : formatCurrency(roundBasePrice))}
+                            {formatCurrency(lastSuccessfulBid.amount)}
                           </p>
                         </div>
                       </div>
                     </div>
-                  )}
+                  );
+                };
 
-                  {/* Previous Bids Card (557px x 161px) - Grey panel border matching screenshot */}
-                  {hasPreviousBids && (
+                // Helper to render Previous Bids Card
+                const renderPreviousBidsCard = () => {
+                  return (
                     <div
-                      className="panel"
+                      className="panel gcl-card-animate"
                       style={{
                         minHeight: '161px',
-                        height: '161px',
                         position: 'relative',
                         overflow: 'hidden',
-                        padding: '16px 20px',
+                        padding: '14px 20px',
                         display: 'flex',
                         flexDirection: 'column',
+                        flex: 1,
+                        minWidth: '320px',
+                        background: '#18181c',
+                        borderColor: '#292930',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '12px', zIndex: 10 }}>
-                        <History size={23} style={{ color: '#f4f4f6' }} />
-                        <span style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
-                          PREVIOUS BIDS
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <History size={20} style={{ color: '#f4f4f6' }} />
+                          <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
+                            PREVIOUS BIDS
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
+                          Round {roundIdx + 1} Purchases
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', zIndex: 10 }}>
-                        {previousBidsList.length === 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '90px', color: '#9a9aa3', fontSize: '15px', fontFamily: "'Inter', sans-serif" }}>
-                            No previous bids yet
+                      {/* Column Headers */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '90px 1fr 100px',
+                          alignItems: 'center',
+                          padding: '0 8px 6px 8px',
+                          borderBottom: '1px solid #282830',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#8e8e98',
+                          fontFamily: "'Rajdhani', sans-serif",
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        <div>ROUND-QUESTION</div>
+                        <div>TEAM NAME</div>
+                        <div style={{ textAlign: 'right' }}>VALUE</div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '6px', overflowY: 'auto', maxHeight: '86px', zIndex: 10 }}>
+                        {previousBidsDisplayList.length === 0 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: '#9a9aa3', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
+                            No previous purchases in this round
                           </div>
                         ) : (
-                          previousBidsList.map((bid) => (
+                          previousBidsDisplayList.map((bid) => (
                             <div
                               key={bid.id}
+                              className="gcl-row-enter"
                               style={{
                                 display: 'grid',
-                                gridTemplateColumns: '36px 1fr auto 75px',
+                                gridTemplateColumns: '90px 1fr 100px',
                                 alignItems: 'center',
-                                gap: '14px',
+                                gap: '8px',
                                 height: '28px',
                                 minHeight: '28px',
-                                background: '#1c1c21',
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                background: '#141418',
+                                border: '1px solid rgba(255, 255, 255, 0.04)',
                                 borderRadius: '4px',
-                                padding: '0 8px 0 0',
+                                padding: '0 8px',
                               }}
                             >
-                              <div className="num" style={{ width: '36px', height: '28px', borderRadius: '4px', fontSize: '15px' }}>
-                                {bid.index}
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  height: '20px',
+                                  padding: '0 6px',
+                                  borderRadius: '3px',
+                                  background: '#22222a',
+                                  color: '#e2e2e8',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  fontFamily: "'Rajdhani', sans-serif",
+                                }}
+                              >
+                                {bid.compactRef}
                               </div>
-                              <span style={{ fontSize: '16px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                              <span style={{ fontSize: '14px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
                                 {bid.teamName}
                               </span>
-                              <span style={{ fontSize: '18px', fontWeight: 600, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                                {bid.amount}
-                              </span>
-                              <span style={{ fontSize: '16px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                                {bid.time}
+                              <span style={{ fontSize: '16px', fontWeight: 700, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                {formatCurrency(bid.amount)}
                               </span>
                             </div>
                           ))
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  );
+                };
+
+                // CASE 1: 0 sold & no active bid -> SHOW NOTHING
+                if (soldCount === 0 && !hasCurrent) {
+                  return null;
+                }
+
+                // CASE 2: 0 sold & active bid -> SHOW CURRENT BID
+                if (soldCount === 0 && hasCurrent) {
+                  return (
+                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
+                      {renderCurrentBidCard()}
+                    </div>
+                  );
+                }
+
+                // CASE 3: 1 sold & no active bid -> SHOW LAST SUCCESSFUL BID
+                if (soldCount === 1 && !hasCurrent) {
+                  return (
+                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
+                      {renderLastSuccessfulBidCard()}
+                    </div>
+                  );
+                }
+
+                // CASE 4: 1 sold & active bid -> SHOW CURRENT BID + LAST SUCCESSFUL BID
+                if (soldCount === 1 && hasCurrent) {
+                  return (
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                      {renderCurrentBidCard()}
+                      {renderLastSuccessfulBidCard()}
+                    </div>
+                  );
+                }
+
+                // CASE 5 & 8: 2+ sold & no active bid -> SHOW LAST SUCCESSFUL BID + PREVIOUS BIDS (older purchases)
+                if (soldCount >= 2 && !hasCurrent) {
+                  return (
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                      {renderLastSuccessfulBidCard()}
+                      {renderPreviousBidsCard()}
+                    </div>
+                  );
+                }
+
+                // CASE 6 & 7: 2+ sold & active bid -> SHOW CURRENT BID + PREVIOUS BIDS (all purchases)
+                if (soldCount >= 2 && hasCurrent) {
+                  return (
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                      {renderCurrentBidCard()}
+                      {renderPreviousBidsCard()}
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
 
               {/* 3. Live Team Status Table (1156px x 385px) */}
               <LiveTeamStatus
                 teams={availableTeams}
                 myTeamId={effectiveMyTeamId}
                 items={items}
+                currentRoundIndex={roundIdx}
               />
             </div>
 
             {/* RIGHT COLUMN: 369px x 715px SELECTED TEAM & ITEMS WON (Shown only when team is selected) */}
             {isTeamPanelOpen && selectedTeam && (
-              <div style={{ width: '100%', minWidth: 0 }}>
+              <div className="gcl-sidebar-enter" style={{ width: '100%', minWidth: 0 }}>
                 <div
                   className="panel red"
                   style={{
@@ -922,75 +1240,38 @@ export default function LiveView() {
                   {/* Top info: Crest + Name + Leader */}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      {/* Shield with Detailed Silver Roaring Lion */}
-                      <div style={{ width: '94px', height: '102px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 100 120" style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 0 10px rgba(225, 29, 46, 0.45))' }}>
-                          <defs>
-                            <linearGradient id="crestShieldBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#2c050d" />
-                              <stop offset="50%" stopColor="#140205" />
-                              <stop offset="100%" stopColor="#080102" />
-                            </linearGradient>
-                            <linearGradient id="crestShieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#ff4d66" />
-                              <stop offset="45%" stopColor="#e0263f" />
-                              <stop offset="100%" stopColor="#6e0b17" />
-                            </linearGradient>
-                            <linearGradient id="lionManeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#ffffff" />
-                              <stop offset="100%" stopColor="#c5ccdc" />
-                            </linearGradient>
-                          </defs>
-                          <path
-                            d="M50 3 L93 18 C93 72 50 115 50 117 C50 115 7 72 7 18 Z"
-                            fill="url(#crestShieldBg)"
-                            stroke="url(#crestShieldBorder)"
-                            strokeWidth="3.2"
-                            strokeLinejoin="round"
+                      {/* Logo or Light Grey Trophy */}
+                      {selectedTeam?.logo_url ? (
+                        <div style={{ width: '84px', height: '84px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <img
+                            src={selectedTeam.logo_url}
+                            alt={selectedTeam.name}
+                            style={{
+                              maxWidth: '84px',
+                              maxHeight: '84px',
+                              objectFit: 'contain',
+                              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))',
+                            }}
                           />
-                          <path
-                            d="M50 9 L86 22 C86 67 50 105 50 107 C50 105 14 67 14 22 Z"
-                            fill="none"
-                            stroke="#e0263f"
-                            strokeWidth="1.2"
-                            opacity="0.45"
-                          />
-                          <g transform="translate(15, 20) scale(0.70)">
-                            <path
-                              d="M50 0 C56 5 62 3 67 9 C72 6 78 11 79 18 C85 17 89 24 87 31 C93 33 95 41 91 47 C96 52 94 61 88 66 C91 72 87 80 80 83 C82 89 75 96 68 97 C66 102 58 104 50 104 C42 104 34 102 32 97 C25 96 18 89 20 83 C13 80 9 72 12 66 C6 61 4 52 9 47 C5 41 7 33 13 31 C11 24 15 17 21 18 C22 11 28 6 33 9 C37 3 44 5 50 0 Z"
-                              fill="url(#lionManeGrad)"
-                              stroke="#120204"
-                              strokeWidth="1.8"
-                            />
-                            <path
-                              d="M50 0 L53 14 L60 8 L62 20 L72 16 L70 28 L82 26 L76 38 L86 42 L78 50 L86 58 L76 64 L80 74 L68 76 L66 88 L54 84 L50 96 L46 84 L34 88 L32 76 L20 74 L24 64 L14 58 L22 50 L14 42 L24 38 L18 26 L30 28 L28 16 L38 20 L40 8 L47 14 Z"
-                              fill="#ffffff"
-                            />
-                            <path
-                              d="M50 16 C35 16 26 28 26 46 C26 62 34 76 50 78 C66 76 74 62 74 46 C74 28 65 16 50 16 Z"
-                              fill="#140205"
-                            />
-                            <path d="M32 26 C40 32 46 33 50 33 C54 33 60 32 68 26 C64 34 58 37 50 37 C42 37 36 34 32 26 Z" fill="#edf0f7" />
-                            <path d="M48 37 L52 37 L53 48 L47 48 Z" fill="#edf0f7" />
-                            <polygon points="32,40 43,42 36,46" fill="#e0263f" />
-                            <polygon points="68,40 57,42 64,46" fill="#e0263f" />
-                            <circle cx="38" cy="42" r="1.5" fill="#ffffff" />
-                            <circle cx="62" cy="42" r="1.5" fill="#ffffff" />
-                            <path d="M44 48 L56 48 L54 54 C54 56 52 58 50 58 C48 58 46 56 46 54 Z" fill="#edf0f7" />
-                            <polygon points="47,49 53,49 50,54" fill="#140205" />
-                            <path d="M38 54 C42 53 46 55 49 58 C47 62 42 63 38 61 C36 59 36 56 38 54 Z" fill="#ffffff" />
-                            <path d="M62 54 C58 53 54 55 51 58 C53 62 58 63 62 61 C64 59 64 56 62 54 Z" fill="#ffffff" />
-                            <path d="M40 62 C40 76 46 80 50 80 C54 80 60 76 60 62 Z" fill="#080002" />
-                            <polygon points="41,62 44,70 46,62" fill="#ffffff" />
-                            <polygon points="59,62 56,70 54,62" fill="#ffffff" />
-                            <polygon points="47,62 50,65 53,62" fill="#edf0f7" />
-                            <polygon points="43,79 45,72 47,79" fill="#ffffff" />
-                            <polygon points="57,79 55,72 53,79" fill="#ffffff" />
-                            <polygon points="48,79 50,76 52,79" fill="#edf0f7" />
-                            <path d="M46 82 L50 90 L54 82 Z" fill="#ffffff" />
-                          </g>
-                        </svg>
-                      </div>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: '84px',
+                            height: '84px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(145deg, #28282e, #18181c)',
+                            border: '1px solid #383842',
+                            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0,0,0,0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Trophy size={42} style={{ color: '#d0d0d8', strokeWidth: 1.8, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                        </div>
+                      )}
 
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1088,7 +1369,7 @@ export default function LiveView() {
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <p style={{ fontSize: '12px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                        Total Spent
+                        Round Spent
                       </p>
                       <p style={{ fontSize: '20px', fontWeight: 700, color: '#ff4350', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                         {formatCurrency(selectedTeamSpent)}
@@ -1173,32 +1454,52 @@ export default function LiveView() {
                       <>
                         <Box size={34} style={{ color: '#8a8a93', strokeWidth: 1.5, marginBottom: '6px' }} />
                         <p style={{ fontSize: '15px', color: '#9a9aa3', margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                          No items won yet.
+                          No items won in this round yet.
                         </p>
                       </>
                     ) : (
                       <div style={{ width: '100%', height: '100%', overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        {selectedTeamWonItems.map((item) => (
-                          <div
-                            key={item.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              height: '32px',
-                              padding: '0 8px',
-                              background: '#141417',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            <span style={{ fontSize: '13px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {item.item_name || item.question_ref}
-                            </span>
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#ff3b47', fontFamily: "'Rajdhani', sans-serif" }}>
-                              {formatCurrency(item.cost)}
-                            </span>
-                          </div>
-                        ))}
+                        {selectedTeamWonItems.map((item) => {
+                          const qNum = (item.question_index ?? 0) + 1;
+                          const rNum = (item.round_index ?? roundIdx) + 1;
+                          return (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                height: '32px',
+                                padding: '0 8px',
+                                background: '#141417',
+                                border: '1px solid #222228',
+                                borderRadius: '5px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                <span
+                                  style={{
+                                    padding: '2px 5px',
+                                    borderRadius: '3px',
+                                    background: '#22222a',
+                                    color: '#d0d0d8',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    fontFamily: "'Rajdhani', sans-serif",
+                                  }}
+                                >
+                                  R{rNum}-Q{qNum}
+                                </span>
+                                <span style={{ fontSize: '13px', color: '#e0e0e6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                                  Question {qNum}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#ff3b47', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                                {formatCurrency(item.cost)}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1226,12 +1527,29 @@ export default function LiveView() {
             >
               ROUND 1 FINAL POSITIONS (REVEALING FROM BOTTOM TO TOP)
             </p>
-          </div>          <div className="max-w-4xl w-full mx-auto px-2">
+          </div>          <div className="max-w-5xl w-full mx-auto px-2">
             <div className="gcl-table-card">
-              <div className="gcl-leaderboard-header-reveal">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
+                  alignItems: 'center',
+                  padding: '12px 18px',
+                  background: '#16161c',
+                  borderBottom: '1px solid #26262e',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#9a9aa3',
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: '0.05em',
+                }}
+              >
                 <div>POS</div>
                 <div>TEAM NAME</div>
-                <div className="text-right">STATUS</div>
+                <div style={{ textAlign: 'center' }}>ITEMS BOUGHT</div>
+                <div style={{ textAlign: 'right' }}>TOTAL SPENT</div>
+                <div style={{ textAlign: 'right' }}>TOTAL REMAINING</div>
+                <div style={{ textAlign: 'right' }}>STATUS</div>
               </div>
 
               <div className="space-y-2">
@@ -1259,11 +1577,24 @@ export default function LiveView() {
 
                     const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
 
+                    const teamId = reveal?.team_id || teamObj?.id || r1Result?.id;
+                    const r1TeamItems = items.filter((it) => it.team_id === teamId && it.round_index === 0);
+                    const r1ItemsCount = r1Result?.itemsCount ?? r1TeamItems.length;
+                    const r1TotalSpent = r1Result?.totalSpent ?? r1TeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                    const startingBudget = edition?.starting_budget || 50000000;
+                    const r1Remaining = r1Result?.remainingBudget ?? (teamObj?.budget ?? Math.max(0, startingBudget - r1TotalSpent));
+
                     if (!isRevealed) {
                       return (
                         <div
                           key={position}
                           className="gcl-leaderboard-row-reveal gcl-leaderboard-unrevealed"
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
+                            alignItems: 'center',
+                            padding: '10px 18px',
+                          }}
                         >
                           <div className="flex items-center">
                             <div className="gcl-pos-badge gcl-pos-muted opacity-60">
@@ -1276,6 +1607,9 @@ export default function LiveView() {
                               AWAITING REVEAL
                             </span>
                           </div>
+                          <div style={{ textAlign: 'center', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
+                          <div style={{ textAlign: 'right', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
+                          <div style={{ textAlign: 'right', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
                           <div className="text-right font-mono text-xs uppercase tracking-wider text-slate-600">
                             LOCKED
                           </div>
@@ -1297,6 +1631,12 @@ export default function LiveView() {
                             ? 'gcl-leaderboard-me'
                             : ''
                         }`}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
+                          alignItems: 'center',
+                          padding: '10px 18px',
+                        }}
                       >
                         <div className="flex items-center">
                           <div
@@ -1332,6 +1672,31 @@ export default function LiveView() {
                           {isMyTeam && <span className="badge-you-inline">YOU</span>}
                         </div>
 
+                        <div style={{ textAlign: 'center' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: '#202028',
+                              color: '#f4f4f6',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              fontFamily: "'Rajdhani', sans-serif",
+                            }}
+                          >
+                            {r1ItemsCount} {r1ItemsCount === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+
+                        <div style={{ textAlign: 'right', fontSize: '15px', fontWeight: 700, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(r1TotalSpent)}
+                        </div>
+
+                        <div style={{ textAlign: 'right', fontSize: '15px', fontWeight: 700, color: '#3fe085', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(r1Remaining)}
+                        </div>
+
                         <div className="text-right font-mono text-xs uppercase tracking-wider">
                           {position === 1 ? (
                             <span className="text-yellow-400 font-bold">1ST PLACE</span>
@@ -1355,30 +1720,30 @@ export default function LiveView() {
 
       {/* 4. INTERMISSION STATE */}
       {gameState === 'intermission' && (
-        <div className="live-centered-screen">
+        <div className="live-centered-screen" style={{ padding: '24px 16px' }}>
           {roundIdx === 1 ? (
             /* ROUND 2 INTERMISSION — COMPLETED STANDINGS & BUDGET CARRYOVER NOTICE */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
               <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 2 COMPLETE</span>
                 </div>
-                <h1 className="intermission-title">INTERMISSION</h1>
+                <h1 className="intermission-title">ROUND 2 INTERMISSION</h1>
                 <p className="intermission-subtitle">ROUND 3 WILL START SOON — STAND BY...</p>
                 <div className="intermission-warning-banner mt-4">
                   💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
                 </div>
               </div>
 
-              <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
+              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
+                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    <span>PREVIOUS ROUND TABLE (ROUND 2 RESULTS)</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 2 STANDINGS SUMMARY</span>
                   </div>
-                  <span className="text-slate-400">ROUND 2 SUMMARY</span>
+                  <span className="text-slate-400 font-mono">ROUND 2 SUMMARY</span>
                 </div>
-                <div className="gcl-leaderboard-header">
+                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
                   <div>#</div>
                   <div>TEAM NAME</div>
                   <div className="text-center">TOTAL ITEMS</div>
@@ -1386,7 +1751,7 @@ export default function LiveView() {
                   <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="divide-y divide-[#222228]">
                   {[...teams]
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
@@ -1403,6 +1768,10 @@ export default function LiveView() {
                         <div
                           key={team.id}
                           className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
+                          style={{
+                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (idx % 2 === 0 ? '#18181d' : '#121216'),
+                            padding: '12px 18px',
+                          }}
                         >
                           <div className="flex items-center">
                             <div className="gcl-pos-badge gcl-pos-cyan text-sm">
@@ -1416,7 +1785,18 @@ export default function LiveView() {
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
                           <div className="text-center">
-                            <span className="badge-items-sm font-mono">
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 10px',
+                                borderRadius: '4px',
+                                background: '#202028',
+                                color: '#f4f4f6',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                fontFamily: "'Rajdhani', sans-serif",
+                              }}
+                            >
                               {totalItems} {totalItems === 1 ? 'item' : 'items'}
                             </span>
                           </div>
@@ -1434,27 +1814,27 @@ export default function LiveView() {
             </div>
           ) : roundIdx === 0 ? (
             /* ROUND 1 INTERMISSION — COMPLETED STANDINGS & BUDGET RESET NOTICE */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
               <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 1 COMPLETE</span>
                 </div>
-                <h1 className="intermission-title">INTERMISSION</h1>
+                <h1 className="intermission-title">ROUND 1 INTERMISSION</h1>
                 <p className="intermission-subtitle">ROUND 2 WILL START SOON — STAND BY...</p>
                 <div className="intermission-warning-banner mt-4">
                   ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
                 </div>
               </div>
 
-              <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
+              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
+                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    <span>PREVIOUS ROUND TABLE (ROUND 1 RESULTS)</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 1 STANDINGS SUMMARY</span>
                   </div>
-                  <span className="text-slate-400">ROUND 1 SUMMARY</span>
+                  <span className="text-slate-400 font-mono">ROUND 1 SUMMARY</span>
                 </div>
-                <div className="gcl-leaderboard-header">
+                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
                   <div>POS</div>
                   <div>TEAM NAME</div>
                   <div className="text-center">TOTAL ITEMS</div>
@@ -1462,7 +1842,7 @@ export default function LiveView() {
                   <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="divide-y divide-[#222228]">
                   {(() => {
                     const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
                     const sourceList = (r1Snapshot?.results && r1Snapshot.results.length > 0)
@@ -1493,6 +1873,10 @@ export default function LiveView() {
                               ? 'gcl-leaderboard-me'
                               : ''
                           }`}
+                          style={{
+                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (i % 2 === 0 ? '#18181d' : '#121216'),
+                            padding: '12px 18px',
+                          }}
                         >
                           <div className="flex items-center">
                             <div
@@ -1529,7 +1913,18 @@ export default function LiveView() {
                           </div>
 
                           <div className="text-center">
-                            <span className="badge-items-sm font-mono">
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 10px',
+                                borderRadius: '4px',
+                                background: '#202028',
+                                color: '#f4f4f6',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                fontFamily: "'Rajdhani', sans-serif",
+                              }}
+                            >
                               {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
                             </span>
                           </div>
@@ -1550,7 +1945,7 @@ export default function LiveView() {
             </div>
           ) : (
             /* AFTER ROUND 3 OR TIE BREAKER INTERMISSION */
-            <div className="max-w-5xl w-full mx-auto px-4 space-y-6">
+            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
               <div className="text-center mb-6">
                 <div className="inline-block mb-3">
                   <span className="badge-official">ROUND 3 COMPLETE</span>
@@ -1561,15 +1956,15 @@ export default function LiveView() {
                 <p className="intermission-subtitle">STAND BY...</p>
               </div>
 
-              <div className="gcl-table-card">
-                <div className="px-4 py-2.5 bg-[#18181c] border-b border-[#26262b] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
+              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
+                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    <span>PREVIOUS ROUND TABLE (ROUND 3 RESULTS)</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 3 STANDINGS SUMMARY</span>
                   </div>
-                  <span className="text-slate-400">ROUND 3 SUMMARY</span>
+                  <span className="text-slate-400 font-mono">ROUND 3 SUMMARY</span>
                 </div>
-                <div className="gcl-leaderboard-header">
+                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
                   <div>#</div>
                   <div>TEAM NAME</div>
                   <div className="text-center">TOTAL ITEMS</div>
@@ -1577,7 +1972,7 @@ export default function LiveView() {
                   <div className="text-right">REMAINING</div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="divide-y divide-[#222228]">
                   {[...teams]
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
@@ -1589,6 +1984,10 @@ export default function LiveView() {
                         <div
                           key={team.id}
                           className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
+                          style={{
+                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (idx % 2 === 0 ? '#18181d' : '#121216'),
+                            padding: '12px 18px',
+                          }}
                         >
                           <div className="flex items-center">
                             <div className="gcl-pos-badge gcl-pos-cyan text-sm">
@@ -1602,7 +2001,18 @@ export default function LiveView() {
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
                           <div className="text-center">
-                            <span className="badge-items-sm font-mono">
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 10px',
+                                borderRadius: '4px',
+                                background: '#202028',
+                                color: '#f4f4f6',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                fontFamily: "'Rajdhani', sans-serif",
+                              }}
+                            >
                               {totalItems} {totalItems === 1 ? 'item' : 'items'}
                             </span>
                           </div>

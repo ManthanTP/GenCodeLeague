@@ -462,3 +462,104 @@
     gap: 18px;
   }
 }
+
+/* === SUBTLE BID CARD ANIMATIONS (250-300ms) === */
+@keyframes gclCardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gcl-card-animate {
+  animation: gclCardEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Sidebar Guest <-> Team View Transition */
+@keyframes gclSidebarSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.gcl-sidebar-enter {
+  animation: gclSidebarSlideIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Previous Bids Row Entrance */
+@keyframes gclRowEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gcl-bid-row-new {
+  animation: gclRowEnter 250ms ease-out forwards;
+}
+
+/* Hammer Tap Strike Animation for SOLD */
+@keyframes gclHammerStrike {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-35deg);
+  }
+  55% {
+    transform: rotate(15deg);
+  }
+  75% {
+    transform: rotate(-8deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.gcl-hammer-strike {
+  animation: gclHammerStrike 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Fire Aura Animation for 50L Increments */
+@keyframes gclFirePulse {
+  0% {
+    box-shadow: 0 0 12px rgba(255, 69, 0, 0.7), inset 0 0 10px rgba(255, 140, 0, 0.4);
+    border-color: rgba(255, 69, 0, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 69, 0, 0.95), inset 0 0 20px rgba(255, 140, 0, 0.7);
+    border-color: #ff3b00;
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(255, 69, 0, 0.7), inset 0 0 10px rgba(255, 140, 0, 0.4);
+    border-color: rgba(255, 69, 0, 0.85);
+  }
+}
+
+.gcl-fire-aura {
+  animation: gclFirePulse 1.2s ease-in-out infinite !important;
+  background: radial-gradient(circle, rgba(255, 69, 0, 0.3) 0%, rgba(26, 12, 16, 0.9) 100%) !important;
+  border: 1.5px solid #ff4500 !important;
+}
+
+/* Zebra Striping Table Rows */
+.gcl-table-zebra-even {
+  background: #19191e;
+}
+.gcl-table-zebra-odd {
+  background: #131317;
+}

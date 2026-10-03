@@ -191,8 +191,8 @@ export default function Header({
           </div>
 
           {/* Total Teams glass card */}
-          <div className="panel" style={{ width: '131px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Users size={32} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+          <div className="panel" style={{ minWidth: '140px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <Users size={28} style={{ color: '#f4f4f6', flexShrink: 0 }} />
             <div style={{ whiteSpace: 'nowrap' }}>
               <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                 Total Teams
@@ -202,19 +202,6 @@ export default function Header({
               </p>
             </div>
           </div>
-
-          {/* Exit Fullscreen Button */}
-          {isFullscreen && onExitFullscreen && (
-            <button
-              type="button"
-              onClick={onExitFullscreen}
-              className="gcl-nav-btn-active"
-              title="Exit Fullscreen Presentation Mode"
-            >
-              <Minimize size={13} style={{ color: '#e11d2e' }} />
-              <span>EXIT FULLSCREEN</span>
-            </button>
-          )}
 
           {/* Admin Controls */}
           {viewMode === 'admin' && onToggleView && (
