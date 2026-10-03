@@ -1837,7 +1837,45 @@ export default function AdminPanel() {
     if (eventState?.id) {
       supabase.from('event_state').update(updates).eq('id', eventState.id).then();
     }
-    showNotification('Timer reset to 03:00. Question is now hidden.', 'success');
+    showNotification('Timer reset to 03:00. Question is now hidden (awaiting).', 'success');
+  };
+
+  const handleRevealQuestion = () => {
+    if (alreadySoldItem) return;
+    const now = new Date().toISOString();
+    const updates: Partial<EventState> = {
+      timer_state: 'paused',
+      timer_remaining_seconds: eventState?.timer_remaining_seconds ?? 180,
+      timer_paused_at: now,
+      updated_at: now,
+    };
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
+    broadcastStateChange(updates);
+    if (eventState?.id) {
+      supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    }
+    showNotification('Question revealed to players! (Timer is paused/ready)', 'success');
+    addHistory('Question Revealed', `Question revealed for Round ${roundIdx + 1} - Q${questionIdx + 1}`);
+  };
+
+  const handleHideQuestion = () => {
+    if (alreadySoldItem) return;
+    const now = new Date().toISOString();
+    const updates: Partial<EventState> = {
+      timer_state: 'stopped',
+      timer_started_at: null,
+      timer_paused_at: null,
+      timer_remaining_seconds: 180,
+      timer_duration_seconds: 180,
+      updated_at: now,
+    };
+    setEventState((prev) => (prev ? { ...prev, ...updates } : (updates as EventState)));
+    broadcastStateChange(updates);
+    if (eventState?.id) {
+      supabase.from('event_state').update(updates).eq('id', eventState.id).then();
+    }
+    showNotification('Question hidden from players (awaiting state).', 'success');
+    addHistory('Question Hidden', `Question set to awaiting for Round ${roundIdx + 1} - Q${questionIdx + 1}`);
   };
 
   const handleTeamSelection = (id: string) => {
@@ -3081,11 +3119,33 @@ export default function AdminPanel() {
                     <HelpCircle size={22} />
                     <h2 className="text-xl font-bold text-white">Question & Timer</h2>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
                     {isRevealed ? (
                       <span className="badge-revealed-to-players">● REVEALED TO PLAYERS</span>
                     ) : (
-                      <span className="badge-hidden-from-players">HIDDEN FROM PLAYERS</span>
+                      <span className="badge-hidden-from-players">HIDDEN FROM PLAYERS (AWAITING)</span>
+                    )}
+
+                    {!alreadySoldItem && (
+                      isRevealed ? (
+                        <button
+                          type="button"
+                          onClick={handleHideQuestion}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5 cursor-pointer"
+                          title="Hide question from players (set back to Awaiting state)"
+                        >
+                          <EyeOff size={14} /> Hide Q
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleRevealQuestion}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/60 hover:text-emerald-100 transition flex items-center gap-1.5 cursor-pointer"
+                          title="Reveal question to players on screen before starting countdown timer"
+                        >
+                          <Eye size={14} /> Reveal Q
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
