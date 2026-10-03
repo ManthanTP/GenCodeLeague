@@ -547,9 +547,9 @@ export default function LiveView() {
 
       {/* 3. ACTIVE ROUND STATE (EXACT MATCH TO BLUEPRINT) */}
       {gameState === 'active' && (
-        <div className="gcl-live-viewport-container">
+        <div style={{ width: '100%', padding: '10px 24px 24px 24px' }}>
           {/* Top Right Controls: Viewing as Guest Dropdown & Icon-only Fullscreen Button */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '6px' }}>
             {!isTeamLeader && (
               <div style={{ position: 'relative', width: '270px' }}>
                 <select
@@ -558,12 +558,12 @@ export default function LiveView() {
                   className="panel"
                   style={{
                     width: '100%',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: '#15151b',
-                    border: '1px solid #282832',
-                    color: '#f5f5f7',
-                    fontSize: '14px',
+                    height: '35px',
+                    borderRadius: '8px',
+                    background: '#18181c',
+                    border: '1px solid #2c2c33',
+                    color: '#d6d6dc',
+                    fontSize: '15px',
                     padding: '0 32px 0 14px',
                     appearance: 'none',
                     cursor: 'pointer',
@@ -578,7 +578,7 @@ export default function LiveView() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8e8e9a', pointerEvents: 'none' }} />
+                <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9a9aa3', pointerEvents: 'none' }} />
               </div>
             )}
 
@@ -587,13 +587,13 @@ export default function LiveView() {
               onClick={toggleFullscreen}
               className="panel"
               style={{
-                width: '36px',
-                height: '36px',
+                width: '35px',
+                height: '35px',
                 padding: 0,
-                borderRadius: '10px',
-                background: '#15151b',
-                border: '1px solid #282832',
-                color: isFullscreen ? '#ff2a3d' : '#f5f5f7',
+                borderRadius: '8px',
+                background: '#18181c',
+                border: '1px solid #2c2c33',
+                color: isFullscreen ? '#e8212e' : '#f4f4f6',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -602,28 +602,27 @@ export default function LiveView() {
               }}
               title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
-              {isFullscreen ? <Minimize size={17} style={{ color: '#ff2a3d' }} /> : <Maximize size={17} />}
+              {isFullscreen ? <Minimize size={17} style={{ color: '#e8212e' }} /> : <Maximize size={17} />}
             </button>
           </div>
 
-          {/* Main Arena Dynamic Grid (Left minmax(0,1fr), Right 380px, Gap 20px / Full width if no panel) */}
+          {/* Main Arena Dynamic Grid (Left 1156px, Right 369px, Gap 26px / Full width if no panel) */}
           <div className={`gcl-live-arena-grid ${isTeamPanelOpen && selectedTeam ? 'has-panel' : 'no-panel'}`}>
-            {/* LEFT COLUMN: Question banner, Bids row, Live Team Status */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0, height: '100%', flex: 1 }}>
+            {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
               <div
                 className="panel red"
                 style={{
-                  minHeight: '170px',
+                  minHeight: '185px',
                   height: 'auto',
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '20px 24px',
+                  padding: '24px 30px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '20px',
-                  flexShrink: 0,
+                  gap: '24px',
                 }}
               >
                 {/* 3 Strips with exact blueprint clip-path */}
@@ -638,8 +637,8 @@ export default function LiveView() {
                   className="strip"
                   style={{
                     clipPath: 'polygon(42px 0, 46px 0, 0 46px, 0 42px)',
-                    background: '#ff2a3d',
-                    filter: 'drop-shadow(0 0 4px rgba(255,42,61,.8))',
+                    background: '#ff2a38',
+                    filter: 'drop-shadow(0 0 4px rgba(232,33,46,.8))',
                   }}
                 />
                 <div
@@ -659,38 +658,38 @@ export default function LiveView() {
                     justifyContent: 'center',
                     flex: 1,
                     minWidth: 0,
-                    padding: '4px 16px 4px 38px',
+                    padding: '6px 20px 6px 42px',
                     zIndex: 10,
                     textAlign: 'left',
                   }}
                 >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                      <span style={{ fontSize: '17px', fontWeight: 700, color: '#f5f5f7', letterSpacing: '0.6px', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                      <span style={{ fontSize: '17px', fontWeight: 700, color: '#e6e6ea', letterSpacing: '0.6px', fontFamily: "'Rajdhani', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
                       </span>
-                      <div style={{ width: '56px', height: '3px', background: '#ff2a3d' }} />
+                      <div style={{ width: '56px', height: '3px', background: '#e8212e' }} />
                     </div>
-                    <div style={{ width: '1px', height: '20px', background: '#282832' }} />
-                    <span style={{ fontSize: '15px', fontWeight: 600, letterSpacing: '0.5px', color: '#8e8e9a', fontFamily: "'Inter', sans-serif" }}>
+                    <div style={{ width: '1px', height: '20px', background: '#3a3a41' }} />
+                    <span style={{ fontSize: '15px', fontWeight: 600, letterSpacing: '0.5px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                       QUESTION {questionIdx + 1} OF {totalQuestions}
                     </span>
                     {alreadySoldItem && (
                       <>
-                        <div style={{ width: '1px', height: '20px', background: '#282832' }} />
+                        <div style={{ width: '1px', height: '20px', background: '#3a3a41' }} />
                         <span
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '3px 10px',
+                            padding: '4px 12px',
                             borderRadius: '6px',
-                            background: 'rgba(255, 42, 61, 0.18)',
-                            border: '1px solid #ff2a3d',
-                            color: '#ff2a3d',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            fontFamily: "'Barlow Semi Condensed', sans-serif",
+                            background: 'rgba(232, 33, 46, 0.22)',
+                            border: '1px solid #e8212e',
+                            color: '#ff4d5a',
+                            fontSize: '14px',
+                            fontWeight: 800,
+                            fontFamily: "'Rajdhani', sans-serif",
                             letterSpacing: '0.04em',
                           }}
                         >
@@ -703,15 +702,16 @@ export default function LiveView() {
                   {alreadySoldItem ? (
                     <h2
                       style={{
-                        fontSize: 'clamp(32px, 2.5vw, 36px)',
-                        fontWeight: 700,
-                        color: '#f5f5f7',
+                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontWeight: 800,
+                        color: '#f4f4f6',
                         lineHeight: 1.25,
                         margin: 0,
-                        fontFamily: "'Barlow Semi Condensed', sans-serif",
+                        fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-wrap',
+                        letterSpacing: '0.01em',
                       }}
                     >
                       {renderMultiLineText(alreadySoldItem.item_name || eventState?.current_item_name || '')}
@@ -719,15 +719,16 @@ export default function LiveView() {
                   ) : isRevealed ? (
                     <h2
                       style={{
-                        fontSize: 'clamp(32px, 2.5vw, 36px)',
-                        fontWeight: 700,
-                        color: '#f5f5f7',
+                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontWeight: 800,
+                        color: '#f4f4f6',
                         lineHeight: 1.25,
                         margin: 0,
-                        fontFamily: "'Barlow Semi Condensed', sans-serif",
+                        fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-wrap',
+                        letterSpacing: '0.01em',
                       }}
                     >
                       {renderMultiLineText(eventState?.current_item_name || 'No question text set')}
@@ -735,14 +736,15 @@ export default function LiveView() {
                   ) : (
                     <h2
                       style={{
-                        fontSize: 'clamp(30px, 2.3vw, 34px)',
-                        fontWeight: 600,
-                        color: '#8e8e9a',
+                        fontSize: 'clamp(28px, 2.3vw, 38px)',
+                        fontWeight: 700,
+                        color: '#80808a',
                         lineHeight: 1.25,
                         margin: 0,
-                        fontFamily: "'Barlow Semi Condensed', sans-serif",
+                        fontFamily: "'Rajdhani', sans-serif",
                         textAlign: 'left',
                         fontStyle: 'italic',
+                        letterSpacing: '0.02em',
                       }}
                     >
                       Awaiting for Next Question...
@@ -750,43 +752,43 @@ export default function LiveView() {
                   )}
                 </div>
 
-                {/* Right: BID TIMER */}
+                {/* Right: BID TIMER (188px x 120px) */}
                 <div
                   className="panel"
                   style={{
-                    width: '190px',
-                    height: '124px',
-                    borderRadius: '14px',
-                    background: '#121216',
-                    border: alreadySoldItem ? '1px solid rgba(255, 42, 61, 0.5)' : '1px solid #24242e',
-                    padding: '12px 14px',
+                    width: '188px',
+                    height: '120px',
+                    borderRadius: '12px',
+                    background: '#17171b',
+                    padding: '10px 14px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     zIndex: 10,
+                    border: alreadySoldItem ? '1px solid rgba(232, 33, 46, 0.5)' : undefined,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {alreadySoldItem ? (
-                      <Lock size={20} style={{ color: '#ff2a3d' }} />
+                      <Lock size={22} style={{ color: '#e8212e' }} />
                     ) : (
-                      <Clock size={20} style={{ color: '#ff2a3d' }} />
+                      <Clock size={22} style={{ color: '#e8212e' }} />
                     )}
-                    <span style={{ fontSize: '18px', fontWeight: 600, color: alreadySoldItem ? '#ff2a3d' : '#8e8e9a', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                    <span style={{ fontSize: '19px', fontWeight: 600, color: alreadySoldItem ? '#ff4d5a' : '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
                       {alreadySoldItem ? 'QUESTION SOLD' : 'BID TIMER'}
                     </span>
                   </div>
                   <div
                     style={{
-                      fontSize: alreadySoldItem ? '34px' : '48px',
+                      fontSize: alreadySoldItem ? '34px' : '46px',
                       fontWeight: 700,
-                      fontFamily: "'Barlow Semi Condensed', sans-serif",
+                      fontFamily: "'Rajdhani', sans-serif",
                       fontVariantNumeric: 'tabular-nums',
                       lineHeight: 1,
                       marginTop: '4px',
-                      color: alreadySoldItem ? '#ff2a3d' : '#f5f5f7',
+                      color: alreadySoldItem ? '#ff4d5a' : '#f4f4f6',
                       letterSpacing: alreadySoldItem ? '0.05em' : 'normal',
                     }}
                   >
@@ -794,12 +796,12 @@ export default function LiveView() {
                       ? 'LOCKED'
                       : timerFormatted}
                   </div>
-                  <div style={{ width: '160px', height: '6px', borderRadius: '4px', background: '#24242e', marginTop: '8px', overflow: 'hidden' }}>
+                  <div style={{ width: '161px', height: '7px', borderRadius: '4px', background: '#26262c', marginTop: '6px', overflow: 'hidden' }}>
                     <div
                       style={{
-                        height: '6px',
+                        height: '7px',
                         borderRadius: '4px',
-                        background: '#ff2a3d',
+                        background: '#e8212e',
                         width: alreadySoldItem
                           ? '100%'
                           : ((isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
@@ -826,10 +828,10 @@ export default function LiveView() {
                     <div
                       className="panel red gcl-card-animate"
                       style={{
-                        minHeight: '160px',
+                        minHeight: '161px',
                         position: 'relative',
                         overflow: 'hidden',
-                        padding: '18px 24px',
+                        padding: '16px 24px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
@@ -839,9 +841,9 @@ export default function LiveView() {
                     >
                       {/* Header: Pulsing red dot + CURRENT BID + Question Ref */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className="dot" style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#ff2a3d', boxShadow: '0 0 8px #ff2a3d' }} />
-                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="dot" style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#e8212e' }} />
+                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             CURRENT BID
                           </span>
                           {isFireActive && (
@@ -856,7 +858,7 @@ export default function LiveView() {
                                 color: '#fff',
                                 fontSize: '11px',
                                 fontWeight: 800,
-                                fontFamily: "'Barlow Semi Condensed', sans-serif",
+                                fontFamily: "'Rajdhani', sans-serif",
                                 letterSpacing: '0.05em',
                                 boxShadow: '0 0 10px rgba(255, 69, 0, 0.8)',
                               }}
@@ -867,10 +869,10 @@ export default function LiveView() {
                           )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', color: '#8e8e9a', fontFamily: "'Inter', sans-serif" }}>
+                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                             Question Ref:
                           </span>
-                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             {activeCurrentBid.questionRef}
                           </span>
                         </div>
@@ -878,16 +880,16 @@ export default function LiveView() {
 
                       {/* Content: Vertical Gavel Tile, Bidding Team, Divider, Current Amount */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
                           <div
                             className={`panel ${isFireActive ? 'gcl-fire-aura' : ''}`}
                             style={{
-                              width: '76px',
-                              height: '74px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(180deg, #1f1f26, #141418)',
-                              border: isFireActive ? '1px solid #ff4500' : '1px solid #282832',
-                              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                              width: '80px',
+                              height: '76px',
+                              borderRadius: '10px',
+                              background: 'linear-gradient(180deg, #24242a, #18181c)',
+                              border: isFireActive ? '1px solid #ff4500' : '1px solid #383844',
+                              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.10)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -896,38 +898,38 @@ export default function LiveView() {
                             }}
                           >
                             <Hammer
-                              size={38}
+                              size={40}
                               style={{
-                                color: isFireActive ? '#ff5722' : '#ff2a3d',
+                                color: isFireActive ? '#ff5722' : '#e8212e',
                                 strokeWidth: 1.8,
                                 transform: 'rotate(0deg)',
-                                filter: isFireActive ? 'drop-shadow(0 0 8px rgba(255,87,34,0.9))' : 'drop-shadow(0 0 6px rgba(255,42,61,0.5))',
+                                filter: isFireActive ? 'drop-shadow(0 0 8px rgba(255,87,34,0.9))' : 'none',
                               }}
                             />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '12px', color: '#8e8e9a', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                               Bidding Team
                             </p>
-                            <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5f5f7', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                               {activeCurrentBid.teamName}
                             </p>
                           </div>
                         </div>
 
                         {/* Vertical divider */}
-                        <div style={{ width: '1px', height: '60px', background: '#282832' }} />
+                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
 
                         <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
-                          <p style={{ fontSize: '12px', color: '#8e8e9a', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                             Current Amount
                           </p>
                           <p
                             style={{
-                              fontSize: '44px',
+                              fontSize: '40px',
                               fontWeight: 700,
-                              color: '#ff2a3d',
-                              fontFamily: "'Barlow Semi Condensed', sans-serif",
+                              color: '#ff3b47',
+                              fontFamily: "'Rajdhani', sans-serif",
                               fontVariantNumeric: 'tabular-nums',
                               margin: '6px 0 0 0',
                               lineHeight: 1,
@@ -950,46 +952,46 @@ export default function LiveView() {
                     <div
                       className="panel gcl-card-animate"
                       style={{
-                        minHeight: '160px',
+                        minHeight: '161px',
                         position: 'relative',
                         overflow: 'hidden',
-                        padding: '18px 24px',
+                        padding: '16px 24px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
                         flex: 1,
                         minWidth: '320px',
-                        background: '#141419',
-                        borderColor: '#24242e',
+                        background: '#18181d',
+                        borderColor: '#2f2f38',
                       }}
                     >
                       {/* Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#2fd16f', boxShadow: '0 0 8px rgba(47,209,111,0.6)' }} />
-                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
+                          <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             LAST SUCCESSFUL BID
                           </span>
                           <span
                             style={{
                               padding: '2px 8px',
                               borderRadius: '4px',
-                              background: 'rgba(47,209,111,0.15)',
-                              border: '1px solid rgba(47,209,111,0.3)',
-                              color: '#2fd16f',
+                              background: 'rgba(34,197,94,0.15)',
+                              border: '1px solid rgba(34,197,94,0.3)',
+                              color: '#3fe085',
                               fontSize: '11px',
                               fontWeight: 700,
-                              fontFamily: "'Barlow Semi Condensed', sans-serif",
+                              fontFamily: "'Rajdhani', sans-serif",
                             }}
                           >
                             SOLD
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', color: '#8e8e9a', fontFamily: "'Inter', sans-serif" }}>
+                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                             Question Ref:
                           </span>
-                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             {lastSuccessfulBid.questionRef}
                           </span>
                         </div>
@@ -997,16 +999,16 @@ export default function LiveView() {
 
                       {/* Content */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
                           <div
                             className="panel"
                             style={{
-                              width: '76px',
-                              height: '74px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(180deg, #1f1f26, #141418)',
-                              border: '1px solid #282832',
-                              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                              width: '80px',
+                              height: '76px',
+                              borderRadius: '10px',
+                              background: 'linear-gradient(180deg, #24242a, #18181c)',
+                              border: '1px solid #383844',
+                              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.10)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1014,38 +1016,38 @@ export default function LiveView() {
                             }}
                           >
                             <Hammer
-                              size={38}
+                              size={40}
                               className="gcl-hammer-strike"
                               style={{
-                                color: '#2fd16f',
+                                color: '#22c55e',
                                 strokeWidth: 1.8,
                                 transform: 'rotate(0deg)',
                               }}
                             />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '12px', color: '#8e8e9a', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                               Winning Team
                             </p>
-                            <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5f5f7', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                               {lastSuccessfulBid.teamName}
                             </p>
                           </div>
                         </div>
 
                         {/* Vertical divider */}
-                        <div style={{ width: '1px', height: '60px', background: '#282832' }} />
+                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
 
                         <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
-                          <p style={{ fontSize: '12px', color: '#8e8e9a', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                             Final Bid
                           </p>
                           <p
                             style={{
                               fontSize: '40px',
                               fontWeight: 700,
-                              color: '#2fd16f',
-                              fontFamily: "'Barlow Semi Condensed', sans-serif",
+                              color: '#3fe085',
+                              fontFamily: "'Rajdhani', sans-serif",
                               fontVariantNumeric: 'tabular-nums',
                               margin: '6px 0 0 0',
                               lineHeight: 1,
@@ -1066,26 +1068,26 @@ export default function LiveView() {
                     <div
                       className="panel gcl-card-animate"
                       style={{
-                        minHeight: '160px',
+                        minHeight: '161px',
                         position: 'relative',
                         overflow: 'hidden',
-                        padding: '16px 20px',
+                        padding: '14px 20px',
                         display: 'flex',
                         flexDirection: 'column',
                         flex: 1,
                         minWidth: '320px',
-                        background: '#141419',
-                        borderColor: '#24242e',
+                        background: '#18181c',
+                        borderColor: '#292930',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <History size={18} style={{ color: '#f5f5f7' }} />
-                          <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '0.5px', color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <History size={20} style={{ color: '#f4f4f6' }} />
+                          <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             PREVIOUS BIDS
                           </span>
                         </div>
-                        <span style={{ fontSize: '12px', color: '#8e8e9a', fontFamily: "'Inter', sans-serif" }}>
+                        <span style={{ fontSize: '12px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                           Round {roundIdx + 1} Purchases
                         </span>
                       </div>
@@ -1097,11 +1099,11 @@ export default function LiveView() {
                           gridTemplateColumns: '90px 1fr 100px',
                           alignItems: 'center',
                           padding: '0 8px 6px 8px',
-                          borderBottom: '1px solid #24242e',
+                          borderBottom: '1px solid #282830',
                           fontSize: '11px',
                           fontWeight: 700,
-                          color: '#8e8e9a',
-                          fontFamily: "'Barlow Semi Condensed', sans-serif",
+                          color: '#8e8e98',
+                          fontFamily: "'Rajdhani', sans-serif",
                           letterSpacing: '0.05em',
                         }}
                       >
@@ -1110,9 +1112,9 @@ export default function LiveView() {
                         <div style={{ textAlign: 'right' }}>VALUE</div>
                       </div>
 
-                      <div className="gcl-thin-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '6px', overflowY: 'auto', maxHeight: '86px', zIndex: 10 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '6px', overflowY: 'auto', maxHeight: '86px', zIndex: 10 }}>
                         {previousBidsDisplayList.length === 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: '#8e8e9a', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: '#9a9aa3', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
                             No previous purchases in this round
                           </div>
                         ) : (
@@ -1127,9 +1129,9 @@ export default function LiveView() {
                                 gap: '8px',
                                 height: '28px',
                                 minHeight: '28px',
-                                background: '#111115',
+                                background: '#141418',
                                 border: '1px solid rgba(255, 255, 255, 0.04)',
-                                borderRadius: '6px',
+                                borderRadius: '4px',
                                 padding: '0 8px',
                               }}
                             >
@@ -1140,20 +1142,20 @@ export default function LiveView() {
                                   justifyContent: 'center',
                                   height: '20px',
                                   padding: '0 6px',
-                                  borderRadius: '4px',
-                                  background: '#1c1c24',
-                                  color: '#f5f5f7',
-                                  fontSize: '11px',
+                                  borderRadius: '3px',
+                                  background: '#22222a',
+                                  color: '#e2e2e8',
+                                  fontSize: '12px',
                                   fontWeight: 700,
-                                  fontFamily: "'Barlow Semi Condensed', sans-serif",
+                                  fontFamily: "'Rajdhani', sans-serif",
                                 }}
                               >
                                 {bid.compactRef}
                               </div>
-                              <span style={{ fontSize: '14px', color: '#f5f5f7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                              <span style={{ fontSize: '14px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
                                 {bid.teamName}
                               </span>
-                              <span style={{ fontSize: '15px', fontWeight: 700, color: '#ff2a3d', fontFamily: "'Barlow Semi Condensed', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                              <span style={{ fontSize: '16px', fontWeight: 700, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
                                 {formatCurrency(bid.amount)}
                               </span>
                             </div>
@@ -1172,7 +1174,7 @@ export default function LiveView() {
                 // CASE 2: 0 sold & active bid -> SHOW CURRENT BID
                 if (soldCount === 0 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '16px', flexShrink: 0 }}>
+                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
                       {renderCurrentBidCard()}
                     </div>
                   );
@@ -1181,7 +1183,7 @@ export default function LiveView() {
                 // CASE 3: 1 sold & no active bid -> SHOW LAST SUCCESSFUL BID
                 if (soldCount === 1 && !hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '16px', flexShrink: 0 }}>
+                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
                       {renderLastSuccessfulBidCard()}
                     </div>
                   );
@@ -1190,7 +1192,7 @@ export default function LiveView() {
                 // CASE 4: 1 sold & active bid -> SHOW CURRENT BID + LAST SUCCESSFUL BID
                 if (soldCount === 1 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', flexShrink: 0 }}>
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                       {renderCurrentBidCard()}
                       {renderLastSuccessfulBidCard()}
                     </div>
@@ -1200,7 +1202,7 @@ export default function LiveView() {
                 // CASE 5 & 8: 2+ sold & no active bid -> SHOW LAST SUCCESSFUL BID + PREVIOUS BIDS (older purchases)
                 if (soldCount >= 2 && !hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', flexShrink: 0 }}>
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                       {renderLastSuccessfulBidCard()}
                       {renderPreviousBidsCard()}
                     </div>
@@ -1210,7 +1212,7 @@ export default function LiveView() {
                 // CASE 6 & 7: 2+ sold & active bid -> SHOW CURRENT BID + PREVIOUS BIDS (all purchases)
                 if (soldCount >= 2 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', flexShrink: 0 }}>
+                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                       {renderCurrentBidCard()}
                       {renderPreviousBidsCard()}
                     </div>
@@ -1220,7 +1222,7 @@ export default function LiveView() {
                 return null;
               })()}
 
-              {/* 3. Live Team Status Table (takes leftover height and scrolls internally) */}
+              {/* 3. Live Team Status Table (1156px x 385px) */}
               <LiveTeamStatus
                 teams={availableTeams}
                 myTeamId={effectiveMyTeamId}
@@ -1230,26 +1232,25 @@ export default function LiveView() {
               />
             </div>
 
-            {/* RIGHT COLUMN: 380px SELECTED TEAM & ITEMS WON (Shown only when team is selected) */}
+            {/* RIGHT COLUMN: 369px x 715px SELECTED TEAM & ITEMS WON (Shown only when team is selected) */}
             {isTeamPanelOpen && selectedTeam && (
-              <div className="gcl-sidebar-enter" style={{ width: '100%', minWidth: 0, height: '100%' }}>
+              <div className="gcl-sidebar-enter" style={{ width: '100%', minWidth: 0 }}>
                 <div
                   className="panel red"
                   style={{
                     width: '100%',
-                    height: '100%',
+                    minHeight: '715px',
                     borderRadius: '16px',
                     padding: '16px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '12px',
                     position: 'relative',
-                    overflow: 'hidden',
                   }}
                 >
-                  {/* Header row: SELECTED TEAM */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10, flexShrink: 0 }}>
-                    <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.4px', color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
+                  {/* Header row: SELECTED TEAM (Change button removed, close button for guest) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                    <span style={{ fontSize: '21px', fontWeight: 700, letterSpacing: '0.3px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                       SELECTED TEAM
                     </span>
                     {!isTeamLeader && (
@@ -1259,7 +1260,7 @@ export default function LiveView() {
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#8e8e9a',
+                          color: '#9a9aa3',
                           cursor: 'pointer',
                           padding: '4px',
                           display: 'flex',
@@ -1273,326 +1274,290 @@ export default function LiveView() {
                     )}
                   </div>
 
-                  {/* Team Identity Card */}
+                {/* Team Identity Card (340px x 358px, #18181c, border #25252b) */}
+                <div
+                  className="panel"
+                  style={{
+                    width: '100%',
+                    height: '358px',
+                    borderRadius: '12px',
+                    background: '#18181c',
+                    borderColor: '#25252b',
+                    padding: '16px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  {/* Top info: Crest + Name + Leader */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      {/* Logo or Light Grey Trophy */}
+                      {selectedTeam?.logo_url ? (
+                        <div style={{ width: '84px', height: '84px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <img
+                            src={selectedTeam.logo_url}
+                            alt={selectedTeam.name}
+                            style={{
+                              maxWidth: '84px',
+                              maxHeight: '84px',
+                              objectFit: 'contain',
+                              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))',
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: '84px',
+                            height: '84px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(145deg, #28282e, #18181c)',
+                            border: '1px solid #383842',
+                            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0,0,0,0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Trophy size={42} style={{ color: '#d0d0d8', strokeWidth: 1.8, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                        </div>
+                      )}
+
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ fontSize: '23px', fontWeight: 700, color: '#f4f4f6', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                            {selectedTeam?.name || 'helloo new team'}
+                          </h3>
+                          <div className="chip" style={{ width: '39px', height: '25px', fontSize: '12px', fontWeight: 700 }}>
+                            YOU
+                          </div>
+                        </div>
+                        <p style={{ fontSize: '14px', color: '#9a9aa3', margin: '6px 0 0 0', lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                          Leader
+                        </p>
+                        <p style={{ fontSize: '21px', fontWeight: 600, color: '#f4f4f6', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                          {selectedTeamLeader}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ width: '100%', height: '1px', background: '#26262c', margin: '10px 0 8px 0' }} />
+
+                    {/* Team Members Header */}
+                    <p style={{ fontSize: '18px', fontWeight: 600, color: '#f4f4f6', margin: '0 0 8px 0', fontFamily: "'Rajdhani', sans-serif" }}>
+                      Team Members ({displayMembers.length})
+                    </p>
+                  </div>
+
+                  {/* Member rows (only real members, no fake Member 1..5) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {displayMembers.length === 0 ? (
+                      <p style={{ fontSize: '14px', color: '#9a9aa3', margin: '6px 0', fontStyle: 'italic', fontFamily: "'Inter', sans-serif" }}>
+                        No members registered
+                      </p>
+                    ) : (
+                      displayMembers.map((member, i) => (
+                        <div
+                          key={member.id || i}
+                          style={{
+                            height: '32px',
+                            background: '#1b1b20',
+                            borderRadius: '5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '0 8px 0 0',
+                          }}
+                        >
+                          <div className="num" style={{ width: '38px', height: '32px', borderRadius: '5px', fontSize: '15px' }}>
+                            {i + 1}
+                          </div>
+                          <span style={{ fontSize: '15px', color: '#e4e4e8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                            {member.name || (member as any).full_name || `Member ${i + 1}`}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Dual Stats Row: Total Spent & Remaining with fitted font-size */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Total Spent */}
                   <div
                     className="panel"
                     style={{
-                      width: '100%',
-                      borderRadius: '12px',
-                      background: '#121216',
-                      borderColor: '#24242e',
-                      padding: '14px',
+                      height: '76px',
+                      borderRadius: '10px',
+                      background: '#1a1a1f',
+                      padding: '0 10px',
                       display: 'flex',
-                      flexDirection: 'column',
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'hidden',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    {/* Top info: Crest + Name + Leader */}
-                    <div style={{ flexShrink: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        {/* 84px Crest tile with Red Glow */}
-                        {selectedTeam?.logo_url ? (
-                          <div
-                            style={{
-                              width: '84px',
-                              height: '84px',
-                              borderRadius: '14px',
-                              background: 'linear-gradient(145deg, #201216, #120a0d)',
-                              border: '1px solid rgba(255, 42, 61, 0.45)',
-                              boxShadow: '0 0 20px rgba(255, 42, 61, 0.35)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              overflow: 'hidden',
-                              padding: '4px',
-                            }}
-                          >
-                            <img
-                              src={selectedTeam.logo_url}
-                              alt={selectedTeam.name}
-                              style={{
-                                maxWidth: '76px',
-                                maxHeight: '76px',
-                                objectFit: 'contain',
-                                filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))',
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              width: '84px',
-                              height: '84px',
-                              borderRadius: '14px',
-                              background: 'linear-gradient(145deg, #241015, #14080b)',
-                              border: '1px solid rgba(255, 42, 61, 0.45)',
-                              boxShadow: '0 0 20px rgba(255, 42, 61, 0.35)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <Trophy size={42} style={{ color: '#ff2a3d', strokeWidth: 1.8, filter: 'drop-shadow(0 2px 8px rgba(255,42,61,0.5))' }} />
-                          </div>
-                        )}
-
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#f5f5f7', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                              {selectedTeam?.name || 'helloo new team'}
-                            </h3>
-                            <div className="chip" style={{ width: '38px', height: '22px', fontSize: '11px', fontWeight: 800, background: '#ff2a3d', color: '#fff', borderRadius: '6px' }}>
-                              YOU
-                            </div>
-                          </div>
-                          <p style={{ fontSize: '13px', color: '#8e8e9a', margin: '4px 0 0 0', lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                            Leader
-                          </p>
-                          <p style={{ fontSize: '20px', fontWeight: 600, color: '#f5f5f7', margin: '3px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                            {selectedTeamLeader}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div style={{ width: '100%', height: '1px', background: '#24242e', margin: '10px 0 8px 0' }} />
-
-                      {/* Team Members Header */}
-                      <p style={{ fontSize: '16px', fontWeight: 700, color: '#f5f5f7', margin: '0 0 6px 0', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                        Team Members ({displayMembers.length})
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '44px',
+                        borderRadius: '8px',
+                        background: '#3a1015',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <svg width="28" height="26" viewBox="0 0 36 32">
+                        <g fill="#e8212e">
+                          <ellipse cx="18" cy="6" rx="14" ry="5"/>
+                          <path d="M4 9v5c0 3 6 5 14 5s14-2 14-5V9c0 3-6 5-14 5S4 12 4 9z"/>
+                          <path d="M4 17v5c0 3 6 5 14 5s14-2 14-5v-5c0 3-6 5-14 5S4 20 4 17z"/>
+                        </g>
+                      </svg>
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: '12px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                        Round Spent
+                      </p>
+                      <p style={{ fontSize: '20px', fontWeight: 700, color: '#ff4350', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                        {formatCurrency(selectedTeamSpent)}
                       </p>
                     </div>
-
-                    {/* Member rows scroll inside */}
-                    <div
-                      className="gcl-thin-scrollbar"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '5px',
-                        overflowY: 'auto',
-                        flex: 1,
-                        minHeight: 0,
-                        paddingRight: '2px',
-                      }}
-                    >
-                      {displayMembers.length === 0 ? (
-                        <p style={{ fontSize: '13px', color: '#8e8e9a', margin: '6px 0', fontStyle: 'italic', fontFamily: "'Inter', sans-serif" }}>
-                          No members registered
-                        </p>
-                      ) : (
-                        displayMembers.map((member, i) => (
-                          <div
-                            key={member.id || i}
-                            style={{
-                              height: '34px',
-                              minHeight: '34px',
-                              background: '#15151b',
-                              border: '1px solid #24242e',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              padding: '0 8px 0 0',
-                            }}
-                          >
-                            <div className="num" style={{ width: '32px', height: '32px', borderRadius: '7px', fontSize: '14px', background: '#1c1c24', color: '#f5f5f7' }}>
-                              {i + 1}
-                            </div>
-                            <span style={{ fontSize: '14px', color: '#f5f5f7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
-                              {member.name || (member as any).full_name || `Member ${i + 1}`}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
                   </div>
 
-                  {/* Dual Stats Row: Total Spent & Remaining */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0 }}>
-                    {/* Round Spent */}
-                    <div
-                      className="panel"
-                      style={{
-                        height: '74px',
-                        borderRadius: '12px',
-                        background: '#121216',
-                        border: '1px solid #24242e',
-                        padding: '0 10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '44px',
-                          borderRadius: '10px',
-                          background: 'rgba(255, 42, 61, 0.15)',
-                          border: '1px solid rgba(255, 42, 61, 0.35)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <svg width="26" height="24" viewBox="0 0 36 32">
-                          <g fill="#ff2a3d">
-                            <ellipse cx="18" cy="6" rx="14" ry="5"/>
-                            <path d="M4 9v5c0 3 6 5 14 5s14-2 14-5V9c0 3-6 5-14 5S4 12 4 9z"/>
-                            <path d="M4 17v5c0 3 6 5 14 5s14-2 14-5v-5c0 3-6 5-14 5S4 20 4 17z"/>
-                          </g>
-                        </svg>
-                      </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <p style={{ fontSize: '11px', color: '#8e8e9a', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                          Round Spent
-                        </p>
-                        <p style={{ fontSize: '22px', fontWeight: 700, color: '#ff2a3d', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                          {formatCurrency(selectedTeamSpent)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Remaining */}
-                    <div
-                      className="panel"
-                      style={{
-                        height: '74px',
-                        borderRadius: '12px',
-                        background: '#121216',
-                        border: '1px solid #24242e',
-                        padding: '0 10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '44px',
-                          borderRadius: '10px',
-                          background: 'rgba(47, 209, 111, 0.12)',
-                          border: '1px solid rgba(47, 209, 111, 0.35)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Wallet size={22} style={{ color: '#2fd16f' }} />
-                      </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <p style={{ fontSize: '11px', color: '#8e8e9a', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
-                          Remaining
-                        </p>
-                        <p style={{ fontSize: '22px', fontWeight: 700, color: '#2fd16f', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                          {formatCurrency(selectedTeam?.budget || 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items Won Card */}
+                  {/* Remaining */}
                   <div
                     className="panel"
                     style={{
-                      height: '180px',
-                      borderRadius: '12px',
-                      background: '#121216',
-                      border: '1px solid #24242e',
-                      padding: '12px 14px',
+                      height: '76px',
+                      borderRadius: '10px',
+                      background: '#1a1a1f',
+                      padding: '0 10px',
                       display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      flexShrink: 0,
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <Box size={18} style={{ color: '#f5f5f7' }} />
-                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#f5f5f7', fontFamily: "'Barlow Semi Condensed', sans-serif" }}>
-                        Items Won ({selectedTeamWonItems.length})
-                      </span>
-                    </div>
-
-                    {/* Inner Box with thin dark scrollbar */}
                     <div
                       style={{
-                        width: '100%',
-                        flex: 1,
-                        minHeight: 0,
+                        width: '42px',
+                        height: '44px',
                         borderRadius: '8px',
-                        background: '#0c0c10',
-                        border: '1px solid #22222a',
+                        background: 'rgba(255, 255, 255, 0.04)',
                         display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
                       }}
                     >
-                      {selectedTeamWonItems.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                          <Box size={28} style={{ color: '#8e8e9a', strokeWidth: 1.5, marginBottom: '4px' }} />
-                          <p style={{ fontSize: '13px', color: '#8e8e9a', margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                            No items won in this round yet.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="gcl-thin-scrollbar" style={{ width: '100%', height: '100%', overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {selectedTeamWonItems.map((item) => {
-                            const qNum = (item.question_index ?? 0) + 1;
-                            const rNum = (item.round_index ?? roundIdx) + 1;
-                            return (
-                              <div
-                                key={item.id}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  height: '34px',
-                                  minHeight: '34px',
-                                  padding: '0 10px',
-                                  background: '#15151b',
-                                  border: '1px solid #24242e',
-                                  borderRadius: '6px',
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                                  <span
-                                    style={{
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      background: '#1c1c24',
-                                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                                      color: '#f5f5f7',
-                                      fontSize: '11px',
-                                      fontWeight: 700,
-                                      fontFamily: "'Barlow Semi Condensed', sans-serif",
-                                    }}
-                                  >
-                                    R{rNum}-Q{qNum}
-                                  </span>
-                                  <span style={{ fontSize: '13px', color: '#f5f5f7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
-                                    Question {qNum}
-                                  </span>
-                                </div>
-                                <span style={{ fontSize: '15px', fontWeight: 700, color: '#ff2a3d', fontFamily: "'Barlow Semi Condensed', sans-serif", fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                                  {formatCurrency(item.cost)}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <Wallet size={24} style={{ color: '#f4f4f6' }} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: '12px', color: '#b5b5bd', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                        Remaining
+                      </p>
+                      <p style={{ fontSize: '20px', fontWeight: 700, color: '#3fe085', fontVariantNumeric: 'tabular-nums', margin: '4px 0 0 0', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                        {formatCurrency(selectedTeam?.budget || 0)}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Items Won Card (341px x 190px, background #1a1a1f, border #25252b) */}
+                <div
+                  className="panel"
+                  style={{
+                    height: '190px',
+                    borderRadius: '10px',
+                    background: '#1a1a1f',
+                    borderColor: '#25252b',
+                    padding: '14px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box size={21} style={{ color: '#f4f4f6' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 500, color: '#f4f4f6', fontFamily: "'Inter', sans-serif" }}>
+                      Items Won ({selectedTeamWonItems.length})
+                    </span>
+                  </div>
+
+                  {/* Inner Box (318px x 120px, background #18181c, border #26262b) */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '120px',
+                      borderRadius: '8px',
+                      background: '#18181c',
+                      border: '1px solid #26262b',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {selectedTeamWonItems.length === 0 ? (
+                      <>
+                        <Box size={34} style={{ color: '#8a8a93', strokeWidth: 1.5, marginBottom: '6px' }} />
+                        <p style={{ fontSize: '15px', color: '#9a9aa3', margin: 0, fontFamily: "'Inter', sans-serif" }}>
+                          No items won in this round yet.
+                        </p>
+                      </>
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {selectedTeamWonItems.map((item) => {
+                          const qNum = (item.question_index ?? 0) + 1;
+                          const rNum = (item.round_index ?? roundIdx) + 1;
+                          return (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                height: '32px',
+                                padding: '0 8px',
+                                background: '#141417',
+                                border: '1px solid #222228',
+                                borderRadius: '5px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                <span
+                                  style={{
+                                    padding: '2px 5px',
+                                    borderRadius: '3px',
+                                    background: '#22222a',
+                                    color: '#d0d0d8',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    fontFamily: "'Rajdhani', sans-serif",
+                                  }}
+                                >
+                                  R{rNum}-Q{qNum}
+                                </span>
+                                <span style={{ fontSize: '13px', color: '#e0e0e6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                                  Question {qNum}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#ff3b47', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                                {formatCurrency(item.cost)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+            </div>
             )}
           </div>
         </div>
