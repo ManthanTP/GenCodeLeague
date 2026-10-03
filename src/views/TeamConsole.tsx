@@ -107,11 +107,7 @@ export default function TeamConsole() {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-mono">
-                Team Score: <strong className="text-yellow-400 text-base">★ {eventState.game_state === 'winner_reveal' ? (myTeam.score || 0) : 'HIDDEN'}</strong>
-              </span>
-            </div>
+
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">

@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Sparkles,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -167,6 +168,10 @@ export default function AdminCertificateManager({
   const [certToRevoke, setCertToRevoke] = useState<Certificate | null>(null);
   const [revokedReason, setRevokedReason] = useState('');
   const [revoking, setRevoking] = useState(false);
+
+  // Delete / Remove Modal State
+  const [certToDelete, setCertToDelete] = useState<Certificate | null>(null);
+  const [deletingCert, setDeletingCert] = useState(false);
 
   // Detail / Preview Modal
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
@@ -381,10 +386,58 @@ export default function AdminCertificateManager({
         activeEdition?.year,
         activeEdition?.name
       );
-      const certId = generateCertificateId(editionCode, certificateType);
-
       const teamId = selectedTeamId || null;
 
+      // Check if certificate already exists for this recipient in this edition
+      const { data: existingCerts } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('edition_id', targetEditionId)
+        .ilike('recipient_name', recipientName.trim());
+
+      if (existingCerts && existingCerts.length > 0) {
+        // Update existing certificate instead of creating duplicate
+        const existingCert = existingCerts[0];
+        const updates = {
+          team_id: teamId,
+          certificate_type: certificateType,
+          achievement: showAchievementField ? achievement.trim() || null : null,
+          custom_title: customTitle.trim() || null,
+          custom_subtitle: customSubtitle.trim() || null,
+          status: 'valid' as const,
+          issued_at: new Date().toISOString(),
+        };
+
+        const { error: updateErr } = await supabase
+          .from('certificates')
+          .update(updates)
+          .eq('id', existingCert.id);
+
+        if (updateErr) throw updateErr;
+
+        await logAdminAction('CERTIFICATE_UPDATED_ON_REISSUE', {
+          certificate_id: existingCert.certificate_id,
+          recipient_name: recipientName.trim(),
+          updates,
+        });
+
+        onShowToast(
+          `Certificate already existed for "${recipientName.trim()}". Updated existing certificate ${existingCert.certificate_id}!`,
+          'success'
+        );
+
+        // Reset form
+        setRecipientName('');
+        setSelectedTeamId('');
+        setAchievement('');
+
+        // Refresh list
+        loadCertificates();
+        return;
+      }
+
+      // No existing certificate — issue new
+      const certId = generateCertificateId(editionCode, certificateType);
       const record = {
         certificate_id: certId,
         edition_id: targetEditionId,
@@ -399,9 +452,7 @@ export default function AdminCertificateManager({
         verify_view_count: 0,
       };
 
-
       const { error } = await supabase.from('certificates').insert(record);
-
       if (error) throw error;
 
       await logAdminAction('CERTIFICATE_ISSUED', {
@@ -457,64 +508,67 @@ export default function AdminCertificateManager({
         activeEdition?.name
       );
 
-      // If some members have not been issued certificates, issue for those remaining members;
-      // If unissuedCount is 0, user clicked to re-issue for all team members.
-      const membersToIssue =
-        unissuedCount > 0
-          ? currentTeamMembers.filter((m) => {
-              const memberName = (m.full_name || m.name || '').trim().toLowerCase();
-              return !certificatesList.some(
-                (c) =>
-                  c.recipient_name.trim().toLowerCase() === memberName &&
-                  c.certificate_type === certificateType &&
-                  c.edition_id === targetEditionId &&
-                  c.status === 'valid'
-              );
-            })
-          : currentTeamMembers;
+      // Fetch all certificates in target edition for check
+      const { data: editionCerts } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('edition_id', targetEditionId);
 
-      const records = [];
-      for (const m of membersToIssue) {
+      let newCount = 0;
+      let updatedCount = 0;
+
+      for (const m of currentTeamMembers) {
         const memberName = (m.full_name || m.name || '').trim();
         if (!memberName) continue;
 
-        const certId = generateCertificateId(editionCode, certificateType);
-        records.push({
-          certificate_id: certId,
-          edition_id: targetEditionId,
-          team_id: selectedTeamId,
-          recipient_name: memberName,
-          certificate_type: certificateType,
-          achievement: showAchievementField ? achievement.trim() || null : null,
-          custom_title: customTitle.trim() || null,
-          custom_subtitle: customSubtitle.trim() || null,
-          template_version: 1,
-          status: 'valid',
-          verify_view_count: 0,
-        });
+        const existing = (editionCerts || []).find(
+          (c) => c.recipient_name.trim().toLowerCase() === memberName.toLowerCase()
+        );
+
+        if (existing) {
+          // Update existing certificate
+          const updates = {
+            team_id: selectedTeamId,
+            certificate_type: certificateType,
+            achievement: showAchievementField ? achievement.trim() || null : null,
+            custom_title: customTitle.trim() || null,
+            custom_subtitle: customSubtitle.trim() || null,
+            status: 'valid' as const,
+            issued_at: new Date().toISOString(),
+          };
+          await supabase.from('certificates').update(updates).eq('id', existing.id);
+          updatedCount++;
+        } else {
+          // Issue new certificate
+          const certId = generateCertificateId(editionCode, certificateType);
+          await supabase.from('certificates').insert({
+            certificate_id: certId,
+            edition_id: targetEditionId,
+            team_id: selectedTeamId,
+            recipient_name: memberName,
+            certificate_type: certificateType,
+            achievement: showAchievementField ? achievement.trim() || null : null,
+            custom_title: customTitle.trim() || null,
+            custom_subtitle: customSubtitle.trim() || null,
+            template_version: 1,
+            status: 'valid',
+            verify_view_count: 0,
+          });
+          newCount++;
+        }
       }
 
-      if (records.length === 0) {
-        onShowToast('No members found with valid names to issue.', 'error');
-        return;
-      }
-
-      const { error } = await supabase.from('certificates').insert(records);
-      if (error) {
-        console.error('Failed to insert certificates:', error);
-        throw error;
-      }
-
-      await logAdminAction('BATCH_TEAM_CERTIFICATES_ISSUED', {
+      await logAdminAction('BATCH_TEAM_CERTIFICATES_PROCESSED', {
         team_id: selectedTeamId,
         team_name: teamName,
-        count: records.length,
+        newCount,
+        updatedCount,
         certificate_type: certificateType,
         edition_id: targetEditionId,
       });
 
       onShowToast(
-        `Successfully issued ${records.length} certificates for team "${teamName}"!`,
+        `Team certificates processed: ${newCount} new issued, ${updatedCount} existing updated!`,
         'success'
       );
 
@@ -703,6 +757,45 @@ export default function AdminCertificateManager({
       onShowToast(err?.message || 'Revocation failed.', 'error');
     } finally {
       setRevoking(false);
+    }
+  };
+
+  // ─── Delete / Remove Certificate ───
+  const handleDeleteCertificate = async () => {
+    if (!certToDelete) return;
+
+    setDeletingCert(true);
+    try {
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certToDelete.id);
+
+      if (error) throw error;
+
+      await logAdminAction('CERTIFICATE_DELETED', {
+        certificate_id: certToDelete.certificate_id,
+        recipient_name: certToDelete.recipient_name,
+        edition_id: certToDelete.edition_id,
+      });
+
+      onShowToast(
+        `Certificate ${certToDelete.certificate_id} permanently removed.`,
+        'success'
+      );
+
+      // Remove from local list state
+      setCertificatesList((prev) => prev.filter((c) => c.id !== certToDelete.id));
+
+      if (previewCert && previewCert.id === certToDelete.id) {
+        setPreviewCert(null);
+      }
+
+      setCertToDelete(null);
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to delete certificate.', 'error');
+    } finally {
+      setDeletingCert(false);
     }
   };
 
@@ -1893,12 +1986,21 @@ export default function AdminCertificateManager({
                         {cert.status === 'valid' && (
                           <button
                             onClick={() => setCertToRevoke(cert)}
-                            className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30"
+                            className="p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30"
                             title="Revoke Certificate"
                           >
                             <AlertTriangle size={14} />
                           </button>
                         )}
+
+                        {/* Remove / Delete Certificate */}
+                        <button
+                          onClick={() => setCertToDelete(cert)}
+                          className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/25 text-red-400 border border-red-500/30 cursor-pointer transition-colors"
+                          title="Permanently Delete Certificate"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -1976,6 +2078,17 @@ export default function AdminCertificateManager({
                   className="px-3 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Edit3 size={13} /> Edit Certificate
+                </button>
+                <button
+                  onClick={() => {
+                    const toDelete = previewCert;
+                    setPreviewCert(null);
+                    setCertToDelete(toDelete);
+                  }}
+                  className="px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Permanently Delete Certificate"
+                >
+                  <Trash2 size={13} /> Remove Certificate
                 </button>
                 <button
                   onClick={() => handleDownload(previewCert)}
@@ -2240,6 +2353,45 @@ export default function AdminCertificateManager({
               >
                 <ShieldAlert size={16} />
                 {revoking ? 'Revoking...' : 'Confirm Revoke'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ═══ Delete Certificate Confirmation Modal ═══ */}
+      {certToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#131316] border border-red-900/60 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Permanently Remove Certificate</h3>
+                <p className="text-xs text-[#9a9aa3] font-mono">
+                  {certToDelete.certificate_id}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#9a9aa3] leading-relaxed">
+              Are you sure you want to permanently delete the certificate issued to <strong className="text-white">{certToDelete.recipient_name}</strong>? This action will remove the record completely from the database. Public verification links for this ID will no longer be valid.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setCertToDelete(null)}
+                className="px-4 py-2 rounded-lg bg-[#18181c] hover:bg-[#202025] text-xs font-semibold text-[#e1e1e6] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCertificate}
+                disabled={deletingCert}
+                className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 size={14} />
+                {deletingCert ? 'Removing...' : 'Delete Permanently'}
               </button>
             </div>
           </div>

@@ -300,22 +300,46 @@ Priya Sharma,,volunteer`;
           console.warn(`PDF render failed for ${certId}:`, renderErr);
         }
 
-        // Insert database record (metadata only — no pdf_url)
-        const { error: dbError } = await supabase.from('certificates').insert({
-          certificate_id: certId,
-          edition_id: selectedEditionId,
-          team_id: row.matchedTeam?.id || null,
-          recipient_name: row.name,
-          certificate_type: certType,
-          template_version: 1,
-          status: 'valid',
-          verify_view_count: 0,
-        });
+        // Check if certificate already exists in selectedEditionId for this recipient
+        const { data: existingCerts } = await supabase
+          .from('certificates')
+          .select('*')
+          .eq('edition_id', selectedEditionId)
+          .ilike('recipient_name', row.name.trim());
 
-        if (dbError) throw dbError;
+        let finalCertId = certId;
+        if (existingCerts && existingCerts.length > 0) {
+          const existing = existingCerts[0];
+          finalCertId = existing.certificate_id;
+          const { error: updateErr } = await supabase
+            .from('certificates')
+            .update({
+              team_id: row.matchedTeam?.id || null,
+              certificate_type: certType,
+              status: 'valid',
+              issued_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+
+          if (updateErr) throw updateErr;
+        } else {
+          // Insert database record (metadata only — no pdf_url)
+          const { error: dbError } = await supabase.from('certificates').insert({
+            certificate_id: certId,
+            edition_id: selectedEditionId,
+            team_id: row.matchedTeam?.id || null,
+            recipient_name: row.name.trim(),
+            certificate_type: certType,
+            template_version: 1,
+            status: 'valid',
+            verify_view_count: 0,
+          });
+
+          if (dbError) throw dbError;
+        }
 
         generatedResults.push({
-          certificate_id: certId,
+          certificate_id: finalCertId,
           recipient_name: row.name,
           team_name: row.team,
           certificate_type: certType,

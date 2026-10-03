@@ -24,6 +24,7 @@ function App() {
       <Route path="/my-certificates" element={<StudentCertificateLookup />} />
       <Route path="/hall-of-fame" element={<HallOfFame />} />
       <Route path="/editions/:editionId" element={<EditionDetail />} />
+      <Route path="/teams" element={<Navigate to="/hall-of-fame" replace />} />
       <Route path="/teams/:teamId" element={<TeamProfile />} />
       <Route path="/gallery" element={<GalleryView />} />
       <Route path="/announcements" element={<AnnouncementsView />} />
