@@ -662,7 +662,7 @@ export default function LiveView() {
                     <span style={{ fontSize: '14px', letterSpacing: '0.4px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                       QUESTION {questionIdx + 1} OF {totalQuestions}
                     </span>
-                    {alreadySoldItem ? (
+                    {alreadySoldItem && (
                       <>
                         <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
                         <span
@@ -682,52 +682,6 @@ export default function LiveView() {
                           }}
                         >
                           <Lock size={13} /> QUESTION LOCKED — SOLD TO {soldBuyerTeam?.name?.toUpperCase() || 'TEAM'} ({formatCurrency(alreadySoldItem.cost)})
-                        </span>
-                      </>
-                    ) : !isRevealed ? (
-                      <>
-                        <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '3px 10px',
-                            borderRadius: '6px',
-                            background: 'rgba(234, 179, 8, 0.15)',
-                            border: '1px solid rgba(234, 179, 8, 0.4)',
-                            color: '#facc15',
-                            fontSize: '13px',
-                            fontWeight: 800,
-                            fontFamily: "'Rajdhani', sans-serif",
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#facc15', display: 'inline-block' }} className="animate-ping" />
-                          AWAITING REVEAL
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ width: '1px', height: '18px', background: '#3a3a41' }} />
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '3px 10px',
-                            borderRadius: '6px',
-                            background: 'rgba(34, 197, 94, 0.15)',
-                            border: '1px solid rgba(34, 197, 94, 0.4)',
-                            color: '#4ade80',
-                            fontSize: '13px',
-                            fontWeight: 800,
-                            fontFamily: "'Rajdhani', sans-serif",
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} className="animate-pulse" />
-                          LIVE QUESTION
                         </span>
                       </>
                     )}
@@ -766,34 +720,20 @@ export default function LiveView() {
                       {renderMultiLineText(eventState?.current_item_name || 'No question text set')}
                     </h2>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '8px 0' }}>
-                      <span
-                        style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          background: '#e8212e',
-                          display: 'inline-block',
-                          boxShadow: '0 0 12px rgba(232, 33, 46, 0.9)',
-                        }}
-                        className="animate-pulse"
-                      />
-                      <h2
-                        style={{
-                          fontSize: '28px',
-                          fontWeight: 700,
-                          color: '#9a9aa3',
-                          lineHeight: 1.35,
-                          margin: 0,
-                          fontFamily: "'Rajdhani', sans-serif",
-                          textAlign: 'left',
-                          letterSpacing: '0.04em',
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        Awaiting for Next Question...
-                      </h2>
-                    </div>
+                    <h2
+                      style={{
+                        fontSize: '26px',
+                        fontWeight: 700,
+                        color: '#80808a',
+                        lineHeight: 1.35,
+                        margin: 0,
+                        fontFamily: "'Rajdhani', sans-serif",
+                        textAlign: 'left',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Awaiting for Next Question...
+                    </h2>
                   )}
                 </div>
 
@@ -812,56 +752,17 @@ export default function LiveView() {
                     justifyContent: 'center',
                     flexShrink: 0,
                     zIndex: 10,
-                    border: alreadySoldItem
-                      ? '1px solid rgba(232, 33, 46, 0.5)'
-                      : !isRevealed
-                      ? '1px solid rgba(234, 179, 8, 0.3)'
-                      : isTimerRunning
-                      ? '1px solid rgba(0, 229, 255, 0.4)'
-                      : undefined,
+                    border: alreadySoldItem ? '1px solid rgba(232, 33, 46, 0.5)' : undefined,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {alreadySoldItem ? (
                       <Lock size={22} style={{ color: '#e8212e' }} />
                     ) : (
-                      <Clock
-                        size={22}
-                        style={{
-                          color: isExpired
-                            ? '#ff4d5a'
-                            : isTimerRunning
-                            ? '#00e5ff'
-                            : !isRevealed
-                            ? '#eab308'
-                            : '#e8212e',
-                        }}
-                        className={isTimerRunning ? 'animate-spin-slow' : ''}
-                      />
+                      <Clock size={22} style={{ color: '#e8212e' }} />
                     )}
-                    <span
-                      style={{
-                        fontSize: '19px',
-                        fontWeight: 600,
-                        color: alreadySoldItem
-                          ? '#ff4d5a'
-                          : isExpired
-                          ? '#ff4d5a'
-                          : isTimerRunning
-                          ? '#00e5ff'
-                          : !isRevealed
-                          ? '#facc15'
-                          : '#c8c8ce',
-                        fontFamily: "'Rajdhani', sans-serif",
-                      }}
-                    >
-                      {alreadySoldItem
-                        ? 'QUESTION SOLD'
-                        : isExpired
-                        ? 'TIME EXPIRED'
-                        : !isRevealed
-                        ? 'AWAITING'
-                        : 'BID TIMER'}
+                    <span style={{ fontSize: '19px', fontWeight: 600, color: alreadySoldItem ? '#ff4d5a' : '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
+                      {alreadySoldItem ? 'QUESTION SOLD' : 'BID TIMER'}
                     </span>
                   </div>
                   <div
@@ -872,18 +773,9 @@ export default function LiveView() {
                       fontVariantNumeric: 'tabular-nums',
                       lineHeight: 1,
                       marginTop: '4px',
-                      color: alreadySoldItem
-                        ? '#ff4d5a'
-                        : isExpired
-                        ? '#ff4d5a'
-                        : isTimerRunning
-                        ? '#facc15'
-                        : !isRevealed
-                        ? '#9a9aa3'
-                        : '#f4f4f6',
+                      color: alreadySoldItem ? '#ff4d5a' : '#f4f4f6',
                       letterSpacing: alreadySoldItem ? '0.05em' : 'normal',
                     }}
-                    className={isExpired ? 'animate-pulse' : ''}
                   >
                     {alreadySoldItem
                       ? 'LOCKED'
@@ -894,20 +786,12 @@ export default function LiveView() {
                       style={{
                         height: '7px',
                         borderRadius: '4px',
-                        background: alreadySoldItem
-                          ? '#e8212e'
-                          : isExpired
-                          ? '#ff4d5a'
-                          : isTimerRunning
-                          ? '#facc15'
-                          : '#4a4a55',
+                        background: '#e8212e',
                         width: alreadySoldItem
                           ? '100%'
-                          : (isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
+                          : ((isTimerRunning && timeLeft > 0 && eventState?.timer_duration_seconds)
                           ? `${Math.max(0, Math.min(100, (timeLeft / eventState.timer_duration_seconds) * 100))}%`
-                          : isExpired
-                          ? '0%'
-                          : '100%',
+                          : '0%'),
                         transition: 'width 1s linear',
                       }}
                     />
