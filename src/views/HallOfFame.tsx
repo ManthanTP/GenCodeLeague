@@ -383,7 +383,7 @@ export default function HallOfFame() {
 
                       <Link
                         to={`/editions/${edition.id}`}
-                        className="px-5 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#25252b] text-[#ff4d5a] hover:text-[#ff2a38] text-xs font-bold flex items-center gap-2 transition-colors border border-[#3e3e48] w-fit shrink-0 uppercase tracking-wider font-['Rajdhani',sans-serif]"
+                        className="px-5 py-2.5 rounded-xl bg-[#201518] hover:bg-[#2e181c] text-[#ff4d5a] hover:text-[#ff2a38] text-xs font-bold flex items-center gap-2 transition-all border border-[#e8212e]/60 hover:border-[#ff2a38] shadow-[0_0_14px_rgba(232,33,46,0.25)] w-fit shrink-0 uppercase tracking-wider font-['Rajdhani',sans-serif]"
                       >
                         Full Edition Dossier <ArrowRight size={14} />
                       </Link>
