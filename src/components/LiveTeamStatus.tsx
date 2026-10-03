@@ -93,10 +93,11 @@ export default function LiveTeamStatus({
         }}
       >
         {/* Table Container */}
-        <div style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 10 }}>
+        <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', zIndex: 10 }}>
           <table
             style={{
               width: '100%',
+              minWidth: '550px',
               borderCollapse: 'separate',
               borderSpacing: '0 2px',
               textAlign: 'left',

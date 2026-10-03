@@ -156,13 +156,20 @@
 
 /* === HEADER STYLES (99px) === */
 .gcl-header-glass {
-  min-height: 99px;
-  height: 99px;
+  min-height: 68px;
+  height: 68px;
   background: linear-gradient(#1c1c20, #17171a);
   border-bottom: 1px solid #35353b;
   box-shadow: 0 4px 18px rgba(0,0,0,.35);
   display: flex;
   align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .gcl-header-glass {
+    min-height: 99px;
+    height: 99px;
+  }
 }
 
 /* Header nav button (inactive) */

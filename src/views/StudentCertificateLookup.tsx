@@ -366,17 +366,17 @@ export default function StudentCertificateLookup() {
 
         {/* Modal Certificate Preview */}
         {previewCert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <div className="panel red p-6 sm:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-8">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+            <div className="panel red p-4 sm:p-6 md:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-4 sm:my-8 max-h-[92vh] overflow-y-auto">
               <div className="w-full flex items-center justify-between pb-3 border-b border-[#35353b]">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[#ffd700] font-bold">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-[#ffd700] font-bold text-xs sm:text-sm truncate">
                     {previewCert.certificate_id}
                   </span>
                   <Link
                     to={`/verify/${previewCert.certificate_id}`}
                     target="_blank"
-                    className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono"
+                    className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0"
                   >
                     Public Verify <ExternalLink size={12} />
                   </Link>
@@ -384,13 +384,13 @@ export default function StudentCertificateLookup() {
                 <button
                   type="button"
                   onClick={() => setPreviewCert(null)}
-                  className="px-3 py-1 rounded bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold cursor-pointer"
+                  className="px-3 py-1.5 min-h-[36px] rounded bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold cursor-pointer shrink-0"
                 >
                   Close ✕
                 </button>
               </div>
 
-              <div className="w-full overflow-x-auto flex justify-center py-2">
+              <div className="w-full overflow-x-auto flex justify-center py-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div
                   style={{
                     width: 1000 * 0.8,
@@ -416,18 +416,18 @@ export default function StudentCertificateLookup() {
                 </div>
               </div>
 
-              <div className="w-full flex justify-between items-center pt-2 border-t border-[#35353b]">
+              <div className="w-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5 pt-2 border-t border-[#35353b]">
                 <button
                   type="button"
                   onClick={() => handleCopyVerifyUrl(previewCert.certificate_id)}
-                  className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3 py-2 min-h-[42px] rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Copy size={13} /> Copy Verification Link
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDownload(previewCert)}
-                  className="gcl-nav-btn-active text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer"
+                  className="gcl-nav-btn-active text-xs font-bold px-4 py-2 min-h-[42px] rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Download size={14} /> Download PDF
                 </button>

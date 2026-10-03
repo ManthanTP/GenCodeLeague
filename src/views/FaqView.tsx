@@ -147,35 +147,35 @@ export default function FaqView() {
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
-              className={activeCategory === 'all' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
+              className={`min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold ${activeCategory === 'all' ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}`}
             >
               All Topics ({faqs.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('auction')}
-              className={activeCategory === 'auction' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
+              className={`min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold ${activeCategory === 'auction' ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}`}
             >
               Bidding & Rounds
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('budget')}
-              className={activeCategory === 'budget' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
+              className={`min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold ${activeCategory === 'budget' ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}`}
             >
               Budgets & Mechanics
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('certs')}
-              className={activeCategory === 'certs' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
+              className={`min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold ${activeCategory === 'certs' ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}`}
             >
               Certificates & Verification
             </button>
             <button
               type="button"
               onClick={() => setActiveCategory('teams')}
-              className={activeCategory === 'teams' ? 'gcl-nav-btn-active text-xs' : 'gcl-nav-btn text-xs'}
+              className={`min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold ${activeCategory === 'teams' ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}`}
             >
               Teams & Roster
             </button>

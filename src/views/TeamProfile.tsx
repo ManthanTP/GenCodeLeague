@@ -172,7 +172,7 @@ export default function TeamProfile() {
             {/* Podium Placement Badge */}
             {podiumPosition && (
               <div
-                className={`px-5 py-3 rounded-2xl text-center ${
+                className={`px-5 py-3 rounded-2xl text-center w-full sm:w-auto shrink-0 ${
                   podiumPosition === '1st'
                     ? 'panel gold'
                     : podiumPosition === '2nd'
@@ -345,10 +345,11 @@ export default function TeamProfile() {
               No auction items recorded for this team.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto">
+            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table
                 style={{
                   width: '100%',
+                  minWidth: '550px',
                   borderCollapse: 'separate',
                   borderSpacing: '0 3px',
                   textAlign: 'left',

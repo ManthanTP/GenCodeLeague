@@ -383,7 +383,7 @@ export default function HallOfFame() {
 
                       <Link
                         to={`/editions/${edition.id}`}
-                        className="px-5 py-2.5 rounded-xl bg-[#201518] hover:bg-[#2e181c] text-[#ff4d5a] hover:text-[#ff2a38] text-xs font-bold flex items-center gap-2 transition-all border border-[#e8212e]/60 hover:border-[#ff2a38] shadow-[0_0_14px_rgba(232,33,46,0.25)] w-fit shrink-0 uppercase tracking-wider font-['Rajdhani',sans-serif]"
+                        className="px-5 py-2.5 rounded-xl bg-[#201518] hover:bg-[#2e181c] text-[#ff4d5a] hover:text-[#ff2a38] text-xs font-bold flex items-center justify-center gap-2 transition-all border border-[#e8212e]/60 hover:border-[#ff2a38] shadow-[0_0_14px_rgba(232,33,46,0.25)] w-full sm:w-fit shrink-0 uppercase tracking-wider font-['Rajdhani',sans-serif] min-h-[44px]"
                       >
                         Full Edition Dossier <ArrowRight size={14} />
                       </Link>
@@ -588,10 +588,11 @@ export default function HallOfFame() {
                       </div>
 
                       {/* Live View Table Style with panel red and alternating row background */}
-                      <div className="w-full overflow-x-auto">
+                      <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                         <table
                           style={{
                             width: '100%',
+                            minWidth: '600px',
                             borderCollapse: 'separate',
                             borderSpacing: '0 3px',
                             textAlign: 'left',

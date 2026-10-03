@@ -13,7 +13,6 @@ import {
   Megaphone,
   HelpCircle,
   Wallet,
-  Minimize,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
@@ -83,50 +82,35 @@ export default function Header({
   const displayTeams = teamCount || 0;
 
   return (
-    <header className="gcl-header-glass" style={{ width: '100%', position: 'sticky', top: 0, zIndex: 50 }}>
-      <div
-        style={{
-          maxWidth: '1600px',
-          margin: '0 auto',
-          padding: '0 32px',
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          height: '100%',
-        }}
-      >
+    <header className="gcl-header-glass w-full sticky top-0 z-50 transition-all">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 md:px-8 w-full flex items-center justify-between gap-3 h-full">
         {/* Brand identity */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.85rem',
-            cursor: 'pointer',
-            userSelect: 'none',
-            flexShrink: 0,
-          }}
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0"
           onClick={() => navigate('/')}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-3px', fontWeight: 700, fontSize: '72px', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
-            <span style={{ color: '#fff' }}>GC</span>
-            <span style={{ color: '#e8212e' }}>L</span>
+          <div
+            className="flex items-baseline font-bold leading-none font-['Rajdhani',sans-serif]"
+            style={{ letterSpacing: '-2px' }}
+          >
+            <span className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">GC</span>
+            <span className="text-[#e8212e] text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">L</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '1rem', marginLeft: '0.25rem' }}>
-            <span style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
+
+          <div className="flex flex-col border-l border-[#35353b] pl-2 sm:pl-3 ml-1">
+            <span className="text-sm sm:text-lg md:text-xl font-bold tracking-tight text-[#f4f4f6] uppercase leading-tight font-['Rajdhani',sans-serif]">
               GEN CODE LEAGUE
             </span>
-            <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.25rem' }}>
-              <span className="dot" style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+            <span className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#9a9aa3] flex items-center gap-1.5 mt-0.5">
+              <span className="dot w-2 h-2 rounded-full bg-[#e8212e] shrink-0" />
               LIVE AUCTION
             </span>
           </div>
         </div>
 
-        {/* Center: Glass Navigation Buttons */}
+        {/* Center: Glass Navigation Buttons (Desktop XL) */}
         {!isFullscreen && (
-          <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="hidden xl:flex items-center gap-2">
             {viewMode === 'admin' && (
               <div className="header-role-badge header-role-admin">
                 <Shield size={18} />
@@ -135,7 +119,7 @@ export default function Header({
             )}
 
             {viewMode === 'live' && (
-              <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
+              <nav className="flex items-center gap-2 shrink-0 flex-nowrap">
                 {navLinks.map((link) => {
                   const IconComponent = link.icon;
                   const active = isLinkActive(link.path, link.altPath);
@@ -149,11 +133,11 @@ export default function Header({
                       style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                     >
                       <IconComponent
-                        size={22}
+                        size={20}
                         fill={link.label === 'Hall of Fame' ? (active && link.isLive ? '#ff4a56' : '#f4f4f6') : 'none'}
-                        style={{ flexShrink: 0 }}
+                        className="shrink-0"
                       />
-                      <span style={{ whiteSpace: 'nowrap' }}>{link.label}</span>
+                      <span>{link.label}</span>
                     </button>
                   );
                 })}
@@ -164,66 +148,69 @@ export default function Header({
 
         {/* Center: Fullscreen Status Badge */}
         {isFullscreen && (
-          <div className="gcl-glass" style={{ padding: '0.5rem 1.25rem', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.75rem', fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ color: '#ffffff', borderBottom: '2px solid #e11d2e', paddingBottom: '1px' }}>
+          <div className="gcl-glass px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold flex items-center gap-2 font-mono">
+            <span className="text-white border-b-2 border-[#e11d2e] pb-0.5">
               {(currentRoundName || 'ROUND 1').toUpperCase()}
             </span>
-            <span style={{ color: '#475569' }}>|</span>
-            <span style={{ color: '#9a98a2' }}>
-              QUESTION {(questionIdx !== undefined ? questionIdx + 1 : 1)} OF {totalQuestions || 20}
+            <span className="text-slate-500">|</span>
+            <span className="text-[#9a9aa3]">
+              Q {(questionIdx !== undefined ? questionIdx + 1 : 1)}/{totalQuestions || 20}
             </span>
           </div>
         )}
 
-        {/* Right Stats Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexShrink: 0 }}>
-          {/* Remaining Budget glass card */}
-          <div className="panel red" style={{ width: '185px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Wallet size={32} style={{ strokeWidth: 2.2, color: '#f4f4f6', flexShrink: 0 }} />
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                Remaining Budget
-              </p>
-              <p style={{ fontSize: '24px', fontWeight: 700, color: '#ff4350', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {displayBudget}
-              </p>
+        {/* Right Stats & Action Controls */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Desktop/Tablet Stat Cards (Shown on Large screens) */}
+          <div className="hidden lg:flex items-center gap-2.5">
+            {/* Remaining Budget glass card */}
+            <div className="panel red h-14 sm:h-16 rounded-xl px-3 sm:px-4 flex items-center gap-2.5 whitespace-nowrap shrink-0">
+              <Wallet size={24} className="text-[#f4f4f6] shrink-0" />
+              <div>
+                <p className="text-[11px] text-[#b5b5bd] leading-none font-sans">
+                  Remaining Budget
+                </p>
+                <p className="text-lg sm:text-xl font-bold text-[#ff4350] mt-1 leading-none font-['Rajdhani',sans-serif] font-mono">
+                  {displayBudget}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Total Teams glass card */}
-          <div className="panel" style={{ minWidth: '140px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Users size={28} style={{ color: '#f4f4f6', flexShrink: 0 }} />
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                Total Teams
-              </p>
-              <p style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f6', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {displayTeams}
-              </p>
+            {/* Total Teams glass card */}
+            <div className="panel h-14 sm:h-16 rounded-xl px-3 sm:px-4 flex items-center gap-2 whitespace-nowrap shrink-0">
+              <Users size={22} className="text-[#f4f4f6] shrink-0" />
+              <div>
+                <p className="text-[11px] text-[#b5b5bd] leading-none font-sans">
+                  Total Teams
+                </p>
+                <p className="text-lg sm:text-xl font-bold text-[#f4f4f6] mt-1 leading-none font-['Rajdhani',sans-serif] font-mono">
+                  {displayTeams}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Admin Controls */}
           {viewMode === 'admin' && onToggleView && (
-            <button onClick={onToggleView} className="btn-header-view">
-              <Eye size={16} /> Live View
+            <button onClick={onToggleView} className="btn-header-view text-xs py-2 px-3">
+              <Eye size={15} /> <span className="hidden sm:inline">Live View</span>
             </button>
           )}
           {viewMode === 'admin' && isAdminAuthenticated && onLogout && (
-            <button onClick={onLogout} className="btn-header-logout">
-              <LogOut size={16} /> Logout
+            <button onClick={onLogout} className="btn-header-logout text-xs py-2 px-3">
+              <LogOut size={15} /> <span className="hidden sm:inline">Logout</span>
             </button>
           )}
 
-          {/* Mobile hamburger */}
+          {/* Mobile hamburger toggle (Large touch target) */}
           {!isFullscreen && viewMode === 'live' && (
             <button
-              className="xl:hidden"
-              style={{ padding: '0.4rem', color: '#8d8b94', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              className="xl:hidden w-11 h-11 flex items-center justify-center rounded-xl bg-[#18181c] border border-[#2c2c33] text-[#f4f4f6] hover:text-[#ff4d5a] hover:border-[#ff4d5a] transition-all cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           )}
         </div>
@@ -231,23 +218,66 @@ export default function Header({
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && viewMode === 'live' && (
-        <div style={{ background: 'rgba(18,18,21,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const active = isLinkActive(link.path, link.altPath);
-            return (
-              <button
-                key={link.label}
-                type="button"
-                onClick={() => { handleNavClick(link.path); setMobileMenuOpen(false); }}
-                className={active && link.isLive ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}
-                style={{ width: '100%', justifyContent: 'flex-start' }}
-              >
-                <Icon size={16} style={{ color: active ? '#e11d2e' : '#8d8b94' }} />
-                <span>{link.label}</span>
-              </button>
-            );
-          })}
+        <div
+          id="mobile-nav-drawer"
+          className="xl:hidden absolute top-full left-0 right-0 z-50 bg-[#131317]/95 backdrop-blur-xl border-b border-[#35353b] p-4 shadow-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
+        >
+          {/* Mobile Stat Cards */}
+          <div className="grid grid-cols-2 gap-2.5 pb-2 border-b border-[#26262c]">
+            <div className="panel red p-3 rounded-xl flex items-center gap-2">
+              <Wallet size={20} className="text-[#ff4d5a] shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] text-[#9a9aa3] block truncate font-sans">
+                  Remaining Budget
+                </span>
+                <span className="text-base font-bold text-[#ff4d5a] block truncate font-['Rajdhani',sans-serif]">
+                  {displayBudget}
+                </span>
+              </div>
+            </div>
+
+            <div className="panel p-3 rounded-xl flex items-center gap-2">
+              <Users size={18} className="text-white shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] text-[#9a9aa3] block truncate font-sans">
+                  Registered Teams
+                </span>
+                <span className="text-base font-bold text-white block truncate font-['Rajdhani',sans-serif]">
+                  {displayTeams} Teams
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Links with large 48px touch targets */}
+          <div className="flex flex-col gap-1.5">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isLinkActive(link.path, link.altPath);
+              return (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => {
+                    handleNavClick(link.path);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[48px] px-4 rounded-xl flex items-center gap-3 text-sm font-bold tracking-wide transition-all cursor-pointer font-['Rajdhani',sans-serif] ${
+                    active && link.isLive
+                      ? 'bg-[linear-gradient(#45141b,#2a0c11)] text-[#ff4a56] border border-[#a6212c] shadow-[0_0_12px_rgba(232,33,46,0.3)]'
+                      : 'bg-[#18181c] text-[#f4f4f6] border border-[#2c2c33] hover:bg-[#222228] hover:border-[#3e3e48]'
+                  }`}
+                >
+                  <Icon
+                    size={18}
+                    className="shrink-0"
+                    style={{ color: active && link.isLive ? '#ff4a56' : '#9a9aa3' }}
+                  />
+                  <span className="uppercase text-sm">{link.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </header>

@@ -209,16 +209,16 @@ export default function EditionDetail() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto shrink-0">
             <Link
               to={`/gallery?edition=${edition?.id}`}
-              className="px-4 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#25252d] text-xs font-bold flex items-center gap-2 transition-all border border-[#3e3e48] hover:border-[#ff4d5a] text-[#f4f4f6] uppercase tracking-wider"
+              className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#25252d] text-xs font-bold flex items-center gap-2 transition-all border border-[#3e3e48] hover:border-[#ff4d5a] text-[#f4f4f6] uppercase tracking-wider min-h-[44px]"
             >
               <Image size={15} className="text-[#ff4d5a]" /> Event Gallery
             </Link>
             <Link
               to={`/certificates`}
-              className="px-4 py-2.5 rounded-xl bg-[#2b0e13] hover:bg-[#3a1015] text-xs font-bold flex items-center gap-2 transition-all border border-[#e8212e]/70 text-[#ff4d5a] uppercase tracking-wider shadow-[0_0_14px_rgba(232,33,46,0.25)]"
+              className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-[#2b0e13] hover:bg-[#3a1015] text-xs font-bold flex items-center gap-2 transition-all border border-[#e8212e]/70 text-[#ff4d5a] uppercase tracking-wider shadow-[0_0_14px_rgba(232,33,46,0.25)] min-h-[44px]"
             >
               <FileText size={15} /> Certificates
             </Link>
@@ -510,10 +510,11 @@ export default function EditionDetail() {
               borderRadius: '14px',
             }}
           >
-            <div style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 10 }}>
+            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', zIndex: 10 }}>
               <table
                 style={{
                   width: '100%',
+                  minWidth: '600px',
                   borderCollapse: 'separate',
                   borderSpacing: '0 2px',
                   textAlign: 'left',
