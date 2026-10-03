@@ -23,7 +23,6 @@ import {
   type CrossEditionStats,
 } from '../utils/archiveUtils';
 import { formatCurrency } from '../utils/formatters';
-import { SAMPLE_EDITION_2025, SAMPLE_TEAMS_2025 } from '../data/sampleEditionData';
 import type { Edition, Team } from '../types/database';
 
 interface ArchivedEditionWithPodium extends Edition {
@@ -57,45 +56,12 @@ export default function HallOfFame() {
         if (eds && eds.length > 0) {
           setEditions((eds as unknown as ArchivedEditionWithPodium[]) || []);
         } else {
-          // Guaranteed fallback sample edition so Hall of Fame is never empty
-          const demoEd: ArchivedEditionWithPodium = {
-            ...SAMPLE_EDITION_2025,
-            champion: SAMPLE_TEAMS_2025[0],
-            runnerUp: SAMPLE_TEAMS_2025[1],
-            thirdPlace: SAMPLE_TEAMS_2025[2],
-          };
-          setEditions([demoEd]);
+          setEditions([]);
         }
 
         // 2. Fetch cross-edition records
         const recs = await fetchCrossEditionRecords();
-        if (recs && (recs.mostCorrectAnswers || recs.highestBidWon || recs.mostQuestionsWon || recs.highestTournamentInvestment)) {
-          setRecords(recs);
-        } else {
-          setRecords({
-            mostCorrectAnswers: {
-              teamName: 'Binary Beasts',
-              editionName: 'GCL 2025: Season of Champions',
-              correctCount: 16,
-            },
-            highestBidWon: {
-              teamName: 'Cyber Sentinels',
-              editionName: 'GCL 2025: Season of Champions',
-              itemName: 'Quantum AI Core (Round 2 #08)',
-              amount: 14500000,
-            },
-            mostQuestionsWon: {
-              teamName: 'Binary Beasts',
-              editionName: 'GCL 2025: Season of Champions',
-              count: 7,
-            },
-            highestTournamentInvestment: {
-              teamName: 'Binary Beasts',
-              editionName: 'GCL 2025: Season of Champions',
-              amount: 36000000,
-            },
-          });
-        }
+        setRecords(recs || null);
       } catch (err) {
         console.error('Failed to load hall of fame data:', err);
       } finally {

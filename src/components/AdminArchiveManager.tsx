@@ -27,7 +27,6 @@ import {
 import { supabase } from '../lib/supabase';
 import { logAdminAction } from '../utils/certificateUtils';
 import { formatCurrency } from '../utils/formatters';
-import { seedSampleEdition } from '../data/sampleEditionData';
 import { seedFaqs } from '../data/faqData';
 import type { Edition, Team, Sponsor, GalleryPhoto, FaqEntry } from '../types/database';
 
@@ -137,26 +136,6 @@ export default function AdminArchiveManager({
   const [faqAnswer, setFaqAnswer] = useState('');
   const [faqSortOrder, setFaqSortOrder] = useState('0');
   const [savingFaq, setSavingFaq] = useState(false);
-  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
-
-  const handleSeedDemoData = async () => {
-    setIsSeedingDemo(true);
-    try {
-      const res = await seedSampleEdition();
-      await seedFaqs();
-      if (res.success) {
-        onShowToast(res.message, 'success');
-        await loadEditions();
-        if (onEditionUpdated) onEditionUpdated();
-      } else {
-        onShowToast(res.message, 'error');
-      }
-    } catch (err: any) {
-      onShowToast(err?.message || 'Failed to seed sample edition', 'error');
-    } finally {
-      setIsSeedingDemo(false);
-    }
-  };
 
   // Subtab navigation state
   const [archiveSubTab, setArchiveSubTab] = useState<'podium' | 'sponsors' | 'gallery' | 'faqs' | 'backup'>('podium');
@@ -882,16 +861,6 @@ export default function AdminArchiveManager({
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={handleSeedDemoData}
-              disabled={isSeedingDemo}
-              className="px-3 py-2 bg-[var(--accent-red)] hover:bg-[#c91824] text-white text-xs font-bold font-mono rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-              title="Seed GCL 2025 Demo Edition with full podium, teams, sponsors & gallery records"
-            >
-              <Sparkles size={14} /> {isSeedingDemo ? 'Seeding Demo...' : 'Seed Sample Edition'}
-            </button>
-
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
