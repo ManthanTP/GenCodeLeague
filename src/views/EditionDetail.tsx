@@ -26,7 +26,7 @@ import {
   type EditionComputedStats,
 } from '../utils/archiveUtils';
 import { formatCurrency } from '../utils/formatters';
-import type { Edition, Team, Sponsor, GalleryPhoto } from '../types/database';
+import type { Edition, Team, Sponsor, GalleryPhoto, TeamItem } from '../types/database';
 
 interface EditionWithPodium extends Edition {
   champion?: Team | null;
@@ -38,6 +38,7 @@ export default function EditionDetail() {
   const { editionId } = useParams<{ editionId: string }>();
   const [edition, setEdition] = useState<EditionWithPodium | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [teamItems, setTeamItems] = useState<TeamItem[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [stats, setStats] = useState<EditionComputedStats | null>(null);
@@ -69,9 +70,17 @@ export default function EditionDetail() {
           .from('teams')
           .select('*')
           .eq('edition_id', editionId)
-          .order('score', { ascending: false });
+          .order('sort_order', { ascending: true });
 
         setTeams(teamsData || []);
+
+        // 2b. Fetch Team Items for this edition
+        const { data: itemsData } = await supabase
+          .from('team_items')
+          .select('*')
+          .eq('edition_id', editionId);
+
+        setTeamItems(itemsData || []);
 
         // 3. Fetch Sponsors
         const { data: sponsorsData } = await supabase
@@ -130,9 +139,14 @@ export default function EditionDetail() {
           </Link>
 
           {edition?.is_archived && (
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 uppercase">
-              ARCHIVED HISTORICAL RECORD
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/40 uppercase shadow-[0_0_12px_rgba(212,175,55,0.15)]">
+                COMPLETED
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#18181c] text-[#a1a1aa] border border-[#26262b] uppercase">
+                HISTORICAL / PREVIOUS EDITION
+              </span>
+            </div>
           )}
         </div>
 
@@ -360,39 +374,62 @@ export default function EditionDetail() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[#202024] text-[#71717a] font-mono uppercase">
-                  <th className="py-3 px-3">Rank</th>
-                  <th className="py-3 px-3">Team Name</th>
-                  <th className="py-3 px-3 text-right">Budget Left</th>
-                  <th className="py-3 px-3 text-right">Profile</th>
+                <tr className="border-b border-[#202024] text-[#71717a] font-mono uppercase tracking-wider">
+                  <th className="py-3 px-3">RANK</th>
+                  <th className="py-3 px-3">TEAM</th>
+                  <th className="py-3 px-3 text-center">TOTAL ITEMS</th>
+                  <th className="py-3 px-3 text-right">TOTAL SPENT</th>
+                  <th className="py-3 px-3 text-right">TOTAL REMAINING</th>
+                  <th className="py-3 px-3 text-right">PROFILE</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1c1c21] font-sans">
                 {teams.map((t, index) => {
-                  const rankNum = index + 1;
-                  const rankColor =
-                    rankNum === 1
-                      ? 'text-[#d4af37]'
-                      : rankNum === 2
-                      ? 'text-[#a1a1aa]'
-                      : rankNum === 3
-                      ? 'text-[#cd7f32]'
-                      : 'text-[#71717a]';
+                  const teamBoughtItems = teamItems.filter((it) => it.team_id === t.id);
+                  const totalItems = teamBoughtItems.length;
+                  const totalSpent = teamBoughtItems.reduce((acc, it) => acc + (it.cost || 0), 0) || ((edition?.starting_budget || 150000000) - t.budget);
+                  const totalRemaining = t.budget;
+
+                  // Official Podium: ONLY 1st, 2nd, 3rd!
+                  // Team C – Apex Assembly and other non-podium teams are NOT assigned 4th place.
+                  const is1st = index === 0 || t.id === edition?.champion_team_id;
+                  const is2nd = index === 1 || t.id === edition?.runner_up_team_id;
+                  const is3rd = index === 2 || t.id === edition?.third_place_team_id;
 
                   return (
                     <tr key={t.id} className="hover:bg-[#18181c]/60 transition-colors">
-                      <td className={`py-3 px-3 font-mono font-bold ${rankColor}`}>
-                        #{rankNum}
+                      <td className="py-3.5 px-3 font-mono font-bold">
+                        {is1st ? (
+                          <span className="px-2.5 py-1 rounded-lg font-mono font-black text-xs bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50 shadow-[0_0_10px_rgba(212,175,55,0.2)] inline-flex items-center gap-1">
+                            1ST
+                          </span>
+                        ) : is2nd ? (
+                          <span className="px-2.5 py-1 rounded-lg font-mono font-bold text-xs bg-slate-800 text-[#e1e1e6] border border-slate-600 inline-flex items-center gap-1">
+                            2ND
+                          </span>
+                        ) : is3rd ? (
+                          <span className="px-2.5 py-1 rounded-lg font-mono font-bold text-xs bg-amber-900/30 text-[#cd7f32] border border-amber-700/50 inline-flex items-center gap-1">
+                            3RD
+                          </span>
+                        ) : (
+                          <span className="text-[#71717a] font-mono text-xs px-2 font-normal">—</span>
+                        )}
                       </td>
-                      <td className="py-3 px-3 font-bold text-white text-sm">
+                      <td className="py-3.5 px-3 font-bold text-white text-sm">
                         <Link to={`/teams/${t.id}`} className="hover:text-[var(--accent-red)] transition-colors">
                           {t.name}
                         </Link>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-emerald-400 font-semibold">
-                        {formatCurrency(t.budget)}
+                      <td className="py-3.5 px-3 text-center font-mono text-[#e1e1e6] font-semibold">
+                        {totalItems}
                       </td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3.5 px-3 text-right font-mono text-red-400 font-semibold">
+                        {formatCurrency(totalSpent)}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono text-emerald-400 font-bold">
+                        {formatCurrency(totalRemaining)}
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
                         <Link
                           to={`/teams/${t.id}`}
                           className="text-xs text-[var(--accent-red)] hover:underline font-mono"
