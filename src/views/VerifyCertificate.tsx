@@ -12,9 +12,6 @@ import {
   Award,
   Users,
   ChevronLeft,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
   Lock,
   CheckCircle2,
   XCircle,
@@ -65,7 +62,6 @@ export default function VerifyCertificate() {
   const [downloading, setDownloading] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [autoScale, setAutoScale] = useState<number>(0.75);
-  const [userZoom, setUserZoom] = useState<number | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   // 3D Tilt calculation on pointer move
@@ -97,7 +93,7 @@ export default function VerifyCertificate() {
     };
   }, [showPreview, cert?.id]);
 
-  const activeScale = userZoom !== null ? userZoom : autoScale;
+  const activeScale = autoScale;
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setNotification({ msg, type });
@@ -197,12 +193,11 @@ export default function VerifyCertificate() {
     }
   };
 
-  // 3D Tilt handler (disabled on touch devices, when zoom is not 100%, or reduced motion)
+  // 3D Tilt handler (disabled on touch devices or reduced motion)
   const canTilt =
     typeof window !== 'undefined' &&
     !window.matchMedia('(pointer: coarse)').matches &&
-    !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
-    (userZoom === null || userZoom === 1);
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!canTilt) return;
@@ -699,68 +694,21 @@ export default function VerifyCertificate() {
               {/* RIGHT COLUMN: Certificate Preview                             */}
               {/* ============================================================ */}
               <div className="panel p-5 sm:p-6 rounded-2xl border border-[#26262f] bg-[#121217] space-y-4 min-w-0">
-                {/* Header Row: Title & Zoom / Toggle Controls */}
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#23232c] flex-wrap">
+                {/* Header Row: Title & Hide/Show Preview Control */}
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#23232c]">
                   <span className="text-xs font-mono uppercase tracking-wider text-[#9a9aa3] font-bold flex items-center gap-2">
                     <FileText size={15} className="text-[#ff4d5a]" /> Certificate preview
                   </span>
 
-                  <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                    {/* Zoom controls */}
-                    {showPreview && (
-                      <div className="flex items-center gap-1.5 bg-[#18181c] px-2.5 py-1 rounded-lg border border-[#3e3e48]">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setUserZoom((prev) =>
-                              Math.max(Number(((prev ?? autoScale) - 0.1).toFixed(2)), 0.3)
-                            )
-                          }
-                          className="p-1 rounded hover:bg-[#25252b] text-[#9a9aa3] hover:text-white transition-colors cursor-pointer"
-                          aria-label="Zoom out"
-                          title="Zoom Out"
-                        >
-                          <ZoomOut size={13} />
-                        </button>
-                        <span className="text-xs font-mono font-bold text-[#ffd700] min-w-[38px] text-center">
-                          {Math.round(activeScale * 100)}%
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setUserZoom((prev) =>
-                              Math.min(Number(((prev ?? autoScale) + 0.1).toFixed(2)), 1.3)
-                            )
-                          }
-                          className="p-1 rounded hover:bg-[#25252b] text-[#9a9aa3] hover:text-white transition-colors cursor-pointer"
-                          aria-label="Zoom in"
-                          title="Zoom In"
-                        >
-                          <ZoomIn size={13} />
-                        </button>
-                        {userZoom !== null && (
-                          <button
-                            type="button"
-                            onClick={() => setUserZoom(null)}
-                            className="ml-1 px-2 py-0.5 rounded bg-[#25252b] hover:bg-[#303038] text-[10px] font-mono text-slate-200 flex items-center gap-1 cursor-pointer"
-                            title="Fit to Window"
-                          >
-                            <RotateCcw size={10} /> Fit
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Hide / Show Preview button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowPreview(!showPreview)}
-                      className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-mono font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Eye size={13} />
-                      {showPreview ? 'Hide preview' : 'Show preview'}
-                    </button>
-                  </div>
+                  {/* Hide / Show Preview button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-mono font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye size={13} />
+                    {showPreview ? 'Hide preview' : 'Show preview'}
+                  </button>
                 </div>
 
                 {/* Dark Stage containing the Certificate */}
