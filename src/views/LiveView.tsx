@@ -611,7 +611,7 @@ export default function LiveView() {
             {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
-              <div className="panel red gcl-question-card card--sheen">
+              <div className="panel red gcl-question-card">
                 {/* 3 Strips with exact blueprint clip-path */}
                 <div
                   className="strip"
@@ -625,7 +625,7 @@ export default function LiveView() {
                   style={{
                     clipPath: 'polygon(42px 0, 46px 0, 0 46px, 0 42px)',
                     background: '#ff2a38',
-                    filter: 'drop-shadow(0 0 4px rgba(232,33,46,.8))',
+                    filter: 'drop-shadow(0 0 5px rgba(255,42,56,.8))',
                   }}
                 />
                 <div
