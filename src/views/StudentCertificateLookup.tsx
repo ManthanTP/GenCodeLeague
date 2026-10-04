@@ -562,7 +562,7 @@ export default function StudentCertificateLookup() {
 
             {/* UNLOCKED STAGE: Certificate Artwork & Actions */}
             {hasSearched && exactMatches.length > 0 && activeCert && (
-              <div className="space-y-3.5 sm:space-y-4 min-w-0">
+              <div className="vault-unlocked-stage min-w-0">
                 {/* 3D Perspective Stage Container */}
                 <div
                   ref={stageContainerRef}
@@ -575,7 +575,7 @@ export default function StudentCertificateLookup() {
                   <div className="vault-ring-burst-element" aria-hidden="true" />
 
                   {/* Stage Top Meta Bar: VALID pill, Certificate ID, Public Verify link */}
-                  <div className="flex items-center justify-between gap-2 px-1 pb-2.5 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center justify-between gap-2 px-1 pb-3 sm:pb-4 flex-wrap sm:flex-nowrap">
                     <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                       {activeCert.status === 'valid' ? (
                         <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
@@ -594,7 +594,7 @@ export default function StudentCertificateLookup() {
                     <Link
                       to={`/verify/${activeCert.certificate_id}`}
                       target="_blank"
-                      className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0 transition-colors ml-auto sm:ml-0"
+                      className="gcl-btn-outline-red px-3.5 py-1 text-xs gap-1.5 font-bold uppercase tracking-wider shrink-0 transition-all ml-auto sm:ml-0"
                     >
                       Public Verify <ExternalLink size={12} />
                     </Link>
@@ -657,7 +657,7 @@ export default function StudentCertificateLookup() {
                 </div>
 
                 {/* STAGE ACTION BUTTONS (Optimized for both mobile and desktop) */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                <div className="vault-stage-actions flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                   <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                     <button
                       type="button"
@@ -810,14 +810,14 @@ export default function StudentCertificateLookup() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
             <div className="panel red p-3.5 sm:p-6 md:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-2 sm:my-8 max-h-[96vh] overflow-y-auto">
               <div className="w-full flex items-center justify-between pb-3 border-b border-[#35353b]">
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   <span className="font-mono text-[#ffd700] font-bold text-xs sm:text-sm truncate">
                     {previewCert.certificate_id}
                   </span>
                   <Link
                     to={`/verify/${previewCert.certificate_id}`}
                     target="_blank"
-                    className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0"
+                    className="gcl-btn-outline-red px-3 py-1 text-xs gap-1.5 font-bold uppercase tracking-wider shrink-0 transition-all"
                   >
                     Public Verify <ExternalLink size={12} />
                   </Link>

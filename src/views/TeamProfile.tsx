@@ -166,9 +166,9 @@ export default function TeamProfile() {
         <div className="flex items-center justify-between">
           <Link
             to={edition?.id ? `/editions/${edition.id}` : '/hall-of-fame'}
-            className="flex items-center gap-1.5 text-xs font-mono text-[#8a8a93] hover:text-[#ff4d5a] transition-colors"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
           >
-            <ChevronLeft size={16} /> Back to {edition?.name || 'Hall of Fame'}
+            <ChevronLeft size={15} /> Back to {edition?.name || 'Hall of Fame'}
           </Link>
 
           <span className="text-xs font-mono text-[#ff4d5a] uppercase tracking-wider font-semibold">

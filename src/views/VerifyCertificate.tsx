@@ -271,14 +271,14 @@ export default function VerifyCertificate() {
         <div className="flex items-center justify-between gap-4 py-1">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-[#9a9aa3] hover:text-white hover:bg-[#18181c] border border-transparent hover:border-[#2e2e38] transition-all"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
           >
             <ChevronLeft size={15} /> Back to Live Event
           </Link>
 
           <Link
             to="/my-certificates"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold text-[#9a9aa3] hover:text-[#ff4d5a] hover:bg-[rgba(232,33,46,0.1)] border border-transparent hover:border-[#ff2a38]/30 transition-all"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
           >
             <Search size={14} /> Search by Name
           </Link>

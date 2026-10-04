@@ -357,7 +357,8 @@
 
 /* Dark Certificate Stage */
 .verify-certificate-stage {
-  padding: 16px;
+  padding: 24px 16px 20px 16px;
+  margin-top: 14px;
   background: #09090c;
   border: 1px solid #1f1f26;
   border-radius: 14px;

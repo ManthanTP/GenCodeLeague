@@ -167,9 +167,9 @@ export default function EditionDetail() {
         <div className="flex items-center justify-between">
           <Link
             to="/hall-of-fame"
-            className="inline-flex items-center gap-2 text-sm text-[#9a9aa3] hover:text-[#ff4d5a] transition-colors font-bold uppercase tracking-wider"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
           >
-            <ChevronLeft size={16} /> Back to Hall of Fame
+            <ChevronLeft size={15} /> Back to Hall of Fame
           </Link>
 
           {edition?.is_archived && (
@@ -206,13 +206,13 @@ export default function EditionDetail() {
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto shrink-0">
             <Link
               to={`/gallery?edition=${edition?.id}`}
-              className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-[#18181c] hover:bg-[#25252d] text-xs font-bold flex items-center gap-2 transition-all border border-[#3e3e48] hover:border-[#ff4d5a] text-[#f4f4f6] uppercase tracking-wider min-h-[44px]"
+              className="gcl-btn-outline-red px-5 py-2.5 text-xs font-bold uppercase tracking-wider min-h-[44px] inline-flex items-center gap-2 flex-1 sm:flex-none justify-center"
             >
-              <Image size={15} className="text-[#ff4d5a]" /> Event Gallery
+              <Image size={15} /> Event Gallery
             </Link>
             <Link
               to={`/my-certificates`}
-              className="gcl-btn-outline-red px-5 py-2.5 text-xs font-bold uppercase tracking-wider min-h-[44px]"
+              className="gcl-btn-outline-red px-5 py-2.5 text-xs font-bold uppercase tracking-wider min-h-[44px] flex-1 sm:flex-none justify-center"
             >
               <FileText size={15} className="mr-1.5" /> Certificates
             </Link>
