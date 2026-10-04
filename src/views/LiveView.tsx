@@ -547,7 +547,7 @@ export default function LiveView() {
 
       {/* 3. ACTIVE ROUND STATE (EXACT MATCH TO BLUEPRINT) */}
       {gameState === 'active' && (
-        <div style={{ width: '100%', padding: '10px 24px 24px 24px' }}>
+        <div className="gcl-live-container">
           {/* Top Right Controls: Viewing as Guest Dropdown & Icon-only Fullscreen Button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '6px' }}>
             {!isTeamLeader && (
@@ -611,20 +611,7 @@ export default function LiveView() {
             {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
-              <div
-                className="panel red"
-                style={{
-                  minHeight: '185px',
-                  height: 'auto',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  padding: '24px 30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '24px',
-                }}
-              >
+              <div className="panel red gcl-question-card">
                 {/* 3 Strips with exact blueprint clip-path */}
                 <div
                   className="strip"
@@ -650,19 +637,7 @@ export default function LiveView() {
                 />
 
                 {/* Left-aligned content: round meta and question text */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    flex: 1,
-                    minWidth: 0,
-                    padding: '6px 20px 6px 42px',
-                    zIndex: 10,
-                    textAlign: 'left',
-                  }}
-                >
+                <div className="gcl-question-content">
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                       <span style={{ fontSize: '17px', fontWeight: 700, color: '#e6e6ea', letterSpacing: '0.6px', fontFamily: "'Rajdhani', sans-serif" }}>
@@ -752,21 +727,10 @@ export default function LiveView() {
                   )}
                 </div>
 
-                {/* Right: BID TIMER (188px x 120px) */}
+                {/* Right: BID TIMER */}
                 <div
-                  className="panel"
+                  className="panel gcl-question-timer"
                   style={{
-                    width: '188px',
-                    height: '120px',
-                    borderRadius: '12px',
-                    background: '#17171b',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    zIndex: 10,
                     border: alreadySoldItem ? '1px solid rgba(232, 33, 46, 0.5)' : undefined,
                   }}
                 >

@@ -100,31 +100,31 @@ export default function Header({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.85rem',
+            gap: '0.65rem',
             cursor: 'pointer',
             userSelect: 'none',
             flexShrink: 0,
           }}
           onClick={() => navigate('/')}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-3px', fontWeight: 700, fontSize: '72px', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-2px', fontWeight: 700, fontSize: 'clamp(36px, 4.5vw, 72px)', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
             <span style={{ color: '#fff' }}>GC</span>
             <span style={{ color: '#e8212e' }}>L</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '1rem', marginLeft: '0.25rem' }}>
-            <span style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '0.75rem', marginLeft: '0.2rem' }}>
+            <span style={{ fontSize: 'clamp(14px, 1.6vw, 22px)', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
               GEN CODE LEAGUE
             </span>
-            <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.25rem' }}>
-              <span className="dot" style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+            <span style={{ fontSize: 'clamp(10px, 1.1vw, 14px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
+              <span className="dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
               LIVE AUCTION
             </span>
           </div>
         </div>
 
-        {/* Center: Glass Navigation Buttons */}
+        {/* Center: Glass Navigation Buttons (Desktop XL only) */}
         {!isFullscreen && (
-          <div className="hidden xl:flex" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="hidden xl:flex items-center gap-2">
             {viewMode === 'admin' && (
               <div className="header-role-badge header-role-admin">
                 <Shield size={18} />
@@ -133,7 +133,7 @@ export default function Header({
             )}
 
             {viewMode === 'live' && (
-              <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
+              <nav className="flex items-center gap-2 shrink-0 flex-nowrap">
                 {navLinks.map((link) => {
                   const IconComponent = link.icon;
                   const active = isLinkActive(link.path, link.altPath);
@@ -174,30 +174,41 @@ export default function Header({
         )}
 
         {/* Right Stats Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexShrink: 0 }}>
-          {/* Remaining Budget glass card */}
-          <div className="panel red" style={{ width: '185px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Wallet size={32} style={{ strokeWidth: 2.2, color: '#f4f4f6', flexShrink: 0 }} />
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                Remaining Budget
-              </p>
-              <p style={{ fontSize: '24px', fontWeight: 700, color: '#ff4350', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {displayBudget}
-              </p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+          {/* Mobile/Tablet Compact Budget Pill (Shown on screens < lg) */}
+          <div className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
+            <Wallet size={15} className="text-[#ff4350] shrink-0" />
+            <span className="text-xs font-bold text-[#ff4350] font-['Rajdhani',sans-serif] font-mono whitespace-nowrap">
+              {displayBudget}
+            </span>
           </div>
 
-          {/* Total Teams glass card */}
-          <div className="panel" style={{ minWidth: '140px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Users size={28} style={{ color: '#f4f4f6', flexShrink: 0 }} />
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                Total Teams
-              </p>
-              <p style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f6', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {displayTeams}
-              </p>
+          {/* Desktop Stat Cards (Shown on Large screens >= lg) */}
+          <div className="hidden lg:flex items-center gap-2.5">
+            {/* Remaining Budget glass card */}
+            <div className="panel red" style={{ width: '185px', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Wallet size={32} style={{ strokeWidth: 2.2, color: '#f4f4f6', flexShrink: 0 }} />
+              <div style={{ whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                  Remaining Budget
+                </p>
+                <p style={{ fontSize: '24px', fontWeight: 700, color: '#ff4350', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {displayBudget}
+                </p>
+              </div>
+            </div>
+
+            {/* Total Teams glass card */}
+            <div className="panel" style={{ minWidth: '140px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Users size={28} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+              <div style={{ whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                  Total Teams
+                </p>
+                <p style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f6', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {displayTeams}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -213,11 +224,10 @@ export default function Header({
             </button>
           )}
 
-          {/* Mobile hamburger */}
+          {/* Mobile hamburger button */}
           {!isFullscreen && viewMode === 'live' && (
             <button
-              className="xl:hidden"
-              style={{ padding: '0.4rem', color: '#8d8b94', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              className="xl:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-[#18181c] border border-[#2c2c33] text-[#f4f4f6] hover:text-[#ff4d5a] transition-all cursor-pointer shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
             >
@@ -229,23 +239,48 @@ export default function Header({
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && viewMode === 'live' && (
-        <div style={{ background: 'rgba(18,18,21,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const active = isLinkActive(link.path, link.altPath);
-            return (
-              <button
-                key={link.label}
-                type="button"
-                onClick={() => { handleNavClick(link.path); setMobileMenuOpen(false); }}
-                className={active && link.isLive ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}
-                style={{ width: '100%', justifyContent: 'flex-start' }}
-              >
-                <Icon size={16} style={{ color: active ? '#e11d2e' : '#8d8b94' }} />
-                <span>{link.label}</span>
-              </button>
-            );
-          })}
+        <div style={{ background: 'rgba(14,14,18,0.98)', borderBottom: '1px solid #23232c', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', backdropFilter: 'blur(16px)' }}>
+          {/* Mobile Drawer Stats */}
+          <div className="grid grid-cols-2 gap-2.5 pb-2 border-b border-[#23232c]">
+            <div className="panel red p-2.5 rounded-lg flex items-center gap-2">
+              <Wallet size={20} className="text-[#ff4350] shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] text-[#9a9aa3] block font-sans">Remaining Budget</span>
+                <span className="text-sm font-bold text-[#ff4350] block truncate font-['Rajdhani',sans-serif]">
+                  {displayBudget}
+                </span>
+              </div>
+            </div>
+            <div className="panel p-2.5 rounded-lg flex items-center gap-2">
+              <Users size={18} className="text-[#f4f4f6] shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] text-[#9a9aa3] block font-sans">Total Teams</span>
+                <span className="text-sm font-bold text-white block truncate font-['Rajdhani',sans-serif]">
+                  {displayTeams} Teams
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Links */}
+          <div className="flex flex-col gap-1.5">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isLinkActive(link.path, link.altPath);
+              return (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => { handleNavClick(link.path); setMobileMenuOpen(false); }}
+                  className={active && link.isLive ? 'gcl-nav-btn-active' : 'gcl-nav-btn'}
+                  style={{ width: '100%', justifyContent: 'flex-start', height: '44px' }}
+                >
+                  <Icon size={18} style={{ color: active && link.isLive ? '#ff4a56' : '#9a9aa3' }} />
+                  <span>{link.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </header>

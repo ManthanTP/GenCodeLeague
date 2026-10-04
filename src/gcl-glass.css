@@ -150,15 +150,22 @@
   color: #9a9aa3;
 }
 
-/* === HEADER STYLES (99px) === */
+/* === HEADER STYLES (99px desktop, 70px mobile) === */
 .gcl-header-glass {
-  min-height: 99px;
-  height: 99px;
+  min-height: 70px;
+  height: 70px;
   background: linear-gradient(#141418, #0e0e12);
   border-bottom: 1px solid #23232c;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .gcl-header-glass {
+    min-height: 99px;
+    height: 99px;
+  }
 }
 
 /* Header nav button (inactive) */
@@ -494,10 +501,83 @@
     grid-template-columns: 1fr;
     gap: 20px;
   }
+}
+
+@media (max-width: 768px) {
   .gcl-live-bid-row,
   .gcl-live-arena-grid.no-panel .gcl-live-bid-row {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 14px;
+  }
+}
+
+/* === RESPONSIVE LIVE CONTAINER & QUESTION CARD === */
+.gcl-live-container {
+  width: 100%;
+  padding: 10px 24px 24px 24px;
+  box-sizing: border-box;
+}
+
+.gcl-question-card {
+  min-height: 185px;
+  position: relative;
+  overflow: hidden;
+  padding: 24px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gcl-question-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 20px 6px 42px;
+  z-index: 10;
+  text-align: left;
+}
+
+.gcl-question-timer {
+  width: 188px;
+  height: 120px;
+  border-radius: 12px;
+  background: #17171b;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+@media (max-width: 768px) {
+  .gcl-live-container {
+    padding: 8px 12px 24px 12px;
+  }
+  .gcl-question-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 14px;
+    gap: 16px;
+    min-height: auto;
+  }
+  .gcl-question-content {
+    padding: 0;
+    width: 100%;
+  }
+  .gcl-question-timer {
+    width: 100%;
+    height: 90px;
+  }
+  .strip {
+    display: none;
   }
 }
 
