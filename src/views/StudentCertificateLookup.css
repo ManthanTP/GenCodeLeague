@@ -1,0 +1,288 @@
+/* ====================================================================
+   GCL CREDENTIAL VAULT — PAGE-SCOPED STYLES
+   Visual redesign of /my-certificates below top navigation
+   ==================================================================== */
+
+/* Vault Container */
+.vault-page-container {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* 2-Column Desktop Grid (Left 380-420px, Right fills the rest) */
+.vault-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .vault-layout-grid {
+    grid-template-columns: 410px minmax(0, 1fr);
+    gap: 36px;
+  }
+}
+
+/* Wide search input container */
+.vault-search-box {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.vault-search-box:focus-within {
+  border-color: #ff2a38;
+  box-shadow: 0 0 16px rgba(255, 42, 56, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.vault-search-input {
+  width: 100%;
+  height: 100%;
+  padding-left: 44px;
+  padding-right: 110px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f4f4f6;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.vault-search-input::placeholder {
+  color: #72727e;
+  font-size: 14px;
+}
+
+/* Solid red unlock button inside search box */
+.vault-unlock-btn {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  bottom: 6px;
+  padding: 0 20px;
+  border-radius: 9px;
+  background: #e8212e;
+  color: #ffffff;
+  border: none;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s ease;
+  box-shadow: 0 0 14px rgba(232, 33, 46, 0.45);
+}
+
+.vault-unlock-btn:hover:not(:disabled) {
+  background: #ff2a38;
+  box-shadow: 0 0 20px rgba(255, 42, 56, 0.65);
+  transform: translateY(-1px);
+}
+
+.vault-unlock-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Dashed info state frame */
+.vault-dashed-frame {
+  width: 100%;
+  border-radius: 16px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(14, 14, 18, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+/* Certificate stage aspect ratio (1.55:1) */
+.vault-stage-card {
+  width: 100%;
+  aspect-ratio: 1.55 / 1;
+  min-height: 380px;
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .vault-stage-card {
+    aspect-ratio: auto;
+    min-height: 380px;
+  }
+}
+
+/* Large Padlock Pulsing Glow */
+@keyframes vaultLockPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 18px rgba(255, 42, 56, 0.35));
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 32px rgba(255, 42, 56, 0.75));
+    opacity: 1;
+  }
+}
+
+.vault-lock-pulsing {
+  animation: vaultLockPulse 2.4s ease-in-out infinite;
+}
+
+.vault-lock-pulsing-fast {
+  animation: vaultLockPulse 0.8s ease-in-out infinite;
+}
+
+/* Lock Shake on Failed Search */
+@keyframes vaultLockShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-9px);
+  }
+  40%, 80% {
+    transform: translateX(9px);
+  }
+}
+
+.vault-lock-shake {
+  animation: vaultLockShake 0.4s ease-in-out;
+}
+
+/* Red Ring Burst Outward Animation (2px circle scaling to ~34x) */
+@keyframes vaultRingBurst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+    border-width: 2.5px;
+  }
+  70% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(34);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.vault-ring-burst-element {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #ff2a38;
+  box-shadow: 0 0 24px #ff2a38, inset 0 0 14px #ff2a38;
+  pointer-events: none;
+  z-index: 30;
+  animation: vaultRingBurst 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Certificate Entrance Animation */
+@keyframes vaultCertEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) rotateX(50deg);
+    filter: blur(12px) brightness(2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateX(0deg);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+.vault-cert-entering {
+  animation: vaultCertEntrance 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* 3D Perspective Stage Container */
+.vault-perspective-stage {
+  perspective: 1100px;
+  width: 100%;
+}
+
+/* Scaled Certificate Stage Wrapper */
+.vault-cert-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  will-change: transform;
+  margin: 0 auto;
+}
+
+/* Medal Color Thin Glowing Outlines & Soft Outer Glows */
+.vault-cert-gold {
+  border: 1.5px solid #f5b73b;
+  box-shadow: 0 0 24px rgba(245, 183, 59, 0.45), 0 0 48px rgba(245, 183, 59, 0.18);
+}
+
+.vault-cert-silver {
+  border: 1.5px solid #c3c7d2;
+  box-shadow: 0 0 24px rgba(195, 199, 210, 0.4), 0 0 48px rgba(195, 199, 210, 0.15);
+}
+
+.vault-cert-red {
+  border: 1.5px solid #ff2a3d;
+  box-shadow: 0 0 24px rgba(255, 42, 61, 0.45), 0 0 48px rgba(255, 42, 61, 0.18);
+}
+
+/* Hologram Sheen Surface (soft-light blend mode for white certificate) */
+.vault-hologram-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: soft-light;
+  transition: opacity 0.25s ease-out;
+  z-index: 10;
+}
+
+/* Accessibility: prefers-reduced-motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .vault-cert-entering,
+  .vault-ring-burst-element,
+  .vault-lock-pulsing,
+  .vault-lock-pulsing-fast,
+  .vault-lock-shake {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  .vault-cert-wrapper {
+    transform: none !important;
+    transition: none !important;
+  }
+}

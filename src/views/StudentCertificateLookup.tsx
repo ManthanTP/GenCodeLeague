@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -9,9 +9,11 @@ import {
   Check,
   ShieldCheck,
   ShieldAlert,
-  ChevronLeft,
   AlertCircle,
   ExternalLink,
+  Lock,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
@@ -20,6 +22,7 @@ import CertificatePreview from '../components/CertificatePreview';
 import { downloadOrRegenerateCertificate } from '../utils/pdfGenerator';
 import type { Certificate } from '../types/certificates';
 import type { Edition } from '../types/database';
+import './StudentCertificateLookup.css';
 
 // Rate-limiting configuration: max 12 searches per minute
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -57,12 +60,35 @@ export default function StudentCertificateLookup() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [notification, setNotification] = useState<NotificationState | null>(null);
 
+  // UI-only state for Credential Vault
+  const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
+  const [unlockTriggerKey, setUnlockTriggerKey] = useState<number>(0);
+  const [shakeKey, setShakeKey] = useState<number>(0);
+  const [copiedCertId, setCopiedCertId] = useState<string | null>(null);
+
+  // 3-step verification UI progression
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyStep, setVerifyStep] = useState(0);
+
+  // 3D Tilt & Hologram sheen state
+  const [tilt, setTilt] = useState<{ rx: number; ry: number; sheenX: number; sheenY: number; opacity: number }>({
+    rx: 0,
+    ry: 0,
+    sheenX: 50,
+    sheenY: 50,
+    opacity: 0,
+  });
+
+  const [stageScale, setStageScale] = useState<number>(0.75);
+  const stageContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Load editions for the optional dropdown filter
+  // Load editions for the filter chips
   useEffect(() => {
     supabase
       .from('editions')
@@ -73,11 +99,58 @@ export default function StudentCertificateLookup() {
       });
   }, []);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  // Normalization helper for exact matching (case-insensitive, trimmed, single spaces)
+  const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  // Filter existing search results for EXACT holder name match only
+  const queryNorm = normalize(searchName);
+  const exactMatches = useMemo(() => {
+    if (!hasSearched || !queryNorm) return [];
+    return results.filter((cert) => normalize(cert.recipient_name) === queryNorm);
+  }, [results, hasSearched, queryNorm]);
+
+  // Keep selectedCertId valid
+  const activeCert: Certificate | null = useMemo(() => {
+    if (exactMatches.length === 0) return null;
+    return exactMatches.find((c) => c.id === selectedCertId) || exactMatches[0];
+  }, [exactMatches, selectedCertId]);
+
+  // Auto-fit stage certificate scale to container width
+  useEffect(() => {
+    const node = stageContainerRef.current;
+    if (!node) return;
+
+    const updateScale = () => {
+      if (stageContainerRef.current) {
+        const containerW = stageContainerRef.current.clientWidth;
+        if (containerW > 0) {
+          const targetScale = Math.min(containerW / 1000, 1);
+          setStageScale(Number(targetScale.toFixed(4)));
+        }
+      }
+    };
+
+    updateScale();
+    const rafId = requestAnimationFrame(updateScale);
+
+    const ro = new ResizeObserver(() => {
+      updateScale();
+    });
+    ro.observe(node);
+
+    window.addEventListener('resize', updateScale);
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [activeCert?.id]);
+
+  const handleSearch = async (e?: React.FormEvent, overrideEditionId?: string) => {
     if (e) e.preventDefault();
     const query = searchName.trim();
     if (!query) {
-      showToast('Please enter your name to search', 'error');
+      showToast('Please enter your full name to unlock', 'error');
       return;
     }
     if (query.length < 2) {
@@ -94,6 +167,10 @@ export default function StudentCertificateLookup() {
     setRateLimited(false);
     setLoading(true);
     setHasSearched(true);
+    setIsVerifying(false);
+    setVerifyStep(0);
+
+    const editionFilter = overrideEditionId !== undefined ? overrideEditionId : selectedEditionId;
 
     try {
       let req = supabase
@@ -106,18 +183,36 @@ export default function StudentCertificateLookup() {
         .ilike('recipient_name', `%${query}%`)
         .order('issued_at', { ascending: false });
 
-      if (selectedEditionId !== 'all') {
-        req = req.eq('edition_id', selectedEditionId);
+      if (editionFilter !== 'all') {
+        req = req.eq('edition_id', editionFilter);
       }
 
       const { data, error } = await req;
       if (error) throw error;
 
-      setResults((data as unknown as Certificate[]) || []);
+      const loaded = (data as unknown as Certificate[]) || [];
+      setResults(loaded);
+
+      const targetNorm = normalize(query);
+      const matches = loaded.filter((cert) => normalize(cert.recipient_name) === targetNorm);
+
+      if (matches.length > 0) {
+        setSelectedCertId(matches[0].id);
+        setUnlockTriggerKey((k) => k + 1);
+      } else {
+        setShakeKey((k) => k + 1);
+      }
     } catch (err: any) {
       showToast(err?.message || 'Search failed. Please try again.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditionChipClick = (editionId: string) => {
+    setSelectedEditionId(editionId);
+    if (searchName.trim().length >= 2) {
+      handleSearch(undefined, editionId);
     }
   };
 
@@ -142,229 +237,557 @@ export default function StudentCertificateLookup() {
     }
   };
 
+  // 3-step verification UI progression ticking every 450ms
+  const handleStartVerification = () => {
+    setIsVerifying(true);
+    setVerifyStep(1);
+
+    setTimeout(() => {
+      setVerifyStep(2);
+    }, 450);
+
+    setTimeout(() => {
+      setVerifyStep(3);
+    }, 900);
+
+    setTimeout(() => {
+      setVerifyStep(4);
+    }, 1350);
+  };
+
+  // 3D Tilt calculation on pointer move
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (e.pointerType === 'touch') return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+    const rx = -y * 14;
+    const ry = x * 14;
+
+    const sheenX = ((e.clientX - rect.left) / rect.width) * 100;
+    const sheenY = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setTilt({ rx, ry, sheenX, sheenY, opacity: 1 });
+  };
+
+  const handlePointerLeave = () => {
+    setTilt({ rx: 0, ry: 0, sheenX: 50, sheenY: 50, opacity: 0 });
+  };
+
+  // Medal theme determination with exact colors
+  const getMedalTheme = (type?: string) => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('winner') || t.includes('champion') || t.includes('1st') || t === 'winner') {
+      return {
+        wrapperClass: 'vault-cert-gold',
+        accentColor: '#f5b73b',
+        label: 'Winner',
+        tileBg: 'rgba(245, 183, 59, 0.12)',
+        tileBorder: 'rgba(245, 183, 59, 0.4)',
+        tileText: '#f5b73b',
+      };
+    }
+    if (t.includes('runner') || t.includes('silver') || t.includes('2nd') || t === 'runner_up') {
+      return {
+        wrapperClass: 'vault-cert-silver',
+        accentColor: '#c3c7d2',
+        label: 'Runner-up',
+        tileBg: 'rgba(195, 199, 210, 0.12)',
+        tileBorder: 'rgba(195, 199, 210, 0.4)',
+        tileText: '#c3c7d2',
+      };
+    }
+    return {
+      wrapperClass: 'vault-cert-red',
+      accentColor: '#ff2a3d',
+      label: 'Participant',
+      tileBg: 'rgba(255, 42, 61, 0.12)',
+      tileBorder: 'rgba(255, 42, 61, 0.4)',
+      tileText: '#ff4d5a',
+    };
+  };
+
+  const activeTheme = getMedalTheme(activeCert?.certificate_type);
+
   return (
     <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[#ff2a38] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
-        {/* Cyber Hero Banner */}
-        <div className="gcl-card-crimson relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
-          <div className="relative z-10 max-w-2xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.15)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider shadow-[0_0_12px_rgba(232,33,46,0.25)] uppercase">
-              <Award size={15} /> PUBLIC CREDENTIAL PORTAL
-            </div>
-            <h1
-              className="text-4xl sm:text-6xl font-black text-white tracking-wide uppercase"
-              style={{ fontFamily: "'Rajdhani', sans-serif" }}
-            >
-              Find Your Certificate
-            </h1>
-            <div className="w-16 h-1 bg-[#e8212e] mx-auto rounded-full" />
-            <p className="text-sm text-[#9a9aa3] font-medium font-sans max-w-xl mx-auto leading-relaxed">
-              Search by your full name to view, verify, and download your official GenCode League certificates across all editions. No login required.
-            </p>
-          </div>
-        </div>
-
-        {/* Search Bar & Filter Form */}
-        <form
-          onSubmit={handleSearch}
-          className="gcl-card-crimson p-6 sm:p-8 max-w-3xl mx-auto space-y-4"
-        >
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-            <div className="relative flex-1">
-              <Search
-                size={18}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9a9aa3]"
-              />
-              <input
-                type="text"
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-                placeholder="Enter your name as registered (e.g. Alex Rivera)..."
-                className="gcl-input w-full pl-10 py-3 text-sm font-semibold"
-                style={{
-                  borderRadius: '10px',
-                  background: '#18181c',
-                  border: '1px solid #3e3e48',
-                }}
-                autoFocus
-              />
-            </div>
-
-            <div className="sm:w-52">
-              <select
-                value={selectedEditionId}
-                onChange={(e) => setSelectedEditionId(e.target.value)}
-                className="gcl-input w-full py-3 text-xs font-mono"
-                style={{
-                  borderRadius: '10px',
-                  background: '#18181c',
-                  border: '1px solid #3e3e48',
-                }}
-              >
-                <option value="all">All Editions</option>
-                {editions.map((ed) => (
-                  <option key={ed.id} value={ed.id}>
-                    {ed.name} ({ed.year})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !searchName.trim()}
-              className="gcl-nav-btn-active text-sm font-bold uppercase tracking-wider px-6 py-3 rounded-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-            >
-              <Search size={16} />
-              {loading ? 'Searching...' : 'Search'}
-            </button>
-          </div>
-
-          {rateLimited && (
-            <p className="text-xs text-amber-400 font-mono flex items-center gap-1.5 justify-center">
-              <AlertCircle size={14} /> Search rate limit active. Please wait 30 seconds before searching again.
-            </p>
-          )}
-        </form>
-
-        {/* Search Results */}
-        {hasSearched && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h2
-                className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2"
+      <main className="vault-page-container px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+        <div className="vault-layout-grid">
+          {/* ================================================================ */}
+          {/* LEFT COLUMN: Search & Unlocked Certificates List                */}
+          {/* ================================================================ */}
+          <div className="flex flex-col gap-6">
+            {/* Pill & Headline */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.12)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider uppercase shadow-[0_0_12px_rgba(232,33,46,0.2)]">
+                <Award size={15} /> CREDENTIAL VAULT
+              </div>
+              <h1
+                className="text-[38px] sm:text-[44px] lg:text-[52px] font-black uppercase tracking-tight leading-none text-white"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
-                <span>Search Results</span>
-                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[#18181c] text-[#ff4d5a] border border-[#2c2c33]">
-                  {results.length} found
+                Your name.{' '}
+                <span className="text-[#e8212e] drop-shadow-[0_0_16px_rgba(232,33,46,0.35)]">
+                  Your proof.
                 </span>
-              </h2>
+              </h1>
+              <p className="text-sm text-[#9a9aa3] font-medium font-sans leading-relaxed">
+                Certificates stay sealed. Enter your exact full name and only yours unlocks. Nobody else's is ever shown.
+              </p>
             </div>
 
-            {results.length === 0 ? (
-              <div className="text-center py-16 panel red p-8">
-                <ShieldAlert size={44} className="text-[#52525b] mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-white">No Certificates Found</h3>
-                <p className="text-xs text-[#9a9aa3] mt-1 max-w-md mx-auto">
-                  We could not find any certificates issued under "{searchName}". Please check for spelling differences or try selecting "All Editions".
-                </p>
+            {/* Search Input Field with embedded Solid Red Unlock Button */}
+            <form onSubmit={handleSearch} className="space-y-3">
+              <div className="vault-search-box">
+                <Search
+                  size={19}
+                  className="absolute left-3.5 text-[#9a9aa3] pointer-events-none"
+                  aria-hidden="true"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  placeholder="Enter your full name to unlock"
+                  className="vault-search-input"
+                  aria-label="Enter your full name to unlock certificates"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !searchName.trim()}
+                  className="vault-unlock-btn"
+                  aria-label="Unlock certificates for entered name"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Checking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={15} />
+                      <span>Unlock</span>
+                    </>
+                  )}
+                </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {results.map((cert) => {
-                  const isValid = cert.status === 'valid';
+
+              {/* Rate limit warning */}
+              {rateLimited && (
+                <div
+                  className="p-3 rounded-lg bg-red-950/40 border border-red-500/40 text-xs font-mono text-red-300 flex items-center gap-2"
+                  role="alert"
+                >
+                  <AlertCircle size={15} className="shrink-0 text-red-400" />
+                  <span>Search rate limit active. Please wait 30 seconds before searching again.</span>
+                </div>
+              )}
+            </form>
+
+            {/* Edition Chips */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#7e7e8b] block font-semibold">
+                Tournament Edition
+              </span>
+              <div className="flex items-center gap-2 flex-wrap" role="radiogroup" aria-label="Edition filter">
+                <button
+                  type="button"
+                  onClick={() => handleEditionChipClick('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    selectedEditionId === 'all'
+                      ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
+                      : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
+                  }`}
+                  role="radio"
+                  aria-checked={selectedEditionId === 'all'}
+                >
+                  All editions
+                </button>
+                {editions.map((ed) => {
+                  const isSelected = selectedEditionId === ed.id;
                   return (
-                    <div
-                      key={cert.id}
-                      className="panel red p-5 flex flex-col justify-between"
+                    <button
+                      key={ed.id}
+                      type="button"
+                      onClick={() => handleEditionChipClick(ed.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
+                          : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
+                      }`}
+                      role="radio"
+                      aria-checked={isSelected}
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#9a9aa3]">
-                              {cert.edition?.name || 'GenCode League'}
-                            </span>
-                            <h3
-                              className="text-2xl font-black text-white mt-0.5 uppercase"
-                              style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                            >
-                              {cert.recipient_name}
-                            </h3>
-                          </div>
-
-                          {isValid ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
-                              <ShieldCheck size={12} /> VALID
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
-                              <ShieldAlert size={12} /> REVOKED
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs pt-1 font-mono">
-                          <div className="bg-[#18181c] p-2.5 rounded-lg border border-[#26262b]">
-                            <span className="text-[10px] uppercase text-[#9a9aa3] block font-bold">
-                              Type
-                            </span>
-                            <span className="font-bold text-[#ff4d5a] capitalize">
-                              {cert.certificate_type.replace('_', ' ')}
-                            </span>
-                          </div>
-
-                          <div className="bg-[#18181c] p-2.5 rounded-lg border border-[#26262b]">
-                            <span className="text-[10px] uppercase text-[#9a9aa3] block font-bold">
-                              Team
-                            </span>
-                            <span className="font-bold text-white truncate block">
-                              {cert.team?.name || 'Individual'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] font-mono text-[#9a9aa3] pt-1">
-                          <span className="text-[#ffd700] font-bold">
-                            {cert.certificate_id}
-                          </span>
-                          <span>
-                            {new Date(cert.issued_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-[#35353b]">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewCert(cert)}
-                          className="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-xs font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Eye size={13} /> View
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyVerifyUrl(cert.certificate_id)}
-                            className="p-1.5 rounded-lg bg-[#18181c] hover:bg-[#25252b] border border-[#3e3e48] text-[#9a9aa3] hover:text-white transition-colors cursor-pointer"
-                            title="Copy Public Verification Link"
-                          >
-                            {copiedId === cert.certificate_id ? (
-                              <Check size={14} className="text-emerald-400" />
-                            ) : (
-                              <Copy size={14} />
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDownload(cert)}
-                            disabled={downloadingId === cert.certificate_id}
-                            className="gcl-nav-btn-active text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                          >
-                            <Download size={13} />
-                            {downloadingId === cert.certificate_id ? 'Downloading...' : 'Download PDF'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      {ed.name} {ed.year ? `'${String(ed.year).slice(-2)}` : ''}
+                    </button>
                   );
                 })}
               </div>
+            </div>
+
+            {/* Left Column Status: Before Unlock vs Unlocked Certificates List */}
+            {!hasSearched || exactMatches.length === 0 ? (
+              <div className="vault-dashed-frame space-y-2.5">
+                <Lock size={22} className="text-[#9a9aa3] opacity-60" aria-hidden="true" />
+                <p className="text-xs font-sans text-[#8e8e9a] max-w-xs leading-relaxed">
+                  Nothing is listed here. Certificates only appear after you enter your exact full name.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#9a9aa3] font-bold">
+                    Unlocked · your certificates
+                  </span>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#18181c] text-[#ff4d5a] border border-[#ff2a38]/40">
+                    {exactMatches.length} {exactMatches.length === 1 ? 'CREDENTIAL' : 'CREDENTIALS'}
+                  </span>
+                </div>
+
+                <div className="space-y-2" role="listbox" aria-label="Unlocked certificates list">
+                  {exactMatches.map((cert) => {
+                    const isSelected = activeCert?.id === cert.id;
+                    const theme = getMedalTheme(cert.certificate_type);
+                    return (
+                      <div
+                        key={cert.id}
+                        role="option"
+                        aria-selected={isSelected}
+                        tabIndex={0}
+                        onClick={() => {
+                          setSelectedCertId(cert.id);
+                          setIsVerifying(false);
+                          setVerifyStep(0);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setSelectedCertId(cert.id);
+                            setIsVerifying(false);
+                            setVerifyStep(0);
+                          }
+                        }}
+                        className={`p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? 'bg-[#181015] border border-[#ff2a38] shadow-[0_0_16px_rgba(255,42,56,0.3)]'
+                            : 'bg-[#121216] border border-[#26262e] hover:border-[#383844] hover:bg-[#18181f]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                            style={{
+                              background: theme.tileBg,
+                              border: `1px solid ${theme.tileBorder}`,
+                              color: theme.tileText,
+                            }}
+                          >
+                            <Award size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <h2 className="text-base font-bold text-white uppercase truncate leading-tight">
+                              {cert.recipient_name}
+                            </h2>
+                            <p className="text-xs font-mono text-[#9a9aa3] truncate mt-0.5">
+                              {cert.edition?.name || 'GCL'} · {cert.certificate_type.replace('_', ' ')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isSelected && (
+                          <div className="w-2 h-2 rounded-full bg-[#ff2a38] shadow-[0_0_8px_#ff2a38] shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
-        )}
 
-        {/* Modal Certificate Preview */}
+          {/* ================================================================ */}
+          {/* RIGHT COLUMN: The Stage (aspect ratio 1.55:1)                    */}
+          {/* ================================================================ */}
+          <div className="flex flex-col gap-5">
+            {/* LOCKED STAGE: Initial State */}
+            {!hasSearched && (
+              <div className="panel gcl-card-crimson vault-stage-card flex items-center justify-center p-6 sm:p-10">
+                <div className="vault-dashed-frame aspect-[1.55/1] max-w-lg w-full h-full flex flex-col items-center justify-center gap-4">
+                  <div className="vault-lock-pulsing">
+                    <Lock size={64} className="text-[#e8212e]" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg sm:text-xl font-black uppercase text-white tracking-wider">
+                      Sealed vault. Enter your name to unlock.
+                    </p>
+                    <p className="text-xs text-[#8e8e9a] font-sans">
+                      Official credentials remain encrypted until authenticated by full name.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FAILED STAGE: Name not found */}
+            {hasSearched && exactMatches.length === 0 && (
+              <div
+                key={`failed-${shakeKey}`}
+                className="panel red vault-stage-card flex items-center justify-center p-6 sm:p-10"
+              >
+                <div className="vault-dashed-frame aspect-[1.55/1] max-w-lg w-full h-full flex flex-col items-center justify-center gap-4 vault-lock-shake">
+                  <div className="p-4 rounded-full bg-[#201014] border border-[#ff2a38]/40 shadow-[0_0_24px_rgba(255,42,56,0.35)]">
+                    <Lock size={48} className="text-[#ff4d5a]" />
+                  </div>
+                  <div className="space-y-1.5 text-center">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase text-white tracking-wide">
+                      Still sealed. Name not found.
+                    </h2>
+                    <p className="text-xs text-[#9a9aa3] font-sans max-w-sm mx-auto leading-relaxed">
+                      Check the spelling and enter your full name. No certificates match the exact input "{searchName}".
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* UNLOCKED STAGE: Certificate Artwork & Actions */}
+            {hasSearched && exactMatches.length > 0 && activeCert && (
+              <div className="space-y-4">
+                {/* 3D Perspective Stage Container */}
+                <div
+                  ref={stageContainerRef}
+                  key={`cert-stage-${unlockTriggerKey}-${activeCert.id}`}
+                  className="vault-perspective-stage relative w-full"
+                  onPointerMove={handlePointerMove}
+                  onPointerLeave={handlePointerLeave}
+                >
+                  {/* Expanding Red Ring Burst Animation (fires on unlock) */}
+                  <div className="vault-ring-burst-element" aria-hidden="true" />
+
+                  {/* Stage Top Meta Bar: VALID pill, Certificate ID, Public Verify link */}
+                  <div className="flex items-center justify-between gap-3 px-1 pb-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {activeCert.status === 'valid' ? (
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                          <ShieldCheck size={13} /> VALID
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
+                          <ShieldAlert size={13} /> REVOKED
+                        </span>
+                      )}
+                      <span className="font-mono text-[#ffd700] font-bold text-xs sm:text-sm truncate">
+                        {activeCert.certificate_id}
+                      </span>
+                    </div>
+
+                    <Link
+                      to={`/verify/${activeCert.certificate_id}`}
+                      target="_blank"
+                      className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0 transition-colors"
+                    >
+                      Public Verify <ExternalLink size={12} />
+                    </Link>
+                  </div>
+
+                  {/* Scaled Certificate Wrapper with 3D Tilt, Unlock Entrance & Medal Glowing Outline */}
+                  <div
+                    className={`vault-cert-wrapper ${activeTheme.wrapperClass} vault-cert-entering`}
+                    style={{
+                      width: '100%',
+                      maxWidth: 1000,
+                      height: Math.round(707 * stageScale),
+                      transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+                      transformStyle: 'preserve-3d',
+                      transition: tilt.opacity === 0 ? 'transform 0.5s ease-out' : 'transform 0.08s ease-out',
+                    }}
+                  >
+                    {/* Official Version 1 Certificate */}
+                    <CertificatePreview
+                      recipientName={activeCert.recipient_name}
+                      certificateType={activeCert.certificate_type}
+                      certificateId={activeCert.certificate_id}
+                      editionId={activeCert.edition_id}
+                      templateVersion={activeCert.template_version}
+                      editionName={activeCert.edition?.name}
+                      teamName={activeCert.team?.name}
+                      achievement={activeCert.achievement}
+                      customTitle={activeCert.custom_title}
+                      customSubtitle={activeCert.custom_subtitle}
+                      issuedAt={activeCert.issued_at}
+                      status={activeCert.status}
+                      scale={stageScale}
+                    />
+
+                    {/* Cursor Sheen Overlay (Soft-light blend mode for white certificate) */}
+                    <div
+                      className="vault-hologram-sheen"
+                      style={{
+                        opacity: tilt.opacity,
+                        background: `radial-gradient(circle at ${tilt.sheenX}% ${tilt.sheenY}%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 42, 61, 0.18) 35%, transparent 65%)`,
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+
+                {/* STAGE ACTION BUTTONS */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleStartVerification}
+                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
+                    >
+                      <ShieldCheck size={15} /> Verify authenticity
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyVerifyUrl(activeCert.certificate_id)}
+                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
+                      title="Copy Verification Link"
+                    >
+                      {copiedId === activeCert.certificate_id ? (
+                        <>
+                          <Check size={15} className="text-emerald-400" /> Copied Link ✓
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={15} /> Copy Verification Link
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreviewCert(activeCert)}
+                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="View Full Certificate"
+                    >
+                      <Eye size={15} /> View
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(activeCert)}
+                    disabled={downloadingId === activeCert.certificate_id}
+                    className="gcl-nav-btn-active h-11 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 min-w-[160px]"
+                  >
+                    <Download size={16} />
+                    {downloadingId === activeCert.certificate_id ? 'Downloading...' : 'Download PDF'}
+                  </button>
+                </div>
+
+                {/* VERIFY PANEL (Animated 3-step checklist ticking every 450ms) */}
+                {isVerifying && (
+                  <div
+                    className="panel p-5 rounded-xl border border-[#2e2e38] bg-[#101015] space-y-3.5 transition-all"
+                    role="region"
+                    aria-live="polite"
+                    aria-label="Certificate verification process"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-[#23232c]">
+                      <span className="text-xs font-mono uppercase tracking-wider text-[#9a9aa3] font-bold flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-[#ff4d5a]" /> Cryptographic Verification
+                      </span>
+                      <span className="text-[11px] font-mono text-[#ffd700]">
+                        {activeCert.certificate_id}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 font-mono text-xs">
+                      {/* Step 1 */}
+                      <div className="flex items-center gap-2.5">
+                        {verifyStep > 1 ? (
+                          <Check size={15} className="text-emerald-400" />
+                        ) : verifyStep === 1 ? (
+                          <Loader2 size={15} className="animate-spin text-[#ff4d5a]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
+                        )}
+                        <span className={verifyStep >= 1 ? 'text-white font-semibold' : 'text-[#6e6e7c]'}>
+                          Reading certificate ID
+                        </span>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div className="flex items-center gap-2.5">
+                        {verifyStep > 2 ? (
+                          <Check size={15} className="text-emerald-400" />
+                        ) : verifyStep === 2 ? (
+                          <Loader2 size={15} className="animate-spin text-[#ff4d5a]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
+                        )}
+                        <span className={verifyStep >= 2 ? 'text-white font-semibold' : 'text-[#6e6e7c]'}>
+                          Matching GCL registry
+                        </span>
+                      </div>
+
+                      {/* Step 3 */}
+                      <div className="flex items-center gap-2.5">
+                        {verifyStep > 3 ? (
+                          <Check size={15} className="text-emerald-400" />
+                        ) : verifyStep === 3 ? (
+                          <Loader2 size={15} className="animate-spin text-[#ff4d5a]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-white/20" />
+                        )}
+                        <span className={verifyStep >= 3 ? 'text-white font-semibold' : 'text-[#6e6e7c]'}>
+                          Checking signature
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Step 4: Final verification result */}
+                    {verifyStep >= 4 && (
+                      <div className="pt-2">
+                        {activeCert.status === 'valid' ? (
+                          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 text-xs font-mono font-bold">
+                              <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+                              <span>
+                                Authentic · issued{' '}
+                                {new Date(activeCert.issued_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                            <Link
+                              to={`/verify/${activeCert.certificate_id}`}
+                              target="_blank"
+                              className="text-xs font-mono text-emerald-300 hover:text-white underline flex items-center gap-1"
+                            >
+                              Public Registry Record <ExternalLink size={12} />
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="p-3 rounded-lg bg-red-950/40 border border-red-500/40 text-red-400 flex items-center gap-2 text-xs font-mono font-bold">
+                            <ShieldAlert size={16} className="text-red-400 shrink-0" />
+                            <span>Could not verify · Revoked or signature mismatch</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Existing Modal Certificate Preview (Untouched functionality) */}
         {previewCert && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
             <div className="panel red p-4 sm:p-6 md:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-4 sm:my-8 max-h-[92vh] overflow-y-auto">
