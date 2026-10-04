@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   Eye,
@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
+import { useEventState } from '../hooks/useEventState';
+import { useTeams } from '../hooks/useTeams';
+import { supabase } from '../lib/supabase';
 
 interface HeaderProps {
   totalSpent?: number;
@@ -35,8 +38,8 @@ interface HeaderProps {
 
 export default function Header({
   totalSpent = 0,
-  totalAvailable = 0,
-  teamCount = 0,
+  totalAvailable: propTotalAvailable,
+  teamCount: propTeamCount,
   viewMode = 'live',
   onToggleView,
   isAdminAuthenticated = false,
@@ -50,6 +53,100 @@ export default function Header({
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [directStats, setDirectStats] = useState<{ count: number; budget: number } | null>(null);
+
+  // Hook into active event state & teams for global stats
+  const { edition } = useEventState();
+  const { teams } = useTeams(edition?.id);
+
+  // Fetch active tournament stats if not provided and not yet loaded
+  useEffect(() => {
+    const hasProps =
+      typeof propTotalAvailable === 'number' &&
+      propTotalAvailable > 0 &&
+      typeof propTeamCount === 'number' &&
+      propTeamCount > 0;
+    if (hasProps) return;
+
+    let isCancelled = false;
+    async function fetchActiveStats() {
+      try {
+        const { data: edData } = await supabase
+          .from('editions')
+          .select('id')
+          .eq('is_current', true)
+          .single();
+
+        if (edData?.id && !isCancelled) {
+          const { data: tData } = await supabase
+            .from('teams')
+            .select('budget')
+            .eq('edition_id', edData.id);
+
+          if (tData && tData.length > 0 && !isCancelled) {
+            const sum = tData.reduce((acc, t) => acc + (t.budget || 0), 0);
+            setDirectStats({ count: tData.length, budget: sum });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load active stats in header', e);
+      }
+    }
+
+    if (!directStats && (!teams || teams.length === 0)) {
+      fetchActiveStats();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [edition?.id, propTotalAvailable, propTeamCount, directStats, teams]);
+
+  const effectiveBudget = useMemo(() => {
+    if (typeof propTotalAvailable === 'number' && propTotalAvailable > 0) {
+      return propTotalAvailable;
+    }
+    if (teams && teams.length > 0) {
+      const b = teams.reduce((acc, t) => acc + (t.budget || 0), 0);
+      if (b > 0) return b;
+    }
+    if (directStats && directStats.budget > 0) {
+      return directStats.budget;
+    }
+    try {
+      const cached = localStorage.getItem('gcl_cached_teams');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const b = parsed.reduce((acc: number, t: { budget?: number }) => acc + (t.budget || 0), 0);
+          if (b > 0) return b;
+        }
+      }
+    } catch {}
+    return 0;
+  }, [propTotalAvailable, teams, directStats]);
+
+  const effectiveTeamCount = useMemo(() => {
+    if (typeof propTeamCount === 'number' && propTeamCount > 0) {
+      return propTeamCount;
+    }
+    if (teams && teams.length > 0) {
+      return teams.length;
+    }
+    if (directStats && directStats.count > 0) {
+      return directStats.count;
+    }
+    try {
+      const cached = localStorage.getItem('gcl_cached_teams');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.length;
+        }
+      }
+    } catch {}
+    return 0;
+  }, [propTeamCount, teams, directStats]);
 
   const navLinks = [
     { label: 'Live', path: '/', altPath: '/live', icon: Radio, isLive: true },
@@ -79,8 +176,8 @@ export default function Header({
     navigate(path);
   };
 
-  const displayBudget = formatCurrency(totalAvailable || 0);
-  const displayTeams = teamCount || 0;
+  const displayBudget = formatCurrency(effectiveBudget);
+  const displayTeams = effectiveTeamCount;
 
   return (
     <header className="gcl-header-glass" style={{ width: '100%', position: 'sticky', top: 0, zIndex: 50 }}>
