@@ -636,9 +636,9 @@ export default function LiveView() {
                   }}
                 />
 
-                {/* Left-aligned content: round meta and question text */}
+                {/* Left-aligned content: starts past corner laser effect */}
                 <div className="gcl-question-content">
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                       <span style={{ fontSize: '17px', fontWeight: 700, color: '#e6e6ea', letterSpacing: '0.6px', fontFamily: "'Rajdhani', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
@@ -677,7 +677,7 @@ export default function LiveView() {
                   {alreadySoldItem ? (
                     <h2
                       style={{
-                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontSize: 'clamp(28px, 2.4vw, 40px)',
                         fontWeight: 800,
                         color: '#f4f4f6',
                         lineHeight: 1.25,
@@ -694,7 +694,7 @@ export default function LiveView() {
                   ) : isRevealed ? (
                     <h2
                       style={{
-                        fontSize: 'clamp(30px, 2.5vw, 42px)',
+                        fontSize: 'clamp(28px, 2.4vw, 40px)',
                         fontWeight: 800,
                         color: '#f4f4f6',
                         lineHeight: 1.25,
@@ -711,7 +711,7 @@ export default function LiveView() {
                   ) : (
                     <h2
                       style={{
-                        fontSize: 'clamp(28px, 2.3vw, 38px)',
+                        fontSize: 'clamp(26px, 2.2vw, 36px)',
                         fontWeight: 700,
                         color: '#80808a',
                         lineHeight: 1.25,
