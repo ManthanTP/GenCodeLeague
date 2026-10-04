@@ -87,11 +87,11 @@ export default function Header({
       <div
         style={{
           width: '100%',
-          padding: '0 24px',
+          padding: '0 clamp(10px, 2vw, 24px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '1rem',
+          gap: 'clamp(6px, 1.5vw, 1rem)',
           height: '100%',
         }}
       >
@@ -100,22 +100,22 @@ export default function Header({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.65rem',
+            gap: 'clamp(4px, 1vw, 0.65rem)',
             cursor: 'pointer',
             userSelect: 'none',
             flexShrink: 0,
           }}
           onClick={() => navigate('/')}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-2px', fontWeight: 700, fontSize: 'clamp(36px, 4.5vw, 72px)', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-2px', fontWeight: 700, fontSize: 'clamp(28px, 4vw, 72px)', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
             <span style={{ color: '#fff' }}>GC</span>
             <span style={{ color: '#e8212e' }}>L</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: '0.75rem', marginLeft: '0.2rem' }}>
-            <span style={{ fontSize: 'clamp(14px, 1.6vw, 22px)', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: 'clamp(6px, 1vw, 0.75rem)', marginLeft: 'clamp(2px, 0.5vw, 0.2rem)' }}>
+            <span style={{ fontSize: 'clamp(12px, 1.5vw, 22px)', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}>
               GEN CODE LEAGUE
             </span>
-            <span style={{ fontSize: 'clamp(10px, 1.1vw, 14px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
+            <span style={{ fontSize: 'clamp(9px, 1vw, 14px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
               <span className="dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
               LIVE AUCTION
             </span>
@@ -174,11 +174,11 @@ export default function Header({
         )}
 
         {/* Right Stats Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 0.75rem)', flexShrink: 0 }}>
           {/* Mobile/Tablet Compact Budget Pill (Shown on screens < lg) */}
-          <div className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
-            <Wallet size={15} className="text-[#ff4350] shrink-0" />
-            <span className="text-xs font-bold text-[#ff4350] font-['Rajdhani',sans-serif] font-mono whitespace-nowrap">
+          <div className="lg:hidden flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
+            <Wallet size={13} className="text-[#ff4350] shrink-0" />
+            <span className="text-[11px] sm:text-xs font-bold text-[#ff4350] font-['Rajdhani',sans-serif] font-mono whitespace-nowrap">
               {displayBudget}
             </span>
           </div>

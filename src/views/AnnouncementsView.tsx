@@ -104,7 +104,7 @@ export default function AnnouncementsView() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         {/* Admin Quick Jump Link if logged in */}
         {isAdmin && (
           <div className="flex justify-end">

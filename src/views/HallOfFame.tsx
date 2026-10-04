@@ -174,7 +174,7 @@ export default function HallOfFame() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
         {/* Cyber Hero Banner (No laser strip, pure opposite-corner red glow) */}
         <div className="panel red relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
           <div className="relative z-10 max-w-3xl mx-auto space-y-3">

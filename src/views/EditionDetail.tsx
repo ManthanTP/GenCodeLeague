@@ -168,7 +168,7 @@ export default function EditionDetail() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
