@@ -9,13 +9,14 @@
   max-width: 1360px;
   margin: 0 auto;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* 2-Column Desktop Grid (Left 380-420px, Right fills the rest) */
 .vault-layout-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 
@@ -62,6 +63,24 @@
 .vault-search-input::placeholder {
   color: #72727e;
   font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .vault-search-box {
+    height: 50px;
+  }
+  .vault-search-input {
+    font-size: 13.5px;
+    padding-left: 38px;
+    padding-right: 92px;
+  }
+  .vault-search-input::placeholder {
+    font-size: 13px;
+  }
+  .vault-unlock-btn {
+    padding: 0 14px;
+    font-size: 13px;
+  }
 }
 
 /* Solid red unlock button inside search box */
@@ -117,6 +136,12 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 640px) {
+  .vault-dashed-frame {
+    padding: 24px 16px;
+  }
+}
+
 /* Certificate stage aspect ratio (1.55:1) */
 .vault-stage-card {
   width: 100%;
@@ -131,7 +156,7 @@
 @media (max-width: 640px) {
   .vault-stage-card {
     aspect-ratio: auto;
-    min-height: 380px;
+    min-height: 260px;
   }
 }
 
@@ -227,6 +252,9 @@
 .vault-perspective-stage {
   perspective: 1100px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Scaled Certificate Stage Wrapper */
@@ -240,6 +268,12 @@
   background-color: #ffffff;
   will-change: transform;
   margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .vault-cert-wrapper {
+    border-radius: 8px;
+  }
 }
 
 /* Medal Color Thin Glowing Outlines & Soft Outer Glows */

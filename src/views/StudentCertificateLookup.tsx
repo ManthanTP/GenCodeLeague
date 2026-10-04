@@ -257,7 +257,10 @@ export default function StudentCertificateLookup() {
 
   // 3D Tilt calculation on pointer move
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (typeof window !== 'undefined' && (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(pointer: coarse)').matches
+    )) return;
     if (e.pointerType === 'touch') return;
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -317,19 +320,19 @@ export default function StudentCertificateLookup() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="vault-page-container px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+      <main className="vault-page-container px-3 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         <div className="vault-layout-grid">
           {/* ================================================================ */}
           {/* LEFT COLUMN: Search & Unlocked Certificates List                */}
           {/* ================================================================ */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5 sm:gap-6 min-w-0">
             {/* Pill & Headline */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.12)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider uppercase shadow-[0_0_12px_rgba(232,33,46,0.2)]">
                 <Award size={15} /> CREDENTIAL VAULT
               </div>
               <h1
-                className="text-[38px] sm:text-[44px] lg:text-[52px] font-black uppercase tracking-tight leading-none text-white"
+                className="text-[32px] sm:text-[44px] lg:text-[52px] font-black uppercase tracking-tight leading-none text-white"
                 style={{ fontFamily: "'Rajdhani', sans-serif" }}
               >
                 Your name.{' '}
@@ -337,7 +340,7 @@ export default function StudentCertificateLookup() {
                   Your proof.
                 </span>
               </h1>
-              <p className="text-sm text-[#9a9aa3] font-medium font-sans leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#9a9aa3] font-medium font-sans leading-relaxed">
                 Certificates stay sealed. Enter your exact full name and only yours unlocks. Nobody else's is ever shown.
               </p>
             </div>
@@ -346,7 +349,7 @@ export default function StudentCertificateLookup() {
             <form onSubmit={handleSearch} className="space-y-3">
               <div className="vault-search-box">
                 <Search
-                  size={19}
+                  size={18}
                   className="absolute left-3.5 text-[#9a9aa3] pointer-events-none"
                   aria-hidden="true"
                 />
@@ -397,11 +400,11 @@ export default function StudentCertificateLookup() {
               <span className="text-[11px] font-mono uppercase tracking-wider text-[#7e7e8b] block font-semibold">
                 Tournament Edition
               </span>
-              <div className="flex items-center gap-2 flex-wrap" role="radiogroup" aria-label="Edition filter">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap" role="radiogroup" aria-label="Edition filter">
                 <button
                   type="button"
                   onClick={() => handleEditionChipClick('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                     selectedEditionId === 'all'
                       ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
                       : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
@@ -418,7 +421,7 @@ export default function StudentCertificateLookup() {
                       key={ed.id}
                       type="button"
                       onClick={() => handleEditionChipClick(ed.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
                           : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
@@ -513,21 +516,21 @@ export default function StudentCertificateLookup() {
           </div>
 
           {/* ================================================================ */}
-          {/* RIGHT COLUMN: The Stage (aspect ratio 1.55:1)                    */}
+          {/* RIGHT COLUMN: The Stage                                          */}
           {/* ================================================================ */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 sm:gap-5 min-w-0">
             {/* LOCKED STAGE: Initial State */}
             {!hasSearched && (
-              <div className="panel gcl-card-crimson vault-stage-card flex items-center justify-center p-6 sm:p-10">
-                <div className="vault-dashed-frame aspect-[1.55/1] max-w-lg w-full h-full flex flex-col items-center justify-center gap-4">
+              <div className="panel gcl-card-crimson vault-stage-card flex items-center justify-center p-4 sm:p-10">
+                <div className="vault-dashed-frame max-w-lg w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4">
                   <div className="vault-lock-pulsing">
-                    <Lock size={64} className="text-[#e8212e]" />
+                    <Lock size={48} className="text-[#e8212e] sm:w-16 sm:h-16" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-lg sm:text-xl font-black uppercase text-white tracking-wider">
+                  <div className="space-y-1 text-center">
+                    <p className="text-base sm:text-xl font-black uppercase text-white tracking-wider">
                       Sealed vault. Enter your name to unlock.
                     </p>
-                    <p className="text-xs text-[#8e8e9a] font-sans">
+                    <p className="text-xs text-[#8e8e9a] font-sans max-w-xs mx-auto">
                       Official credentials remain encrypted until authenticated by full name.
                     </p>
                   </div>
@@ -539,14 +542,14 @@ export default function StudentCertificateLookup() {
             {hasSearched && exactMatches.length === 0 && (
               <div
                 key={`failed-${shakeKey}`}
-                className="panel red vault-stage-card flex items-center justify-center p-6 sm:p-10"
+                className="panel red vault-stage-card flex items-center justify-center p-4 sm:p-10"
               >
-                <div className="vault-dashed-frame aspect-[1.55/1] max-w-lg w-full h-full flex flex-col items-center justify-center gap-4 vault-lock-shake">
-                  <div className="p-4 rounded-full bg-[#201014] border border-[#ff2a38]/40 shadow-[0_0_24px_rgba(255,42,56,0.35)]">
-                    <Lock size={48} className="text-[#ff4d5a]" />
+                <div className="vault-dashed-frame max-w-lg w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4 vault-lock-shake">
+                  <div className="p-3.5 sm:p-4 rounded-full bg-[#201014] border border-[#ff2a38]/40 shadow-[0_0_24px_rgba(255,42,56,0.35)]">
+                    <Lock size={40} className="text-[#ff4d5a] sm:w-12 sm:h-12" />
                   </div>
                   <div className="space-y-1.5 text-center">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase text-white tracking-wide">
+                    <h2 className="text-lg sm:text-2xl font-black uppercase text-white tracking-wide">
                       Still sealed. Name not found.
                     </h2>
                     <p className="text-xs text-[#9a9aa3] font-sans max-w-sm mx-auto leading-relaxed">
@@ -559,7 +562,7 @@ export default function StudentCertificateLookup() {
 
             {/* UNLOCKED STAGE: Certificate Artwork & Actions */}
             {hasSearched && exactMatches.length > 0 && activeCert && (
-              <div className="space-y-4">
+              <div className="space-y-3.5 sm:space-y-4 min-w-0">
                 {/* 3D Perspective Stage Container */}
                 <div
                   ref={stageContainerRef}
@@ -572,14 +575,14 @@ export default function StudentCertificateLookup() {
                   <div className="vault-ring-burst-element" aria-hidden="true" />
 
                   {/* Stage Top Meta Bar: VALID pill, Certificate ID, Public Verify link */}
-                  <div className="flex items-center justify-between gap-3 px-1 pb-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2 px-1 pb-2.5 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                       {activeCert.status === 'valid' ? (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                        <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
                           <ShieldCheck size={13} /> VALID
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
+                        <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
                           <ShieldAlert size={13} /> REVOKED
                         </span>
                       )}
@@ -591,7 +594,7 @@ export default function StudentCertificateLookup() {
                     <Link
                       to={`/verify/${activeCert.certificate_id}`}
                       target="_blank"
-                      className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0 transition-colors"
+                      className="text-xs text-[#9a9aa3] hover:text-[#ff4d5a] flex items-center gap-1 font-mono shrink-0 transition-colors ml-auto sm:ml-0"
                     >
                       Public Verify <ExternalLink size={12} />
                     </Link>
@@ -604,27 +607,42 @@ export default function StudentCertificateLookup() {
                       width: '100%',
                       maxWidth: 1000,
                       height: Math.round(707 * stageScale),
+                      position: 'relative',
+                      overflow: 'hidden',
                       transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
                       transformStyle: 'preserve-3d',
                       transition: tilt.opacity === 0 ? 'transform 0.5s ease-out' : 'transform 0.08s ease-out',
                     }}
                   >
-                    {/* Official Version 1 Certificate */}
-                    <CertificatePreview
-                      recipientName={activeCert.recipient_name}
-                      certificateType={activeCert.certificate_type}
-                      certificateId={activeCert.certificate_id}
-                      editionId={activeCert.edition_id}
-                      templateVersion={activeCert.template_version}
-                      editionName={activeCert.edition?.name}
-                      teamName={activeCert.team?.name}
-                      achievement={activeCert.achievement}
-                      customTitle={activeCert.custom_title}
-                      customSubtitle={activeCert.custom_subtitle}
-                      issuedAt={activeCert.issued_at}
-                      status={activeCert.status}
-                      scale={stageScale}
-                    />
+                    {/* Official Version 1 Certificate Layer (Isolated from normal flow) */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 1000,
+                        height: 707,
+                        transformOrigin: 'top left',
+                        transform: `scale(${stageScale})`,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <CertificatePreview
+                        recipientName={activeCert.recipient_name}
+                        certificateType={activeCert.certificate_type}
+                        certificateId={activeCert.certificate_id}
+                        editionId={activeCert.edition_id}
+                        templateVersion={activeCert.template_version}
+                        editionName={activeCert.edition?.name}
+                        teamName={activeCert.team?.name}
+                        achievement={activeCert.achievement}
+                        customTitle={activeCert.custom_title}
+                        customSubtitle={activeCert.custom_subtitle}
+                        issuedAt={activeCert.issued_at}
+                        status={activeCert.status}
+                        scale={1}
+                      />
+                    </div>
 
                     {/* Cursor Sheen Overlay (Soft-light blend mode for white certificate) */}
                     <div
@@ -638,30 +656,30 @@ export default function StudentCertificateLookup() {
                   </div>
                 </div>
 
-                {/* STAGE ACTION BUTTONS */}
+                {/* STAGE ACTION BUTTONS (Optimized for both mobile and desktop) */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                     <button
                       type="button"
                       onClick={handleStartVerification}
-                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
+                      className="gcl-btn-outline-red h-11 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <ShieldCheck size={15} /> Verify authenticity
+                      <ShieldCheck size={15} /> Verify
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleCopyVerifyUrl(activeCert.certificate_id)}
-                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
+                      className="gcl-btn-outline-red h-11 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
                       title="Copy Verification Link"
                     >
                       {copiedId === activeCert.certificate_id ? (
                         <>
-                          <Check size={15} className="text-emerald-400" /> Copied Link ✓
+                          <Check size={15} className="text-emerald-400" /> Copied ✓
                         </>
                       ) : (
                         <>
-                          <Copy size={15} /> Copy Verification Link
+                          <Copy size={15} /> Copy Link
                         </>
                       )}
                     </button>
@@ -669,10 +687,10 @@ export default function StudentCertificateLookup() {
                     <button
                       type="button"
                       onClick={() => setPreviewCert(activeCert)}
-                      className="gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="col-span-2 sm:col-span-1 gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
                       title="View Full Certificate"
                     >
-                      <Eye size={15} /> View
+                      <Eye size={15} /> View Full
                     </button>
                   </div>
 
@@ -680,7 +698,7 @@ export default function StudentCertificateLookup() {
                     type="button"
                     onClick={() => handleDownload(activeCert)}
                     disabled={downloadingId === activeCert.certificate_id}
-                    className="gcl-nav-btn-active h-11 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 min-w-[160px]"
+                    className="gcl-nav-btn-active h-11 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 w-full sm:w-auto sm:min-w-[160px]"
                   >
                     <Download size={16} />
                     {downloadingId === activeCert.certificate_id ? 'Downloading...' : 'Download PDF'}
@@ -690,7 +708,7 @@ export default function StudentCertificateLookup() {
                 {/* VERIFY PANEL (Animated 3-step checklist ticking every 450ms) */}
                 {isVerifying && (
                   <div
-                    className="panel p-5 rounded-xl border border-[#2e2e38] bg-[#101015] space-y-3.5 transition-all"
+                    className="panel p-4 sm:p-5 rounded-xl border border-[#2e2e38] bg-[#101015] space-y-3.5 transition-all"
                     role="region"
                     aria-live="polite"
                     aria-label="Certificate verification process"
@@ -752,7 +770,7 @@ export default function StudentCertificateLookup() {
                     {verifyStep >= 4 && (
                       <div className="pt-2">
                         {activeCert.status === 'valid' ? (
-                          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
                             <div className="flex items-center gap-2 text-xs font-mono font-bold">
                               <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
                               <span>
@@ -787,10 +805,10 @@ export default function StudentCertificateLookup() {
           </div>
         </div>
 
-        {/* Existing Modal Certificate Preview (Untouched functionality) */}
+        {/* Existing Modal Certificate Preview (Responsive Auto-Fit) */}
         {previewCert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <div className="panel red p-4 sm:p-6 md:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-4 sm:my-8 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+            <div className="panel red p-3.5 sm:p-6 md:p-8 max-w-4xl w-full flex flex-col items-center space-y-4 my-2 sm:my-8 max-h-[96vh] overflow-y-auto">
               <div className="w-full flex items-center justify-between pb-3 border-b border-[#35353b]">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-mono text-[#ffd700] font-bold text-xs sm:text-sm truncate">
@@ -813,29 +831,45 @@ export default function StudentCertificateLookup() {
                 </button>
               </div>
 
-              <div className="w-full overflow-x-auto flex justify-center py-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="w-full overflow-hidden flex justify-center py-2">
                 <div
                   style={{
-                    width: 1000 * 0.8,
-                    height: 707 * 0.8,
+                    width: '100%',
+                    maxWidth: 1000 * 0.8,
+                    height: Math.round(707 * Math.min((typeof window !== 'undefined' ? (window.innerWidth - 48) : 800) / 1000, 0.8)),
                     position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '8px',
                   }}
                 >
-                  <CertificatePreview
-                    recipientName={previewCert.recipient_name}
-                    certificateType={previewCert.certificate_type}
-                    certificateId={previewCert.certificate_id}
-                    editionId={previewCert.edition_id}
-                    templateVersion={previewCert.template_version}
-                    editionName={previewCert.edition?.name}
-                    teamName={previewCert.team?.name}
-                    achievement={previewCert.achievement}
-                    customTitle={previewCert.custom_title}
-                    customSubtitle={previewCert.custom_subtitle}
-                    issuedAt={previewCert.issued_at}
-                    status={previewCert.status}
-                    scale={0.8}
-                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: 1000,
+                      height: 707,
+                      transformOrigin: 'top left',
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth - 48) : 800) / 1000, 0.8)})`,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <CertificatePreview
+                      recipientName={previewCert.recipient_name}
+                      certificateType={previewCert.certificate_type}
+                      certificateId={previewCert.certificate_id}
+                      editionId={previewCert.edition_id}
+                      templateVersion={previewCert.template_version}
+                      editionName={previewCert.edition?.name}
+                      teamName={previewCert.team?.name}
+                      achievement={previewCert.achievement}
+                      customTitle={previewCert.custom_title}
+                      customSubtitle={previewCert.custom_subtitle}
+                      issuedAt={previewCert.issued_at}
+                      status={previewCert.status}
+                      scale={1}
+                    />
+                  </div>
                 </div>
               </div>
 
