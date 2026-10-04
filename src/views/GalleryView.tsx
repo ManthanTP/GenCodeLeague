@@ -86,9 +86,9 @@ export default function GalleryView() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
+      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
         {/* Hero Section */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
+        <div className="gcl-card-crimson p-6 sm:p-8 text-center max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
             <Image size={15} /> EVENT MEDIA GALLERY
           </div>
@@ -101,7 +101,7 @@ export default function GalleryView() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl gcl-card-crimson">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
               <Filter size={14} /> Filter:

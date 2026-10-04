@@ -611,7 +611,7 @@ export default function LiveView() {
             {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
-              <div className="panel red gcl-question-card">
+              <div className="panel red gcl-question-card card--sheen">
                 {/* 3 Strips with exact blueprint clip-path */}
                 <div
                   className="strip"
@@ -790,7 +790,7 @@ export default function LiveView() {
 
                   return (
                     <div
-                      className="panel red gcl-card-animate"
+                      className="panel red gcl-card-animate card--sheen"
                       style={{
                         minHeight: '161px',
                         position: 'relative',

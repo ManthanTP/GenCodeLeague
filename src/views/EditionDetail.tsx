@@ -3,26 +3,17 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Trophy,
   Crown,
-  Medal,
-  Award,
   ChevronLeft,
-  ChevronRight,
-  Users,
-  Calendar,
-  Layers,
   FileText,
   Image,
-  ExternalLink,
-  ShieldCheck,
-  CheckCircle2,
   TrendingUp,
   Clock,
   Sparkles,
-  Package,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
+import MetallicTrophyCup from '../components/MetallicTrophyCup';
 import {
   fetchEditionComputedStats,
   type EditionComputedStats,
@@ -160,7 +151,10 @@ export default function EditionDetail() {
     if (b.id === runnerUpId) return 1;
     if (a.id === thirdPlaceId) return -1;
     if (b.id === thirdPlaceId) return 1;
-    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+
+    const spentA = getTeamStats(a.id).amountSpent;
+    const spentB = getTeamStats(b.id).amountSpent;
+    return spentB - spentA;
   });
 
   return (
@@ -168,7 +162,7 @@ export default function EditionDetail() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
+      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
@@ -190,8 +184,8 @@ export default function EditionDetail() {
           )}
         </div>
 
-        {/* Hero Banner with Opposite-Corner Red Glow */}
-        <div className="panel red relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        {/* Hero Banner with Crimson Glowing Card */}
+        <div className="gcl-card-crimson relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-[rgba(232,33,46,0.18)] text-[#ff4d5a] border border-[#ff2a38]/40 uppercase tracking-widest">
@@ -217,169 +211,152 @@ export default function EditionDetail() {
               <Image size={15} className="text-[#ff4d5a]" /> Event Gallery
             </Link>
             <Link
-              to={`/certificates`}
-              className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-[#2b0e13] hover:bg-[#3a1015] text-xs font-bold flex items-center gap-2 transition-all border border-[#e8212e]/70 text-[#ff4d5a] uppercase tracking-wider shadow-[0_0_14px_rgba(232,33,46,0.25)] min-h-[44px]"
+              to={`/my-certificates`}
+              className="gcl-btn-outline-red px-5 py-2.5 text-xs font-bold uppercase tracking-wider min-h-[44px]"
             >
-              <FileText size={15} /> Certificates
+              <FileText size={15} className="mr-1.5" /> Certificates
             </Link>
           </div>
         </div>
 
-        {/* OFFICIAL 3D CYBER PODIUM TRIO (Gold 01, Silver 02, Bronze 03) */}
+        {/* OFFICIAL PODIUM (Gold 01, Silver 02, Bronze 03 — Matching Compact Glowing Design) */}
         {edition && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Crown size={20} className="text-[#ffd700]" />
-              <h2 className="text-xl font-black text-white uppercase tracking-wide">
-                Official Tournament Podium
-              </h2>
+          <div
+            className="gcl-card-crimson p-5 sm:p-7 space-y-6"
+            style={{
+              background:
+                'radial-gradient(circle at 10% 20%, rgba(232, 33, 46, 0.08) 0%, transparent 45%), linear-gradient(165deg, #15151b, #0c0c10)',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-1">
+              <div>
+                <h2
+                  className="text-lg sm:text-xl font-bold text-white tracking-wide"
+                  style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                  Official Tournament Podium
+                </h2>
+                <p className="text-xs text-[#8a8a93] font-mono mt-0.5">
+                  Final result, {edition?.name || 'GCL 2025'}
+                </p>
+              </div>
+              <div className="gcl-btn-outline-red px-3 py-1 text-xs font-mono font-bold tracking-wider cursor-default">
+                {edition?.name || 'GCL 2025'}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-              {/* 1st Place - GOLD (01) */}
-              <div className="order-1 md:order-2 panel gold relative overflow-hidden p-6 sm:p-8 flex flex-col items-center text-center">
-                <div
-                  style={{
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '52px',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    color: '#ffd700',
-                    textShadow: '0 0 20px rgba(255,215,0,0.65)',
-                    marginBottom: '6px',
-                  }}
-                >
-                  01
-                </div>
-
-                <div className="w-14 h-14 rounded-full bg-[#ffd700]/20 border-2 border-[#ffd700] flex items-center justify-center text-[#ffd700] mb-3 shadow-[0_0_18px_rgba(255,215,0,0.5)]">
-                  <Crown size={28} />
-                </div>
-                <span className="text-[11px] font-black tracking-widest text-[#ffd700] uppercase font-mono">
-                  GRAND CHAMPION • 1ST PLACE
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                  {edition.champion?.name || 'Team I – Jetha ke Jabaz'}
-                </h3>
-
-                {/* Amount Spent & Items Bought */}
-                <div className="mt-4 pt-3 border-t border-[#604d22] w-full flex flex-col items-center gap-1.5 font-mono text-xs">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ffd700]/15 text-[#ffd700] border border-[#ffd700]/40 font-bold">
-                    <Package size={13} /> {champStats.itemsBought} Lots Won • {formatCurrency(champStats.amountSpent)} Spent
-                  </div>
-                  <span className="text-[11px] text-[#d4af37]">
-                    Remaining Budget: <strong className="text-white">{formatCurrency(edition.champion?.budget ?? 53000000)}</strong>
-                  </span>
-                </div>
-
-                {edition.champion_team_id && (
-                  <Link
-                    to={`/teams/${edition.champion_team_id}`}
-                    className="mt-4 text-xs font-bold text-[#ffd700] hover:underline inline-flex items-center gap-1 font-mono uppercase"
+            {/* 3 Step Compact Podium Cards */}
+            <div className="flex flex-col sm:flex-row items-end justify-center gap-4 lg:gap-6 pt-2">
+              {/* 2nd Place: Runner-up (Left, Medium) */}
+              <div
+                className="gcl-podium-silver p-4 flex flex-col items-center text-center w-full sm:w-[220px] md:w-[240px] transition-all"
+                style={{ minHeight: '225px' }}
+              >
+                <div className="w-full flex flex-col items-center flex-1 justify-center">
+                  <MetallicTrophyCup type="silver" size={48} />
+                  <span
+                    className="text-xl font-black text-slate-300 mt-1 leading-none"
+                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
                   >
-                    View Team Profile <ExternalLink size={12} />
-                  </Link>
-                )}
-              </div>
-
-              {/* 2nd Place - SILVER (02) */}
-              <div className="order-2 md:order-1 panel silver relative overflow-hidden p-6 sm:p-8 flex flex-col items-center text-center">
-                <div
-                  style={{
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '44px',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    color: '#ffffff',
-                    textShadow: '0 0 16px rgba(255,255,255,0.6)',
-                    marginBottom: '6px',
-                  }}
-                >
-                  02
-                </div>
-
-                <div className="w-12 h-12 rounded-full bg-slate-200/20 border-2 border-slate-300 flex items-center justify-center text-white mb-3 shadow-[0_0_14px_rgba(255,255,255,0.35)]">
-                  <Medal size={26} />
-                </div>
-                <span className="text-[11px] font-bold tracking-widest text-slate-300 uppercase font-mono">
-                  RUNNER UP • 2ND PLACE
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-100 mt-1">
-                  {edition.runnerUp?.name || 'Team N – TEAM SSVA'}
-                </h3>
-
-                {/* Amount Spent & Items Bought */}
-                <div className="mt-4 pt-3 border-t border-[#3e4450] w-full flex flex-col items-center gap-1.5 font-mono text-xs">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-200 border border-slate-600">
-                    <Package size={13} /> {runnerStats.itemsBought} Lots Won • {formatCurrency(runnerStats.amountSpent)} Spent
-                  </div>
-                  <span className="text-[11px] text-slate-400">
-                    Remaining Budget: <strong className="text-white">{formatCurrency(edition.runnerUp?.budget ?? 16000000)}</strong>
+                    2
                   </span>
+                  <h3
+                    className="text-sm sm:text-base font-bold text-white mt-1 line-clamp-1"
+                    style={{ fontFamily: "'Barlow Semi Condensed', 'Rajdhani', sans-serif", fontWeight: 700 }}
+                  >
+                    {edition.runnerUp?.name || '—'}
+                  </h3>
+                  <p className="text-xs text-[#8a8a93] mt-0.5 font-sans">Runner-up</p>
+                  <p className="text-xs text-[#8a8a93] font-mono mt-0.5">
+                    {runnerStats.itemsBought} lots · {formatCurrency(runnerStats.amountSpent)}
+                  </p>
                 </div>
-
                 {edition.runner_up_team_id && (
                   <Link
                     to={`/teams/${edition.runner_up_team_id}`}
-                    className="mt-4 text-xs font-bold text-slate-300 hover:text-white hover:underline inline-flex items-center gap-1 font-mono uppercase"
+                    className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs"
                   >
-                    View Team Profile <ExternalLink size={12} />
+                    View profile
                   </Link>
                 )}
               </div>
 
-              {/* 3rd Place - BRONZE / BROWN (03) */}
-              <div className="order-3 panel bronze relative overflow-hidden p-6 sm:p-8 flex flex-col items-center text-center">
-                <div
-                  style={{
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '44px',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    color: '#ea580c',
-                    textShadow: '0 0 16px rgba(234,88,12,0.6)',
-                    marginBottom: '6px',
-                  }}
-                >
-                  03
-                </div>
-
-                <div className="w-12 h-12 rounded-full bg-amber-900/30 border-2 border-[#ea580c] flex items-center justify-center text-[#f97316] mb-3 shadow-[0_0_14px_rgba(234,88,12,0.4)]">
-                  <Award size={26} />
-                </div>
-                <span className="text-[11px] font-bold tracking-widest text-[#f97316] uppercase font-mono">
-                  THIRD PLACE • 3RD PLACE
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-100 mt-1">
-                  {edition.thirdPlace?.name || 'Team M – Script Squad'}
-                </h3>
-
-                {/* Amount Spent & Items Bought */}
-                <div className="mt-4 pt-3 border-t border-[#4a2e1c] w-full flex flex-col items-center gap-1.5 font-mono text-xs">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/40 text-amber-300 border border-amber-800/60">
-                    <Package size={13} /> {thirdStats.itemsBought} Lots Won • {formatCurrency(thirdStats.amountSpent)} Spent
-                  </div>
-                  <span className="text-[11px] text-[#f97316]">
-                    Remaining Budget: <strong className="text-white">{formatCurrency(edition.thirdPlace?.budget ?? 53000000)}</strong>
+              {/* 1st Place: Grand Champion (Center, Tallest, Glowing Gold Border) */}
+              <div
+                className="gcl-podium-gold p-4 sm:p-5 flex flex-col items-center text-center w-full sm:w-[260px] md:w-[280px] transition-all order-first sm:order-none"
+                style={{ minHeight: '265px' }}
+              >
+                <div className="w-full flex flex-col items-center flex-1 justify-center">
+                  <MetallicTrophyCup type="gold" size={64} />
+                  <span
+                    className="text-2xl sm:text-3xl font-black text-[#fbbf24] mt-1 leading-none"
+                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                  >
+                    1
                   </span>
+                  <h3
+                    className="text-base sm:text-lg font-black text-white mt-1 line-clamp-1 tracking-tight"
+                    style={{ fontFamily: "'Barlow Semi Condensed', 'Rajdhani', sans-serif", fontWeight: 700 }}
+                  >
+                    {edition.champion?.name || '—'}
+                  </h3>
+                  <p className="text-xs text-[#fbbf24] font-medium mt-0.5 font-sans">
+                    Grand champion
+                  </p>
+                  <p className="text-xs text-[#a1a1aa] font-mono mt-0.5">
+                    {champStats.itemsBought} lots · {formatCurrency(champStats.amountSpent)}
+                  </p>
                 </div>
+                {edition.champion_team_id && (
+                  <Link
+                    to={`/teams/${edition.champion_team_id}`}
+                    className="mt-3 gcl-btn-outline-red px-4 py-1 text-xs"
+                  >
+                    View profile
+                  </Link>
+                )}
+              </div>
 
+              {/* 3rd Place: Third Place (Right, Smallest, Glowing Bronze Border) */}
+              <div
+                className="gcl-podium-bronze p-4 flex flex-col items-center text-center w-full sm:w-[200px] md:w-[220px] transition-all"
+                style={{ minHeight: '210px' }}
+              >
+                <div className="w-full flex flex-col items-center flex-1 justify-center">
+                  <MetallicTrophyCup type="bronze" size={44} />
+                  <span
+                    className="text-lg font-black text-[#f97316] mt-1 leading-none"
+                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                  >
+                    3
+                  </span>
+                  <h3
+                    className="text-xs sm:text-sm font-bold text-white mt-1 line-clamp-1"
+                    style={{ fontFamily: "'Barlow Semi Condensed', 'Rajdhani', sans-serif", fontWeight: 700 }}
+                  >
+                    {edition.thirdPlace?.name || '—'}
+                  </h3>
+                  <p className="text-xs text-[#8a8a93] mt-0.5 font-sans">Third place</p>
+                  <p className="text-xs text-[#8a8a93] font-mono mt-0.5">
+                    {thirdStats.itemsBought} lots · {formatCurrency(thirdStats.amountSpent)}
+                  </p>
+                </div>
                 {edition.third_place_team_id && (
                   <Link
                     to={`/teams/${edition.third_place_team_id}`}
-                    className="mt-4 text-xs font-bold text-[#f97316] hover:underline inline-flex items-center gap-1 font-mono uppercase"
+                    className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs"
                   >
-                    View Team Profile <ExternalLink size={12} />
+                    View profile
                   </Link>
                 )}
               </div>
             </div>
-          </section>
+          </div>
         )}
 
-        {/* COMPUTED REAL STATISTICS & BREAKDOWN (Team View Background Combo) */}
+        {/* COMPUTED REAL STATISTICS & BREAKDOWN */}
         {stats && edition?.is_archived && (
-          <section className="panel red p-6 sm:p-8 space-y-6">
+          <section className="gcl-card-crimson p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp size={20} className="text-[#ff4d5a]" />
@@ -393,7 +370,7 @@ export default function EditionDetail() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="panel p-5 text-center" style={{ background: '#18181c', borderColor: '#25252b' }}>
+              <div className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-5 text-center">
                 <div className="text-3xl sm:text-4xl font-black text-white font-mono">
                   {stats.teamsCount}
                 </div>
@@ -402,7 +379,7 @@ export default function EditionDetail() {
                 </div>
               </div>
 
-              <div className="panel p-5 text-center" style={{ background: '#18181c', borderColor: '#25252b' }}>
+              <div className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-5 text-center">
                 <div className="text-3xl sm:text-4xl font-black text-[#ff4d5a] font-mono">
                   {stats.participantsCount}
                 </div>
@@ -411,7 +388,7 @@ export default function EditionDetail() {
                 </div>
               </div>
 
-              <div className="panel p-5 text-center" style={{ background: '#18181c', borderColor: '#25252b' }}>
+              <div className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-5 text-center">
                 <div className="text-3xl sm:text-4xl font-black text-[#f4f4f6] font-mono">
                   {stats.roundsPlayed}
                 </div>
@@ -420,7 +397,7 @@ export default function EditionDetail() {
                 </div>
               </div>
 
-              <div className="panel p-5 text-center" style={{ background: '#18181c', borderColor: '#25252b' }}>
+              <div className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-5 text-center">
                 <div className="text-3xl sm:text-4xl font-black text-[#3fe085] font-mono">
                   {stats.totalCertificates}
                 </div>
@@ -440,7 +417,7 @@ export default function EditionDetail() {
                   {stats.certificateBreakdown.map((item) => (
                     <div
                       key={item.type}
-                      className="px-3.5 py-1.5 rounded-lg bg-[#18181c] border border-[#26262b] flex items-center gap-2 text-xs font-mono"
+                      className="px-3.5 py-1.5 rounded-lg bg-[#0e0e14] border border-[#22222a] flex items-center gap-2 text-xs font-mono"
                     >
                       <span className="font-bold text-[#ff4d5a]">{item.count}</span>
                       <span className="text-[#a1a1aa] capitalize">
@@ -455,7 +432,7 @@ export default function EditionDetail() {
         )}
 
         {/* EVENT TIMELINE */}
-        <section className="panel red p-6 sm:p-8 space-y-6">
+        <section className="gcl-card-crimson p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2">
             <Clock size={20} className="text-[#ff4d5a]" />
             <h2 className="text-xl font-black text-white uppercase tracking-wide">
@@ -471,7 +448,10 @@ export default function EditionDetail() {
               { step: '04', title: 'Round 3 (50L)', desc: 'System Design & Architecture' },
               { step: '05', title: 'Finale & Podium', desc: 'Sudden Death & Champions' },
             ].map((st, i) => (
-              <div key={i} className="panel p-4 space-y-1.5" style={{ background: '#18181c', borderColor: '#25252b' }}>
+              <div
+                key={i}
+                className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-4 space-y-1.5"
+              >
                 <span className="text-xs font-mono text-[#ff4d5a] font-bold tracking-wider">
                   STAGE {st.step}
                 </span>
@@ -482,196 +462,206 @@ export default function EditionDetail() {
           </div>
         </section>
 
-        {/* FULL FINAL STANDINGS TABLE (Exact LiveTeamStatus Table Style) */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Trophy size={20} className="text-[#ffd700]" />
-                <h2 className="text-xl font-black text-white uppercase tracking-wide">
-                  Official Final Standings
-                </h2>
-              </div>
-              <p className="text-xs text-[#9a9aa3] mt-0.5 font-sans">
-                Official final competition standings across all rounds
-              </p>
-            </div>
-            <span className="text-xs font-mono text-[#ff4d5a] font-bold px-3 py-1 rounded bg-[rgba(232,33,46,0.14)] border border-[rgba(232,33,46,0.4)] w-fit">
-              {teams.length} TEAMS REGISTERED
+        {/* FULL FINAL STANDINGS TABLE (MATCHING USER SCREENSHOT) */}
+        <section className="gcl-card-crimson p-5 sm:p-7 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2
+              className="text-lg font-bold text-white tracking-wide"
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+            >
+              Final standings
+            </h2>
+            <span className="text-xs text-[#8a8a93] font-sans">
+              Select a team to open its profile
             </span>
           </div>
 
-          <div
-            className="panel red"
-            style={{
-              padding: '10px 14px',
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '14px',
-            }}
-          >
-            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', zIndex: 10 }}>
-              <table
-                style={{
-                  width: '100%',
-                  minWidth: '600px',
-                  borderCollapse: 'separate',
-                  borderSpacing: '0 2px',
-                  textAlign: 'left',
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      height: '34px',
-                      background: '#1a1a1f',
-                      borderRadius: '6px',
-                      color: '#9a9aa3',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      letterSpacing: '0.8px',
-                      fontFamily: "'Rajdhani', sans-serif",
-                    }}
-                  >
-                    <th style={{ width: '60px', textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>#</th>
-                    <th style={{ textAlign: 'left', padding: '0 14px' }}>TEAM NAME</th>
-                    <th style={{ width: '130px', textAlign: 'center', padding: '0 12px' }}>ITEMS WON</th>
-                    <th style={{ width: '180px', textAlign: 'right', padding: '0 14px' }}>TOTAL SPENT</th>
-                    <th style={{ width: '180px', textAlign: 'right', padding: '0 14px' }}>REMAINING</th>
-                    <th style={{ width: '100px', textAlign: 'center', padding: '0 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>PROFILE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedStandings.map((t, idx) => {
-                    const stats = getTeamStats(t.id);
-                    const isEven = idx % 2 === 0;
-                    const rowBg = isEven ? '#18181d' : '#121216';
+          <div className="w-full overflow-x-auto">
+            <table
+              style={{
+                width: '100%',
+                minWidth: '680px',
+                borderCollapse: 'separate',
+                borderSpacing: '0 6px',
+                textAlign: 'left',
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    height: '32px',
+                    color: '#8a8a93',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  <th style={{ width: '48px', textAlign: 'center', padding: '0 8px' }}>#</th>
+                  <th style={{ textAlign: 'left', padding: '0 12px' }}>Team</th>
+                  <th style={{ width: '100px', textAlign: 'left', padding: '0 12px' }}>Lots</th>
+                  <th style={{ width: '260px', textAlign: 'left', padding: '0 12px' }}>Spent</th>
+                  <th style={{ width: '120px', textAlign: 'right', padding: '0 16px' }}>Remaining</th>
+                  <th style={{ width: '90px', textAlign: 'center', padding: '0 8px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedStandings.map((t, idx) => {
+                  const teamStat = getTeamStats(t.id);
+                  const isWinner = idx === 0;
+                  const remainingBudget = t.budget ?? 150000000;
+                  const totalBudget = (teamStat.amountSpent + remainingBudget) || 150000000;
+                  const pct = Math.min(100, Math.max(3, Math.round((teamStat.amountSpent / totalBudget) * 100)));
 
-                    const is1st = t.id === edition?.champion_team_id;
-                    const is2nd = t.id === edition?.runner_up_team_id;
-                    const is3rd = t.id === edition?.third_place_team_id;
-
-                    return (
-                      <tr
-                        key={t.id}
-                        style={{
-                          height: '36px',
-                          background: rowBg,
-                          transition: 'background 0.2s ease',
-                        }}
-                      >
-                        {/* Rank Badge */}
-                        <td
-                          style={{
-                            textAlign: 'center',
-                            padding: '0 8px',
-                            borderTopLeftRadius: '6px',
-                            borderBottomLeftRadius: '6px',
-                          }}
-                        >
-                          {is1st ? (
-                            <span
-                              className="num"
-                              style={{
-                                background: 'rgba(255, 215, 0, 0.2)',
-                                border: '1px solid #ffd700',
-                                color: '#ffd700',
-                                fontWeight: 800,
-                                padding: '2px 8px',
-                              }}
-                            >
-                              01
-                            </span>
-                          ) : is2nd ? (
-                            <span
-                              className="num"
-                              style={{
-                                background: 'rgba(203, 213, 225, 0.2)',
-                                border: '1px solid #cbd5e1',
-                                color: '#ffffff',
-                                fontWeight: 800,
-                                padding: '2px 8px',
-                              }}
-                            >
-                              02
-                            </span>
-                          ) : is3rd ? (
-                            <span
-                              className="num"
-                              style={{
-                                background: 'rgba(234, 88, 12, 0.2)',
-                                border: '1px solid #ea580c',
-                                color: '#f97316',
-                                fontWeight: 800,
-                                padding: '2px 8px',
-                              }}
-                            >
-                              03
-                            </span>
-                          ) : (
-                            <span className="num" style={{ color: '#9a9aa3', padding: '2px 6px' }}>
-                              {String(idx + 1).padStart(2, '0')}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Team Name */}
-                        <td style={{ padding: '0 14px' }}>
-                          <Link
-                            to={`/teams/${t.id}`}
-                            className="font-bold text-white hover:text-[#ff4d5a] transition-colors"
-                            style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '16px', letterSpacing: '0.02em' }}
-                          >
-                            {t.name}
-                          </Link>
-                        </td>
-
-                        {/* Items Bought */}
-                        <td style={{ textAlign: 'center', padding: '0 12px' }}>
-                          <span
-                            className="num"
+                  return (
+                    <tr
+                      key={t.id}
+                      className={isWinner ? 'gcl-standings-row-winner' : 'gcl-standings-row'}
+                      style={{ height: '44px' }}
+                    >
+                      {/* Rank # */}
+                      <td style={{ textAlign: 'center', padding: '0 8px' }}>
+                        {isWinner ? (
+                          <div
                             style={{
-                              padding: '2px 10px',
-                              fontWeight: 700,
-                              color: '#f4f4f6',
-                              fontSize: '14px',
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '6px',
+                              border: '1px solid #ff2a38',
+                              color: '#ff4d5a',
+                              background: 'rgba(255, 42, 61, 0.12)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: '13px',
+                              fontFamily: "'Rajdhani', sans-serif",
+                              boxShadow: '0 0 8px rgba(255, 42, 61, 0.35)',
                             }}
                           >
-                            {stats.itemsBought} Lots
-                          </span>
-                        </td>
-
-                        {/* Amount Spent */}
-                        <td style={{ textAlign: 'right', padding: '0 14px', fontWeight: 700, color: '#ff4d5a', fontSize: '15px' }}>
-                          {formatCurrency(stats.amountSpent)}
-                        </td>
-
-                        {/* Remaining Budget */}
-                        <td style={{ textAlign: 'right', padding: '0 14px', fontWeight: 700, color: '#3fe085', fontSize: '15px' }}>
-                          {formatCurrency(t.budget)}
-                        </td>
-
-                        {/* Profile Button */}
-                        <td style={{ textAlign: 'center', padding: '0 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>
-                          <Link
-                            to={`/teams/${t.id}`}
-                            className="px-2.5 py-1 rounded bg-[#2a2a32] hover:bg-[#383842] text-[12px] text-[#ff4d5a] border border-[rgba(255,255,255,0.09)] transition-colors font-mono inline-flex items-center gap-1 font-bold"
+                            1
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '6px',
+                              border: '1px solid #262630',
+                              color: '#a0a0ab',
+                              background: '#16161c',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '13px',
+                              fontFamily: "'Rajdhani', sans-serif",
+                            }}
                           >
-                            View <ChevronRight size={12} />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {idx + 1}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Team Name — White font, NEVER browser blue */}
+                      <td style={{ padding: '0 12px' }}>
+                        <Link
+                          to={`/teams/${t.id}`}
+                          className="gcl-team-name-link font-bold hover:text-[#ff6b78] transition-colors"
+                          style={{
+                            color: '#f5f5f7',
+                            fontFamily: "'Barlow Semi Condensed', 'Rajdhani', sans-serif",
+                            fontWeight: 600,
+                            fontSize: '15px',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          {t.name}
+                        </Link>
+                      </td>
+
+                      {/* Lots Won */}
+                      <td style={{ padding: '0 12px', fontSize: '13px', color: '#f4f4f6', fontFamily: "'Inter', sans-serif" }}>
+                        {teamStat.itemsBought} lots
+                      </td>
+
+                      {/* Spent with Progress Bar */}
+                      <td style={{ padding: '0 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div
+                            style={{
+                              flex: 1,
+                              maxWidth: '140px',
+                              height: '5px',
+                              background: '#1c1c24',
+                              borderRadius: '9999px',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${pct}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #ff2a38, #e8212e)',
+                                borderRadius: '9999px',
+                                boxShadow: '0 0 8px rgba(232, 33, 46, 0.7)',
+                              }}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              color: '#ff4d5a',
+                              fontWeight: 700,
+                              fontSize: '13px',
+                              fontFamily: "'Rajdhani', monospace, sans-serif",
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {formatCurrency(teamStat.amountSpent)}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Remaining Budget */}
+                      <td style={{ textAlign: 'right', padding: '0 16px' }}>
+                        <span
+                          style={{
+                            color: '#3fe085',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            fontFamily: "'Rajdhani', monospace, sans-serif",
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {formatCurrency(remainingBudget)}
+                        </span>
+                      </td>
+
+                      {/* Profile Button */}
+                      <td style={{ textAlign: 'center', padding: '0 8px' }}>
+                        <Link
+                          to={`/teams/${t.id}`}
+                          className="gcl-btn-outline-red"
+                          style={{
+                            padding: '4px 14px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            borderRadius: '6px',
+                          }}
+                        >
+                          Profile
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
 
         {/* SPONSORS & PARTNERS */}
         {sponsors.length > 0 && (
-          <section className="panel red p-6 sm:p-8 space-y-6">
+          <section className="gcl-card-crimson p-6 sm:p-8 space-y-6">
             <div className="flex items-center gap-2">
               <Sparkles size={20} className="text-[#ffd700]" />
               <h2 className="text-xl font-black text-white uppercase tracking-wide">
@@ -689,8 +679,7 @@ export default function EditionDetail() {
                     {sponsorList.map((sp) => (
                       <div
                         key={sp.id}
-                        className="panel p-4 flex flex-col items-center justify-center text-center space-y-2"
-                        style={{ background: '#18181c', borderColor: '#25252b' }}
+                        className="bg-[#0e0e14] border border-[#22222a] hover:border-[#ff2a38]/40 transition-all rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2"
                       >
                         {sp.logo_url ? (
                           <img

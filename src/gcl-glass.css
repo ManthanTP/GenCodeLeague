@@ -681,3 +681,244 @@
 .gcl-table-zebra-odd {
   background: #131317;
 }
+
+/* === EXACT REFERENCE STYLES FROM USER SCREENSHOTS === */
+.card,
+.gcl-card-crimson {
+  border-radius: 16px !important;
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #ff2a3d 0%, #4a0e15 22%, #2a0a10 60%, #ff2a3d 100%) border-box !important;
+  box-shadow: 0 0 26px rgba(255, 42, 61, 0.22) !important;
+  position: relative;
+}
+
+/* Diagonal red sheen modifier (opt-in only for highlighted cards) */
+.card--sheen {
+  position: relative;
+  overflow: hidden;
+}
+.card--sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 0 12%, rgba(255, 42, 61, 0.11) 12.5%, transparent 30%);
+  pointer-events: none;
+  z-index: 1;
+}
+.card--sheen > * {
+  position: relative;
+  z-index: 2;
+}
+
+.card--sheen-strong::before {
+  background: linear-gradient(115deg, transparent 0 12%, rgba(255, 42, 61, 0.16) 12.5%, transparent 30%);
+}
+
+/* Corner glow effect */
+.gcl-card-crimson::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 130px;
+  height: 130px;
+  background: radial-gradient(circle at 100% 0%, rgba(255, 42, 61, 0.2), transparent 70%);
+  pointer-events: none;
+  border-top-right-radius: 16px;
+  z-index: 1;
+}
+
+/* Standings table team link font — NEVER default browser blue */
+.gcl-team-name-link {
+  color: #f5f5f7 !important;
+  font-family: 'Barlow Semi Condensed', 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-decoration: none !important;
+  transition: color 0.18s ease !important;
+  display: inline-block;
+}
+.gcl-team-name-link:hover {
+  color: #ff6b78 !important;
+  text-decoration: none !important;
+}
+
+/* Standings Table Rows */
+.gcl-standings-row td {
+  background: #0d0d12;
+  border-top: 1px solid #1a1a24;
+  border-bottom: 1px solid #1a1a24;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  transition: background 0.18s ease;
+}
+.gcl-standings-row:hover td {
+  background: #14141c;
+}
+.gcl-standings-row td:first-child {
+  border-left: 1px solid #1a1a24;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.gcl-standings-row td:last-child {
+  border-right: 1px solid #1a1a24;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Standings Winner Row #1 Highlight */
+.gcl-standings-row-winner td {
+  background: #171015 !important;
+  border-top: 1px solid #ff2a38 !important;
+  border-bottom: 1px solid #ff2a38 !important;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  box-shadow: 0 0 16px rgba(255, 42, 61, 0.15);
+}
+.gcl-standings-row-winner td:first-child {
+  border-left: 1px solid #ff2a38 !important;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.gcl-standings-row-winner td:last-child {
+  border-right: 1px solid #ff2a38 !important;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.gcl-card-subtle {
+  background: #0e0e14;
+  border: 1px solid rgba(232, 33, 46, 0.35);
+  border-radius: 12px;
+}
+
+.gcl-btn-outline-red {
+  border: 1px solid #e8212e !important;
+  color: #ff4d5a !important;
+  background: rgba(232, 33, 46, 0.06) !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  font-family: 'Rajdhani', monospace, sans-serif !important;
+  transition: all 0.18s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.gcl-btn-outline-red:hover {
+  background: #e8212e !important;
+  color: #ffffff !important;
+  border-color: #ff2a38 !important;
+  box-shadow: 0 0 14px rgba(232, 33, 46, 0.6) !important;
+}
+
+.gcl-badge-square-red {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e8212e;
+  color: #ff4d5a;
+  background: rgba(232, 33, 46, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.gcl-podium-gold {
+  background: linear-gradient(180deg, #17140d 0%, #0d0c0a 100%) !important;
+  border: 1.5px solid #eab308 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 26px rgba(234, 179, 8, 0.42), inset 0 0 14px rgba(234, 179, 8, 0.08) !important;
+  position: relative;
+}
+
+.gcl-podium-silver {
+  background: linear-gradient(180deg, #12141a 0%, #0b0c10 100%) !important;
+  border: 1.5px solid rgba(200, 215, 235, 0.65) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 22px rgba(185, 205, 235, 0.32), inset 0 0 12px rgba(185, 205, 235, 0.05) !important;
+  position: relative;
+}
+
+.gcl-podium-bronze {
+  background: linear-gradient(180deg, #16110c 0%, #0d0b09 100%) !important;
+  border: 1.5px solid #d97706 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 22px rgba(217, 119, 6, 0.32), inset 0 0 12px rgba(217, 119, 6, 0.05) !important;
+  position: relative;
+}
+
+.gcl-card-gold-podium {
+  background: #0e0e14 !important;
+  border: 2px solid #eab308 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 24px rgba(234, 179, 8, 0.42), inset 0 0 12px rgba(234, 179, 8, 0.06) !important;
+}
+
+.gcl-badge-gold-champion {
+  border: 1.5px solid #eab308;
+  background: #141208;
+  color: #eab308;
+  border-radius: 12px;
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.25);
+}
+
+.gcl-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #181820;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gcl-progress-fill-red {
+  height: 100%;
+  background: linear-gradient(90deg, #ff2a38, #e8212e);
+  border-radius: 9999px;
+  box-shadow: 0 0 10px rgba(232, 33, 46, 0.85);
+  transition: width 0.4s ease;
+}
+
+.gcl-table-progress-track {
+  width: 140px;
+  height: 6px;
+  background: #181820;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .gcl-table-progress-track {
+    width: 180px;
+  }
+}
+
+.gcl-two-col-layout {
+  display: grid;
+  grid-template-columns: 100%;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .gcl-two-col-layout {
+    grid-template-columns: minmax(0, 1fr) 350px;
+  }
+}
+
+

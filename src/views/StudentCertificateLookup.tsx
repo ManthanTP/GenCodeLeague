@@ -147,9 +147,9 @@ export default function StudentCertificateLookup() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         {/* Cyber Hero Banner */}
-        <div className="panel red relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
+        <div className="gcl-card-crimson relative overflow-hidden rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center">
           <div className="relative z-10 max-w-2xl mx-auto space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.15)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider shadow-[0_0_12px_rgba(232,33,46,0.25)] uppercase">
               <Award size={15} /> PUBLIC CREDENTIAL PORTAL
@@ -167,10 +167,10 @@ export default function StudentCertificateLookup() {
           </div>
         </div>
 
-        {/* Search Bar & Filter Form with Red Opposite Corner Glow (.panel.red) */}
+        {/* Search Bar & Filter Form */}
         <form
           onSubmit={handleSearch}
-          className="panel red p-6 sm:p-8 max-w-3xl mx-auto space-y-4"
+          className="gcl-card-crimson p-6 sm:p-8 max-w-3xl mx-auto space-y-4"
         >
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             <div className="relative flex-1">
