@@ -4,20 +4,15 @@ import {
   Bell,
   Pin,
   Calendar,
-  Sparkles,
   Search,
-  ShieldAlert,
-  ArrowRight,
   Radio,
-  Clock,
-  Layers,
-  Info,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 import { useAuth } from '../hooks/useAuth';
 import type { Announcement } from '../types/database';
+import './AnnouncementsView.css';
 
 const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
   {
@@ -96,18 +91,22 @@ export default function AnnouncementsView() {
     );
   }, [announcements, search, filterType]);
 
+  const pinnedCount = useMemo(() => {
+    return announcements.filter((a) => a.is_pinned).length;
+  }, [announcements]);
+
   return (
     <div
-      className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white pb-20"
+      className="gcl-live-page min-h-screen text-[#f4f4f6] selection:bg-[var(--accent-red)] selection:text-white pb-20"
       style={{ fontFamily: "'Rajdhani', sans-serif" }}
     >
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="announcements-page-wrap">
         {/* Admin Quick Jump Link if logged in */}
         {isAdmin && (
-          <div className="flex justify-end">
+          <div className="flex justify-end mb-4">
             <button
               onClick={() => navigate('/123456789/GCL-0321/admin?tab=updates')}
               className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#222228] text-white border border-[#2e2e36] hover:border-[var(--accent-red)] font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm font-mono"
@@ -118,112 +117,113 @@ export default function AnnouncementsView() {
           </div>
         )}
 
-        {/* Hero Section */}
-        <div className="gcl-card-crimson p-6 sm:p-8 text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 text-[var(--accent-red)] text-xs font-mono font-bold tracking-wider shadow-[0_0_15px_rgba(232,33,46,0.2)]">
-            <Radio size={14} className="animate-pulse" /> OFFICIAL LEAGUE BROADCASTS
+        {/* HERO CARD: full width of content column (max-width 1120px), 34px vertical padding, subtle diagonal red sheen */}
+        <div className="announcements-hero-card">
+          <div className="announcements-hero-content">
+            <div className="hero-tag-pill">
+              <span className="hero-pulse-dot" />
+              <span>OFFICIAL LEAGUE BROADCASTS</span>
+            </div>
+            <h1 className="hero-headline">
+              Announcements & Bulletins
+            </h1>
+            <p className="hero-subline">
+              Real-time stage updates, schedule releases, tournament guidelines, and administrative bulletins.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-wide uppercase font-['Rajdhani',sans-serif]">
-            Announcements & Bulletins
-          </h1>
-          <p className="text-sm text-[#a1a1aa] font-medium font-sans">
-            Real-time stage updates, schedule releases, tournament guidelines, and administrative bulletins.
-          </p>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
-          <div className="relative w-full sm:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717a]" />
-            <input
-              type="text"
-              placeholder="Search announcements..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="gcl-input w-full pl-9 py-2 text-xs font-mono"
-            />
-          </div>
+        {/* SEARCH FIELD: one wide rounded field (max-width 640px, 50px tall, 14px radius, dark fill, 1px border), centered */}
+        <div className="gcl-search-wrapper">
+          <input
+            type="text"
+            placeholder="Search announcements..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="gcl-search-input"
+            aria-label="Search announcements"
+          />
+          <Search size={18} className="gcl-search-icon" />
+        </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setFilterType('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                filterType === 'all'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
-            >
-              All Bulletins ({announcements.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterType('pinned')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                filterType === 'pinned'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_0_12px_rgba(232,33,46,0.3)]'
-                  : 'bg-[#18181c] text-[#a1a1aa] hover:text-white border border-[#26262b]'
-              }`}
-            >
-              Pinned Only
-            </button>
-          </div>
+        {/* CHIPS: pill-shaped (7px 16px padding), dark fill with subtle border, active red */}
+        <div className="chips-row">
+          <button
+            type="button"
+            onClick={() => setFilterType('all')}
+            className={`gcl-chip-btn ${filterType === 'all' ? 'active' : ''}`}
+          >
+            <span>All Bulletins</span>
+            <span className="gcl-chip-count">({announcements.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('pinned')}
+            className={`gcl-chip-btn ${filterType === 'pinned' ? 'active' : ''}`}
+          >
+            <span>Pinned Only</span>
+            <span className="gcl-chip-count">({pinnedCount})</span>
+          </button>
         </div>
 
         {/* List of Announcements */}
         {filtered.length === 0 ? (
-          <div className="py-20 text-center bg-[#131316] rounded-2xl border border-[#26262b] p-8 shadow-xl">
+          <div className="gcl-empty-box">
             <Bell size={48} className="text-[#52525b] mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white mb-1">No Announcements Found</h3>
-            <p className="text-xs text-[#a1a1aa] mt-1 max-w-md mx-auto">
+            <h3 className="gcl-empty-title">No Announcements Found</h3>
+            <p className="gcl-empty-desc">
               No bulletins match "{search}". Check back soon for official updates.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="bulletins-list">
             {filtered.map((ann) => (
               <div
                 key={ann.id}
-                className={`p-6 rounded-2xl border backdrop-blur-md transition-all shadow-xl space-y-3 ${
-                  ann.is_pinned
-                    ? 'bg-[#16161b] border-[var(--accent-red)]/60 shadow-[0_0_24px_rgba(232,33,46,0.18)]'
-                    : 'bg-[#131316] border-[#26262b] hover:border-[#383842]'
-                }`}
+                className={`announcement-card ${ann.is_pinned ? 'announcement-card-pinned' : ''}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1.5">
-                    {ann.is_pinned && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[var(--accent-red)] text-white shadow-sm uppercase tracking-wider">
+                {/* Top row: tag on the left, date on the right in monospace style with calendar icon */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    {ann.is_pinned ? (
+                      <span className="tag-pinned">
                         <Pin size={11} className="rotate-45" /> PINNED BULLETIN
                       </span>
+                    ) : (
+                      <span className="tag-neutral">
+                        OFFICIAL BULLETIN
+                      </span>
                     )}
-                    <h3 className="text-xl font-extrabold text-white font-['Rajdhani',sans-serif] uppercase tracking-wide">
-                      {ann.title}
-                    </h3>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-mono text-[#71717a] flex items-center gap-1.5">
-                      <Calendar size={13} />
-                      {new Date(ann.published_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-sm text-[#d4d4d8] whitespace-pre-line leading-relaxed font-sans border-t border-[#202026] pt-3">
-                  {ann.body}
-                </div>
-
-                <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-[#71717a]">
-                  <span className="flex items-center gap-1">
-                    <Info size={12} className="text-[var(--accent-red)]" />
-                    Issued by: <strong className="text-white">{ann.created_by || 'League Arbiter'}</strong>
+                  <span className="text-xs font-mono text-[#8e8e9a] flex items-center gap-1.5">
+                    <Calendar size={13} />
+                    {new Date(ann.published_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
                   </span>
-                  <span className="text-emerald-400">● Verified Dispatch</span>
+                </div>
+
+                {/* Title in site's heading font, about 24px, bold, white */}
+                <h3 className="bulletin-title">
+                  {ann.title}
+                </h3>
+
+                {/* Body text in soft light grey (#c9c9d1), line-height 1.55, max ~80ch */}
+                <p className="bulletin-body">
+                  {ann.body}
+                </p>
+
+                {/* Footer row: thin dark divider above it, Issued by on left, Verified Dispatch on right in success green */}
+                <div className="bulletin-footer">
+                  <span className="bulletin-issuer">
+                    Issued by: <strong className="bulletin-issuer-name">{ann.created_by || 'League Arbiter'}</strong>
+                  </span>
+                  <span className="bulletin-verified">
+                    <span className="bulletin-verified-dot" /> Verified Dispatch
+                  </span>
                 </div>
               </div>
             ))}
