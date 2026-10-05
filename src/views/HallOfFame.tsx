@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Trophy,
@@ -14,6 +14,7 @@ import {
 } from '../utils/archiveUtils';
 import { formatCurrency } from '../utils/formatters';
 import type { Edition, Team, TeamItem } from '../types/database';
+import './HallOfFame.css';
 
 interface ArchivedEditionWithPodium extends Edition {
   champion?: Team | null;
@@ -107,6 +108,109 @@ export default function HallOfFame() {
   const runnerStats = getTeamStats(activeEdition, activeEdition?.runner_up_team_id);
   const thirdStats = getTeamStats(activeEdition, activeEdition?.third_place_team_id);
 
+  // Compute all-time records from data already loaded in the page
+  const allTimeRecords = useMemo(() => {
+    if (!editions || editions.length === 0) {
+      return {
+        champion: '—',
+        championSub: 'All-time title leader',
+        peakSpend: '—',
+        peakSpendSub: '0 lots',
+        priciestLot: '—',
+        priciestLotSub: '—',
+        mostLots: '—',
+        mostLotsSub: 'Single edition record',
+      };
+    }
+
+    const allItems: TeamItem[] = [];
+    const teamMap = new Map<string, string>();
+    const editionMap = new Map<string, string>();
+
+    editions.forEach((ed) => {
+      editionMap.set(ed.id, ed.name);
+      (ed.teams || []).forEach((t) => {
+        teamMap.set(t.id, t.name);
+      });
+      (ed.items || []).forEach((it) => {
+        allItems.push(it);
+      });
+    });
+
+    // 1. Tournament champion (unchanged)
+    const champName = records?.mostChampionships?.teamName || activeEdition?.champion?.name || '—';
+    const champSub = activeEdition?.name ? `Champion, ${activeEdition.name}` : 'All-time title leader';
+
+    // 2. Peak auction spend = team with highest TOTAL amount spent across all editions (sum of that team's lots)
+    // Example: "₹13.40 Cr — Team N – TEAM SSVA", secondary line "6 lots"
+    const spendByTeam: Record<string, { amt: number; lots: number; name: string }> = {};
+    allItems.forEach((it) => {
+      if (!it.team_id) return;
+      const tName = teamMap.get(it.team_id) || 'Unknown Team';
+      if (!spendByTeam[it.team_id]) {
+        spendByTeam[it.team_id] = { amt: 0, lots: 0, name: tName };
+      }
+      spendByTeam[it.team_id].amt += Number(it.cost || 0);
+      spendByTeam[it.team_id].lots += 1;
+    });
+
+    const sortedSpend = Object.values(spendByTeam).sort((a, b) => b.amt - a.amt);
+    const topSpender = sortedSpend[0];
+    const peakSpend = topSpender
+      ? `${formatCurrency(topSpender.amt)} — ${topSpender.name}`
+      : '—';
+    const peakSpendSub = topSpender ? `${topSpender.lots} lots` : '0 lots';
+
+    // 3. Priciest lot = single most expensive lot ever sold
+    // Example: "₹3.37 Cr — Team O – Trivia Titans", secondary line "Lot #1"
+    const sortedLots = [...allItems].sort((a, b) => Number(b.cost || 0) - Number(a.cost || 0));
+    const topLot = sortedLots[0];
+    let priciestLot = '—';
+    let priciestLotSub = '—';
+    if (topLot) {
+      const lotTeamName = (topLot.team_id && teamMap.get(topLot.team_id)) || 'Unknown Team';
+      priciestLot = `${formatCurrency(topLot.cost || 0)} — ${lotTeamName}`;
+      const parts = (topLot.item_name || '').split('—');
+      priciestLotSub = parts[0]?.trim() || topLot.item_name || 'Lot #1';
+    }
+
+    // 4. Most lots bought = team with the most lots in one edition
+    // Example: "6 lots — Team N – TEAM SSVA". If teams tie, show the first in the existing order.
+    const lotsInEd: Record<string, { count: number; teamName: string; editionId: string }> = {};
+    allItems.forEach((it) => {
+      if (!it.team_id || !it.edition_id) return;
+      const key = `${it.edition_id}_${it.team_id}`;
+      if (!lotsInEd[key]) {
+        lotsInEd[key] = {
+          count: 0,
+          teamName: teamMap.get(it.team_id) || 'Unknown Team',
+          editionId: it.edition_id,
+        };
+      }
+      lotsInEd[key].count += 1;
+    });
+
+    const sortedLotsInEd = Object.values(lotsInEd).sort((a, b) => b.count - a.count);
+    const topLotsTeam = sortedLotsInEd[0];
+    const mostLots = topLotsTeam
+      ? `${topLotsTeam.count} lots — ${topLotsTeam.teamName}`
+      : '—';
+    const mostLotsSub = topLotsTeam
+      ? `${editionMap.get(topLotsTeam.editionId) || 'Single edition record'}`
+      : 'Single edition record';
+
+    return {
+      champion: champName,
+      championSub: champSub,
+      peakSpend,
+      peakSpendSub,
+      priciestLot,
+      priciestLotSub,
+      mostLots,
+      mostLotsSub,
+    };
+  }, [editions, records, activeEdition]);
+
   return (
     <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[#ff2a38] selection:text-white pb-20">
       <Header viewMode="live" onToggleView={() => {}} />
@@ -163,48 +267,53 @@ export default function HallOfFame() {
           </div>
         ) : (
           <>
-            {/* Section 2: All-time records */}
+            {/* Section 2: All-time records (4 equal horizontal boxes) */}
             <div className="gcl-card mb-[16px]">
               <h2 className="gcl-card-title mb-4">
                 All-time records
               </h2>
-              <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-4 gap-4">
-                <div className="gcl-inner-tile">
-                  <p className="text-xs text-[#8a8a93] font-sans">Tournament champion</p>
-                  <p
-                    className="text-sm sm:text-base font-bold text-white mt-1 truncate"
-                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                  >
-                    {records?.mostChampionships?.teamName || activeEdition?.champion?.name || '—'}
+              <div className="hof-records-grid">
+                {/* 1. Tournament champion */}
+                <div className="hof-record-box">
+                  <p className="hof-record-label">Tournament champion</p>
+                  <p className="hof-record-value" title={allTimeRecords.champion}>
+                    {allTimeRecords.champion}
+                  </p>
+                  <p className="hof-record-sub">
+                    {allTimeRecords.championSub}
                   </p>
                 </div>
-                <div className="gcl-inner-tile">
-                  <p className="text-xs text-[#8a8a93] font-sans">Peak auction spend</p>
-                  <p
-                    className="text-sm sm:text-base font-bold text-[#ff4d5a] mt-1 truncate"
-                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                  >
-                    {records?.highestBidWon
-                      ? `${formatCurrency(records.highestBidWon.amount)} – ${records.highestBidWon.teamName}`
-                      : '—'}
+
+                {/* 2. Peak auction spend */}
+                <div className="hof-record-box">
+                  <p className="hof-record-label">Peak auction spend</p>
+                  <p className="hof-record-value text-[#ff4d5a]" title={allTimeRecords.peakSpend}>
+                    {allTimeRecords.peakSpend}
+                  </p>
+                  <p className="hof-record-sub">
+                    {allTimeRecords.peakSpendSub}
                   </p>
                 </div>
-                <div className="gcl-inner-tile">
-                  <p className="text-xs text-[#8a8a93] font-sans">Priciest lot</p>
-                  <p
-                    className="text-sm sm:text-base font-bold text-white mt-1 truncate"
-                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                  >
-                    {records?.highestBidWon?.itemName || '—'}
+
+                {/* 3. Priciest lot */}
+                <div className="hof-record-box">
+                  <p className="hof-record-label">Priciest lot</p>
+                  <p className="hof-record-value" title={allTimeRecords.priciestLot}>
+                    {allTimeRecords.priciestLot}
+                  </p>
+                  <p className="hof-record-sub">
+                    {allTimeRecords.priciestLotSub}
                   </p>
                 </div>
-                <div className="gcl-inner-tile">
-                  <p className="text-xs text-[#8a8a93] font-sans">Tournament purse</p>
-                  <p
-                    className="text-sm sm:text-base font-bold text-white mt-1 font-mono"
-                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                  >
-                    ₹15.00 Cr
+
+                {/* 4. Most lots bought */}
+                <div className="hof-record-box">
+                  <p className="hof-record-label">Most lots bought</p>
+                  <p className="hof-record-value" title={allTimeRecords.mostLots}>
+                    {allTimeRecords.mostLots}
+                  </p>
+                  <p className="hof-record-sub">
+                    {allTimeRecords.mostLotsSub}
                   </p>
                 </div>
               </div>

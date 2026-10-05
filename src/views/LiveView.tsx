@@ -35,6 +35,7 @@ import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
+import { ShimmerText } from '../components/ui/shimmer-text';
 import './LiveScreens.css';
 
 // Two-handled Trophy Cup inline SVG component for the podium
@@ -604,18 +605,25 @@ export default function LiveView() {
 
       {/* 2. WAITING START STATE */}
       {gameState === 'waiting_start' && (
-        <div className="live-centered-screen">
-          <div className="text-center space-y-6 max-w-4xl z-10 px-4">
-            <div className="inline-block mb-2">
-              <span className="badge-official">Official Auction</span>
-            </div>
+        <div className="live-waiting-start-screen">
+          <div className="text-center space-y-4 max-w-4xl z-10 px-4">
             <h1 className="grand-title">
               GEN <span className="brand-heading-accent">CODE</span> LEAGUE
             </h1>
             <div className="divider-red"></div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-widest animate-bounce gcl-display">
-              Auction Starting Soon
-            </h2>
+            <div style={{ margin: '8px 0' }}>
+              <ShimmerText
+                className="gcl-display"
+                style={{
+                  fontSize: 'clamp(24px, 4.5vw, 52px)',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                }}
+              >
+                Auction Starting Soon
+              </ShimmerText>
+            </div>
 
             {/* Team Selector on Waiting Screen */}
             <div className="team-selector-card">
@@ -627,7 +635,7 @@ export default function LiveView() {
                 onChange={(e) => setMyTeamId(e.target.value)}
                 className="gcl-select"
               >
-                <option value="">-- I am just a viewer --</option>
+                <option value="">Select your team</option>
                 {sortedTeamsDropdown.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -891,22 +899,11 @@ export default function LiveView() {
                   const isFireActive = activeCurrentBid.amount >= 5000000 && activeCurrentBid.amount % 5000000 === 0;
 
                   return (
-                    <div
-                      className="panel red gcl-card-animate card--sheen gcl-current-bid-card"
-                      style={{
-                        position: 'relative',
-                        overflow: 'hidden',
-                        padding: '16px 24px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        flex: 1,
-                      }}
-                    >
-                      {/* Header: Pulsing red dot + CURRENT BID + Question Ref */}
-                      <div className="gcl-current-bid-header" style={{ zIndex: 10 }}>
+                    <div className="panel red gcl-card-animate card--sheen gcl-current-bid-card">
+                      {/* Header: Pulsing red dot + CURRENT BID */}
+                      <div className="gcl-current-bid-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div className="dot" style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#e8212e' }} />
+                          <div className="dot" style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#e8212e' }} />
                           <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
                             CURRENT BID
                           </span>
@@ -932,24 +929,18 @@ export default function LiveView() {
                             </span>
                           )}
                         </div>
-                        <div className="gcl-current-bid-ref" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
-                            Question Ref:
-                          </span>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
-                            {activeCurrentBid.questionRef}
-                          </span>
-                        </div>
                       </div>
 
-                      {/* Content: Vertical Gavel Tile, Bidding Team, Divider, Current Amount */}
-                      <div className="gcl-current-bid-body" style={{ zIndex: 10 }}>
-                        <div className="gcl-current-bid-team-side" style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
+                      {/* Content: 2-part row (Left side: 64x64 Hammer tile + Text stack | 1px Divider | Right side: Amount) */}
+                      <div className="gcl-current-bid-body">
+                        <div className="gcl-current-bid-team-side">
                           <div
                             className={`panel ${isFireActive ? 'gcl-fire-aura' : ''}`}
                             style={{
-                              width: '80px',
-                              height: '76px',
+                              width: '64px',
+                              height: '64px',
+                              minWidth: '64px',
+                              minHeight: '64px',
                               borderRadius: '10px',
                               background: 'linear-gradient(180deg, #24242a, #18181c)',
                               border: isFireActive ? '1px solid #ff4500' : '1px solid #383844',
@@ -958,11 +949,10 @@ export default function LiveView() {
                               alignItems: 'center',
                               justifyContent: 'center',
                               flexShrink: 0,
-                              position: 'relative',
                             }}
                           >
                             <Hammer
-                              size={40}
+                              size={34}
                               style={{
                                 color: isFireActive ? '#ff5722' : '#e8212e',
                                 strokeWidth: 1.8,
@@ -971,36 +961,32 @@ export default function LiveView() {
                               }}
                             />
                           </div>
-                          <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>
                               Bidding Team
                             </p>
-                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                            <p style={{ fontSize: '28px', fontWeight: 700, color: '#f4f4f6', margin: '4px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                               {activeCurrentBid.teamName}
                             </p>
+                            <div className="gcl-current-bid-ref" style={{ marginTop: '4px' }}>
+                              <span className="gcl-ref-label">
+                                Question Ref:
+                              </span>
+                              <span className="gcl-ref-val">
+                                {activeCurrentBid.questionRef}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Vertical divider */}
-                        <div className="gcl-current-bid-divider" style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
+                        <div className="gcl-current-bid-divider" />
 
-                        <div className="gcl-current-bid-amount-side" style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
-                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                        <div className="gcl-current-bid-amount-side">
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>
                             Current Amount
                           </p>
-                          <p
-                            className="gcl-current-bid-amount"
-                            style={{
-                              fontSize: '40px',
-                              fontWeight: 700,
-                              color: '#ff3b47',
-                              fontFamily: "'Rajdhani', sans-serif",
-                              fontVariantNumeric: 'tabular-nums',
-                              margin: '6px 0 0 0',
-                              lineHeight: 1,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
+                          <p className="gcl-current-bid-amount">
                             {formatCurrency(activeCurrentBid.amount)}
                           </p>
                         </div>
@@ -1017,19 +1003,12 @@ export default function LiveView() {
                     <div
                       className="panel gcl-card-animate gcl-current-bid-card"
                       style={{
-                        position: 'relative',
-                        overflow: 'hidden',
-                        padding: '16px 24px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        flex: 1,
                         background: '#18181d',
                         borderColor: '#2f2f38',
                       }}
                     >
                       {/* Header */}
-                      <div className="gcl-current-bid-header" style={{ zIndex: 10 }}>
+                      <div className="gcl-current-bid-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                           <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
                           <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
@@ -1050,24 +1029,18 @@ export default function LiveView() {
                             SOLD
                           </span>
                         </div>
-                        <div className="gcl-current-bid-ref" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
-                            Question Ref:
-                          </span>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
-                            {lastSuccessfulBid.questionRef}
-                          </span>
-                        </div>
                       </div>
 
-                      {/* Content */}
-                      <div className="gcl-current-bid-body" style={{ zIndex: 10 }}>
-                        <div className="gcl-current-bid-team-side" style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
+                      {/* Content: 2-part row */}
+                      <div className="gcl-current-bid-body">
+                        <div className="gcl-current-bid-team-side">
                           <div
                             className="panel"
                             style={{
-                              width: '80px',
-                              height: '76px',
+                              width: '64px',
+                              height: '64px',
+                              minWidth: '64px',
+                              minHeight: '64px',
                               borderRadius: '10px',
                               background: 'linear-gradient(180deg, #24242a, #18181c)',
                               border: '1px solid #383844',
@@ -1079,7 +1052,7 @@ export default function LiveView() {
                             }}
                           >
                             <Hammer
-                              size={40}
+                              size={34}
                               className="gcl-hammer-strike"
                               style={{
                                 color: '#22c55e',
@@ -1088,35 +1061,34 @@ export default function LiveView() {
                               }}
                             />
                           </div>
-                          <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>
                               Winning Team
                             </p>
-                            <p style={{ fontSize: '25px', fontWeight: 700, color: '#f4f4f6', margin: '6px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
+                            <p style={{ fontSize: '28px', fontWeight: 700, color: '#f4f4f6', margin: '4px 0 0 0', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
                               {lastSuccessfulBid.teamName}
                             </p>
+                            <div className="gcl-current-bid-ref" style={{ marginTop: '4px' }}>
+                              <span className="gcl-ref-label">
+                                Question Ref:
+                              </span>
+                              <span className="gcl-ref-val">
+                                {lastSuccessfulBid.questionRef}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Vertical divider */}
-                        <div className="gcl-current-bid-divider" style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
+                        <div className="gcl-current-bid-divider" />
 
-                        <div className="gcl-current-bid-amount-side" style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
-                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
+                        <div className="gcl-current-bid-amount-side">
+                          <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", textTransform: 'uppercase' }}>
                             Final Bid
                           </p>
                           <p
                             className="gcl-current-bid-amount"
-                            style={{
-                              fontSize: '40px',
-                              fontWeight: 700,
-                              color: '#3fe085',
-                              fontFamily: "'Rajdhani', sans-serif",
-                              fontVariantNumeric: 'tabular-nums',
-                              margin: '6px 0 0 0',
-                              lineHeight: 1,
-                              whiteSpace: 'nowrap',
-                            }}
+                            style={{ color: '#3fe085' }}
                           >
                             {formatCurrency(lastSuccessfulBid.amount)}
                           </p>
@@ -1191,7 +1163,7 @@ export default function LiveView() {
                 // CASE 2: 0 sold & active bid -> SHOW CURRENT BID
                 if (soldCount === 0 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
+                    <div className="gcl-live-bid-row">
                       {renderCurrentBidCard()}
                     </div>
                   );
@@ -1200,7 +1172,7 @@ export default function LiveView() {
                 // CASE 3: 1 sold & no active bid -> SHOW LAST SUCCESSFUL BID
                 if (soldCount === 1 && !hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'flex', gap: '20px' }}>
+                    <div className="gcl-live-bid-row">
                       {renderLastSuccessfulBidCard()}
                     </div>
                   );
@@ -1620,6 +1592,7 @@ export default function LiveView() {
             isRevealed,
             teamDisplayName,
             isMyTeam,
+            teamId,
             r1ItemsCount,
             r1TotalSpent,
             r1Remaining,
@@ -1858,6 +1831,43 @@ export default function LiveView() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Team Members List */}
+                      {(() => {
+                        const members = latestSpotlight.teamId ? (teamMembersMap[latestSpotlight.teamId] || []) : [];
+                        return (
+                          <div className="live-spotlight-members-wrap">
+                            <div className="live-spotlight-members-header">
+                              Team members ({members.length})
+                            </div>
+                            {members.length === 0 ? (
+                              <p className="live-spotlight-no-members">No members listed</p>
+                            ) : (
+                              <div className="live-spotlight-members-list">
+                                {members.map((m, idx) => {
+                                  const memberName = m.name || m.full_name || `Member ${idx + 1}`;
+                                  const isLeader = Boolean(m.is_captain || idx === 0);
+                                  return (
+                                    <div key={m.id || idx} className="live-spotlight-member-row">
+                                      <div className="live-spotlight-member-num">
+                                        {idx + 1}
+                                      </div>
+                                      <div className="live-spotlight-member-name" title={memberName}>
+                                        {memberName}
+                                        {isLeader && (
+                                          <span style={{ fontSize: '11px', color: '#f5b73b', fontWeight: 700, marginLeft: '6px' }}>
+                                            (Leader)
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -2146,87 +2156,47 @@ export default function LiveView() {
         return (
           <div className="live-screen-container">
             <div className="live-intermission-layout">
-              {/* Left Column (Sticky on Desktop, Centered Hero on Mobile) */}
-              <div className="live-intermission-left" aria-live="polite">
+              {/* Centered Hero Block */}
+              <div className="live-intermission-hero-block" aria-live="polite">
+                {/* 1. Progress Stepper centered */}
                 <ProgressStepper currentStage={stageNum} />
 
-                <div className="inline-block mb-3">
+                {/* 2. Small pill "ROUND X COMPLETE" */}
+                <div className="inline-block mt-4 mb-2">
                   <span className="badge-official">ROUND {stageNum} COMPLETE</span>
                 </div>
 
+                {/* 3 & 4. Big Bold Title & Subtext */}
                 {roundIdx === 0 ? (
                   <>
-                    <h1
-                      className="live-intermission-title"
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: 'clamp(36px, 6vw, 64px)',
-                        fontWeight: 900,
-                        lineHeight: 1.05,
-                        color: '#ffffff',
-                        textTransform: 'uppercase',
-                        letterSpacing: '-0.01em',
-                      }}
-                    >
+                    <h1 className="live-intermission-title">
                       ROUND 1 INTERMISSION
                     </h1>
-                    <p
-                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                      style={{ letterSpacing: '0.2em' }}
-                    >
+                    <p className="live-intermission-subtext">
                       ROUND 2 WILL START SOON. STAND BY…
                     </p>
                   </>
                 ) : roundIdx === 1 ? (
                   <>
-                    <h1
-                      className="live-intermission-title"
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: 'clamp(36px, 6vw, 64px)',
-                        fontWeight: 900,
-                        lineHeight: 1.05,
-                        color: '#ffffff',
-                        textTransform: 'uppercase',
-                        letterSpacing: '-0.01em',
-                      }}
-                    >
+                    <h1 className="live-intermission-title">
                       ROUND 2 INTERMISSION
                     </h1>
-                    <p
-                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                      style={{ letterSpacing: '0.2em' }}
-                    >
+                    <p className="live-intermission-subtext">
                       ROUND 3 WILL START SOON. STAND BY…
                     </p>
                   </>
                 ) : (
                   <>
-                    <h1
-                      className="live-intermission-title"
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: 'clamp(32px, 5.5vw, 64px)',
-                        fontWeight: 900,
-                        lineHeight: 1.1,
-                        color: '#ffffff',
-                        textTransform: 'uppercase',
-                        letterSpacing: '-0.01em',
-                      }}
-                    >
-                      <div>RESULTS WILL BE</div>
-                      <div>ANNOUNCED SOON</div>
+                    <h1 className="live-intermission-title">
+                      RESULTS WILL BE ANNOUNCED SOON
                     </h1>
-                    <p
-                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                      style={{ letterSpacing: '0.2em' }}
-                    >
+                    <p className="live-intermission-subtext">
                       STAND BY…
                     </p>
                   </>
                 )}
 
-                {/* Circular Stand By Indicator */}
+                {/* 5. Circular Standby Pulsing Ring */}
                 <div className="live-standby-ring" aria-hidden="true">
                   <svg className="live-standby-spinner" viewBox="0 0 88 88" fill="none">
                     <circle cx="44" cy="44" r="38" stroke="#262630" strokeWidth="3" />
@@ -2251,21 +2221,21 @@ export default function LiveView() {
                   />
                 </div>
 
-                {/* Notice Banner (existing notices only) */}
+                {/* 6. Notice Banner (if Round 1 or 2) centered with max-width ~760px */}
                 {roundIdx === 0 && (
-                  <div className="live-amber-notice">
+                  <div className="live-amber-notice" style={{ maxWidth: '760px', width: '100%', margin: '14px auto 0 auto' }}>
                     ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
                   </div>
                 )}
                 {roundIdx === 1 && (
-                  <div className="live-amber-notice">
+                  <div className="live-amber-notice" style={{ maxWidth: '760px', width: '100%', margin: '14px auto 0 auto' }}>
                     💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
                   </div>
                 )}
               </div>
 
-              {/* Right Column: Summary Card (Full column width, scrollable on desktop) */}
-              <div className="live-intermission-right" style={{ width: '100%', minWidth: 0 }}>
+              {/* 7. Summary / Standings Card (centered, full width up to ~1100px, natural height) */}
+              <div style={{ width: '100%', maxWidth: '1100px', margin: '32px auto 0 auto', boxSizing: 'border-box' }}>
                 <div
                   className="live-card-glow live-intermission-card"
                   style={{
@@ -2780,14 +2750,6 @@ export default function LiveView() {
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-silver" color="#c3c7d2" />
                         </div>
-                        <h2
-                          className="live-podium-name"
-                          style={{
-                            color: '#e2e5ec',
-                          }}
-                        >
-                          {secondName}
-                        </h2>
                       </div>
                     ) : (
                       <div style={{ width: '100%', textAlign: 'center' }}>
@@ -2813,9 +2775,13 @@ export default function LiveView() {
                     className={`live-podium-block live-podium-h-2 ${
                       podiumState.secondRevealed ? 'live-podium-block-silver' : 'live-podium-block-dark'
                     }`}
-                    style={{ width: '100%', fontSize: '42px' }}
                   >
-                    2
+                    <span className="live-podium-rank-chip">2</span>
+                    {podiumState.secondRevealed && (secondTeam || secondName) && (
+                      <div className="live-podium-team-name-box">
+                        <span className="live-podium-team-name">{secondName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2827,15 +2793,6 @@ export default function LiveView() {
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-gold" color="#f5b73b" />
                         </div>
-                        <h2
-                          className="live-podium-name"
-                          style={{
-                            color: '#ffd700',
-                            filter: 'drop-shadow(0 0 12px rgba(245, 183, 59, 0.4))',
-                          }}
-                        >
-                          {firstName}
-                        </h2>
                       </div>
                     ) : (
                       <div style={{ width: '100%', textAlign: 'center' }}>
@@ -2861,9 +2818,13 @@ export default function LiveView() {
                     className={`live-podium-block live-podium-h-1 ${
                       podiumState.firstRevealed ? 'live-podium-block-gold' : 'live-podium-block-dark'
                     }`}
-                    style={{ width: '100%', fontSize: '56px' }}
                   >
-                    1
+                    <span className="live-podium-rank-chip">1</span>
+                    {podiumState.firstRevealed && (firstTeam || firstName) && (
+                      <div className="live-podium-team-name-box">
+                        <span className="live-podium-team-name">{firstName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2875,14 +2836,6 @@ export default function LiveView() {
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-bronze" color="#e8743b" />
                         </div>
-                        <h2
-                          className="live-podium-name"
-                          style={{
-                            color: '#f8b48f',
-                          }}
-                        >
-                          {thirdName}
-                        </h2>
                       </div>
                     ) : (
                       <div style={{ width: '100%', textAlign: 'center' }}>
@@ -2908,9 +2861,13 @@ export default function LiveView() {
                     className={`live-podium-block live-podium-h-3 ${
                       podiumState.thirdRevealed ? 'live-podium-block-bronze' : 'live-podium-block-dark'
                     }`}
-                    style={{ width: '100%', fontSize: '36px' }}
                   >
-                    3
+                    <span className="live-podium-rank-chip">3</span>
+                    {podiumState.thirdRevealed && (thirdTeam || thirdName) && (
+                      <div className="live-podium-team-name-box">
+                        <span className="live-podium-team-name">{thirdName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

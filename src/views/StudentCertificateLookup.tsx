@@ -563,27 +563,22 @@ export default function StudentCertificateLookup() {
                   {/* Expanding Red Ring Burst Animation (fires on unlock) */}
                   <div className="vault-ring-burst-element" aria-hidden="true" />
 
-                  {/* Stage Top Meta Bar: VALID pill, Certificate ID, Public Verify link */}
+                  {/* Stage Top Meta Bar: Download PDF button on the left, Public Verify link on the right */}
                   <div className="flex items-center justify-between gap-2 px-1 pb-3 sm:pb-4 flex-wrap sm:flex-nowrap">
-                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                      {activeCert.status === 'valid' ? (
-                        <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1 shrink-0">
-                          <ShieldCheck size={13} /> VALID
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/40 flex items-center gap-1 shrink-0">
-                          <ShieldAlert size={13} /> REVOKED
-                        </span>
-                      )}
-                      <span className="font-mono text-[#ffd700] font-bold text-xs sm:text-sm truncate">
-                        {activeCert.certificate_id}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(activeCert)}
+                      disabled={downloadingId === activeCert.certificate_id}
+                      className="gcl-nav-btn-active h-10 px-5 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Download size={15} />
+                      {downloadingId === activeCert.certificate_id ? 'Downloading...' : 'Download PDF'}
+                    </button>
 
                     <Link
                       to={`/verify/${activeCert.certificate_id}`}
                       target="_blank"
-                      className="gcl-btn-outline-red px-3.5 py-1 text-xs gap-1.5 font-bold uppercase tracking-wider shrink-0 transition-all ml-auto sm:ml-0"
+                      className="gcl-btn-outline-red px-3.5 py-1 text-xs gap-1.5 font-bold uppercase tracking-wider shrink-0 transition-all ml-auto sm:ml-0 flex items-center"
                     >
                       Public Verify <ExternalLink size={12} />
                     </Link>
@@ -645,52 +640,16 @@ export default function StudentCertificateLookup() {
                   </div>
                 </div>
 
-                {/* STAGE ACTION BUTTONS (Optimized for both mobile and desktop) */}
-                <div className="vault-stage-actions flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleStartVerification}
-                      className="gcl-btn-outline-red h-11 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <ShieldCheck size={15} /> Verify
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCopyVerifyUrl(activeCert.certificate_id)}
-                      className="gcl-btn-outline-red h-11 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
-                      title="Copy Verification Link"
-                    >
-                      {copiedId === activeCert.certificate_id ? (
-                        <>
-                          <Check size={15} className="text-emerald-400" /> Copied ✓
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={15} /> Copy Link
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreviewCert(activeCert)}
-                      className="col-span-2 sm:col-span-1 gcl-btn-outline-red h-11 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
-                      title="View Full Certificate"
-                    >
-                      <Eye size={15} /> View Full
-                    </button>
-                  </div>
-
+                {/* STAGE ACTION BUTTONS: View Full button only, right-aligned */}
+                <div className="vault-stage-actions flex items-center justify-end gap-2.5">
                   <button
                     type="button"
-                    onClick={() => handleDownload(activeCert)}
-                    disabled={downloadingId === activeCert.certificate_id}
-                    className="gcl-nav-btn-active h-11 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 w-full sm:w-auto sm:min-w-[160px]"
+                    onClick={() => setPreviewCert(activeCert)}
+                    className="gcl-nav-btn-active h-11 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto sm:min-w-[160px]"
+                    title="View Full Certificate"
                   >
-                    <Download size={16} />
-                    {downloadingId === activeCert.certificate_id ? 'Downloading...' : 'Download PDF'}
+                    <Eye size={16} />
+                    View Full
                   </button>
                 </div>
 

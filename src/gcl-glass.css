@@ -496,13 +496,15 @@
 
 .gcl-live-bid-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 20px;
   width: 100%;
 }
 
 .gcl-live-arena-grid.no-panel .gcl-live-bid-row {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 @media (max-width: 1023px) {
@@ -526,8 +528,9 @@
   .gcl-live-bid-row {
     order: 2 !important;
     width: 100% !important;
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
   }
 
   .gcl-sidebar-enter {
@@ -564,9 +567,9 @@
   position: relative;
   overflow: hidden;
   padding: 24px 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 24px;
   width: 100%;
   box-sizing: border-box;
@@ -576,10 +579,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  flex: 1;
+  justify-content: flex-start;
   min-width: 0;
-  padding: 8px 24px 8px 95px;
+  width: 100%;
+  padding: 8px 16px 8px 95px;
   z-index: 10;
   text-align: left;
 }
@@ -593,6 +596,7 @@
 }
 
 .gcl-question-timer {
+  align-self: start;
   width: 188px;
   height: 120px;
   border-radius: 12px;
@@ -633,45 +637,70 @@
   overflow: hidden;
 }
 
-@media (max-width: 1023px) {
+/* Tablet (701px to 1023px): Keep grid and top-right timer */
+@media (min-width: 701px) and (max-width: 1023px) {
   .gcl-question-card {
+    padding: 20px !important;
+    gap: 18px !important;
+  }
+  .gcl-question-content {
+    padding: 4px 12px 4px 80px !important;
+  }
+  .gcl-question-timer {
+    align-self: start !important;
+    width: 175px !important;
+    height: 120px !important;
+  }
+}
+
+/* Under 700px: Timer becomes a full-width row under ROUND N | QUESTION X OF 20 */
+@media (max-width: 700px) {
+  .gcl-question-card {
+    display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
     padding: 16px !important;
-    gap: 16px !important;
+    gap: 12px !important;
     min-height: auto !important;
   }
 
   .gcl-question-content {
+    display: contents !important;
     padding: 0 !important;
-    width: 100% !important;
   }
 
   .gcl-question-header-row {
+    order: 1 !important;
     display: flex !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
     gap: 10px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+  }
+
+  .gcl-question-timer {
+    order: 2 !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 10px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    margin: 4px 0 !important;
   }
 
   .gcl-question-title {
+    order: 3 !important;
     font-size: clamp(18px, 5vw, 28px) !important;
     line-height: 1.25 !important;
     white-space: normal !important;
     word-break: break-word !important;
-  }
-
-  .gcl-question-timer {
     width: 100% !important;
-    height: auto !important;
-    padding: 12px 14px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
   }
 
   .gcl-question-timer-top {
@@ -682,7 +711,7 @@
   }
 
   .gcl-question-timer-digits {
-    font-size: clamp(32px, 9vw, 48px) !important;
+    font-size: clamp(28px, 8vw, 42px) !important;
     margin-top: 0 !important;
     line-height: 1 !important;
   }
@@ -690,88 +719,153 @@
   .gcl-question-timer-bar-wrap {
     width: 100% !important;
     max-width: none !important;
-    margin-top: 4px !important;
+    margin-top: 2px !important;
   }
 
   .strip {
     display: none !important;
   }
+}
 
-  /* Current Bid Card Mobile Stack */
+/* === CURRENT BID & SOLD / LAST SUCCESSFUL BID CARD (Item 4) === */
+.gcl-current-bid-card {
+  min-height: 168px;
+  position: relative;
+  overflow: hidden;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gcl-current-bid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
+  z-index: 10;
+}
+
+.gcl-current-bid-ref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gcl-current-bid-ref .gcl-ref-label {
+  color: #9a9aa3;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+}
+
+.gcl-current-bid-ref .gcl-ref-val {
+  color: #ffffff;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gcl-current-bid-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  flex: 1;
+  z-index: 10;
+}
+
+.gcl-current-bid-team-side {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gcl-current-bid-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #2e2e34;
+  flex-shrink: 0;
+}
+
+.gcl-current-bid-amount-side {
+  min-width: 0;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.gcl-current-bid-amount {
+  font-size: 44px;
+  font-weight: 700;
+  color: #ff3b47;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 0 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 1023px) {
   .gcl-current-bid-card {
     min-height: auto !important;
     padding: 16px !important;
-    min-width: 0 !important;
     width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .gcl-current-bid-header {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 4px !important;
-    margin-bottom: 12px !important;
-  }
-
-  .gcl-current-bid-ref {
-    font-size: 12px !important;
-    color: #9a9aa3 !important;
-    font-family: 'Inter', sans-serif !important;
   }
 
   .gcl-current-bid-body {
     display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 12px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
     width: 100% !important;
   }
 
   .gcl-current-bid-team-side {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
-    min-width: 0 !important;
-    flex: 1 !important;
+    gap: 14px !important;
+    width: 100% !important;
   }
 
   .gcl-current-bid-divider {
-    display: none !important;
+    display: block !important;
+    width: 100% !important;
+    height: 1px !important;
+    background: #282832 !important;
+    margin: 6px 0 !important;
+    align-self: auto !important;
   }
 
   .gcl-current-bid-amount-side {
     text-align: right !important;
-    flex-shrink: 0 !important;
+    width: 100% !important;
   }
 
   .gcl-current-bid-amount {
     font-size: clamp(26px, 8vw, 44px) !important;
-    white-space: nowrap !important;
     line-height: 1 !important;
-  }
-
-  /* Selected Team Panel on Mobile */
-  .gcl-selected-team-panel {
-    min-height: auto !important;
-    width: 100% !important;
-  }
-
-  .gcl-team-identity-card {
-    height: auto !important;
-    min-height: auto !important;
-    padding: 16px 14px !important;
   }
 }
 
-/* === PREVIOUS BIDS CARD === */
+/* === PREVIOUS BIDS CARD (Item 4) === */
 .gcl-prev-bids-card {
-  min-height: 161px;
+  min-height: 168px;
   position: relative;
   overflow: hidden;
   padding: 14px 20px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   flex: 1;
   min-width: 0;
   width: 100%;
@@ -783,7 +877,7 @@
 
 .gcl-prev-bids-header {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 90px 60px;
+  grid-template-columns: 74px minmax(0, 1fr) 95px 60px;
   align-items: center;
   gap: 8px;
   padding: 0 8px 6px 8px;
@@ -793,18 +887,22 @@
   color: #8e8e98;
   font-family: 'Rajdhani', sans-serif;
   letter-spacing: 0.05em;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .gcl-prev-bids-scroll {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-top: 6px;
+  flex: 1;
+  min-height: 0;
+  max-height: 220px;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 220px;
   scrollbar-width: thin;
   scrollbar-color: #2e2e38 #121216;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .gcl-prev-bids-scroll::-webkit-scrollbar {
@@ -817,15 +915,42 @@
 
 .gcl-prev-bids-row {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 90px 60px;
+  grid-template-columns: 74px minmax(0, 1fr) 95px 60px;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
-  background: #141418;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
+  height: 40px;
+  min-height: 40px;
+  border-bottom: 1px solid #23232c;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gcl-prev-bids-team {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  color: #e4e4e8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gcl-prev-bids-amount {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  color: #ff3b47;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gcl-prev-bids-time {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #8a8a95;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .gcl-prev-bids-chip {
