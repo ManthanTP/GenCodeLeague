@@ -13,13 +13,13 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 24px clamp(10px, 2vw, 24px) 56px;
+  padding: 24px clamp(14px, 2vw, 28px) 56px;
   box-sizing: border-box;
 }
 
 @media (max-width: 700px) {
   .live-screen-container {
-    padding: 16px clamp(10px, 2vw, 24px) 40px;
+    padding: 16px clamp(14px, 2vw, 28px) 40px;
   }
 }
 
@@ -255,7 +255,119 @@
   }
 }
 
-/* --- SCREENS 2, 3, 4: INTERMISSIONS --- */
+/* --- SCREENS 2, 3, 4: INTERMISSIONS (Two Columns on Desktop >=1024px, Single Column on Mobile) --- */
+.live-intermission-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .live-intermission-layout {
+    grid-template-columns: minmax(380px, 38%) minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+
+  .live-intermission-left {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .live-intermission-left::before {
+    content: "";
+    position: absolute;
+    top: 15%;
+    left: 10%;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255, 42, 61, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .live-intermission-left .live-stepper-wrap {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0 !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+  }
+
+  .live-intermission-left .live-step-node {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .live-intermission-left .live-step-line {
+    width: 2px !important;
+    height: 18px !important;
+    margin: 3px 0 3px 15px !important;
+  }
+
+  .live-intermission-title {
+    font-size: clamp(40px, 4.5vw, 72px) !important;
+    text-align: left !important;
+  }
+
+  .live-intermission-subtext {
+    text-align: left !important;
+  }
+
+  .live-intermission-left .live-standby-ring {
+    margin: 20px 0 !important;
+  }
+
+  .live-intermission-left .live-amber-notice {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 16px 0 !important;
+    border-radius: 12px !important;
+    text-align: left !important;
+  }
+
+  .live-intermission-card {
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #2e2e38 #121216;
+  }
+
+  .live-intermission-card::-webkit-scrollbar {
+    width: 6px;
+  }
+  .live-intermission-card::-webkit-scrollbar-thumb {
+    background: #2e2e38;
+    border-radius: 3px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .live-intermission-left {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .live-intermission-title {
+    font-size: clamp(32px, 5.5vw, 64px) !important;
+    text-align: center !important;
+  }
+
+  .live-intermission-subtext {
+    text-align: center !important;
+  }
+}
+
 .live-stepper-wrap {
   display: flex;
   align-items: center;
@@ -445,13 +557,45 @@
   }
 }
 
+/* Soft Radial Spotlight behind Podium */
+.live-podium-spotlight-wrap {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.live-podium-spotlight-wrap::before {
+  content: "";
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 1000px);
+  height: 480px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.8s ease;
+}
+
+.live-podium-spotlight-wrap.is-gold-spotlight::before {
+  background: radial-gradient(ellipse at center, rgba(245, 183, 59, 0.12) 0%, transparent 70%);
+}
+
+.live-podium-spotlight-wrap.is-red-spotlight::before {
+  background: radial-gradient(ellipse at center, rgba(255, 42, 61, 0.08) 0%, transparent 70%);
+}
+
 .live-podium-grid {
   display: grid;
   grid-template-columns: 1fr 1.15fr 1fr;
   align-items: end;
   gap: 16px;
-  max-width: 760px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 640px) {
@@ -508,18 +652,18 @@
 }
 
 .live-podium-h-1 {
-  height: 210px;
+  height: clamp(220px, 26vh, 340px);
 }
 
 .live-podium-h-2 {
-  height: 150px;
+  height: calc(clamp(220px, 26vh, 340px) * 0.72);
 }
 
 .live-podium-h-3 {
-  height: 112px;
+  height: calc(clamp(220px, 26vh, 340px) * 0.54);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .live-podium-h-1 {
     height: 150px;
   }
@@ -528,6 +672,54 @@
   }
   .live-podium-h-3 {
     height: 84px;
+  }
+}
+
+/* Responsive Trophy Sizes */
+.live-trophy-gold {
+  width: clamp(104px, 11vw, 160px) !important;
+  height: clamp(104px, 11vw, 160px) !important;
+}
+
+.live-trophy-silver {
+  width: calc(clamp(104px, 11vw, 160px) * 0.72) !important;
+  height: calc(clamp(104px, 11vw, 160px) * 0.72) !important;
+}
+
+.live-trophy-bronze {
+  width: calc(clamp(104px, 11vw, 160px) * 0.60) !important;
+  height: calc(clamp(104px, 11vw, 160px) * 0.60) !important;
+}
+
+@media (max-width: 700px) {
+  .live-trophy-gold {
+    width: 72px !important;
+    height: 72px !important;
+  }
+  .live-trophy-silver {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .live-trophy-bronze {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+.live-podium-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(20px, 2.2vw, 32px) !important;
+  font-weight: 800;
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+@media (max-width: 700px) {
+  .live-podium-name {
+    font-size: 16px !important;
   }
 }
 
@@ -657,7 +849,15 @@
   .live-medal-gold,
   .live-medal-silver,
   .live-medal-bronze,
-  .live-row-plain {
+  .live-row-plain,
+  .dot,
+  .gcl-card-animate,
+  .card--sheen::before,
+  .gcl-row-enter,
+  .gcl-hammer-strike,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-spin-slow {
     animation: none !important;
     transition: opacity 0.2s ease !important;
     transform: none !important;

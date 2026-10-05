@@ -93,18 +93,19 @@ export default function LiveTeamStatus({
         }}
       >
         {/* Table Container */}
-        <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', zIndex: 10 }}>
+        <div className="gcl-status-table-wrap" style={{ width: '100%', position: 'relative', zIndex: 10 }}>
           <table
+            className="gcl-status-table"
             style={{
               width: '100%',
-              minWidth: '550px',
               borderCollapse: 'separate',
               borderSpacing: '0 2px',
               textAlign: 'left',
             }}
           >
-            <thead>
+            <thead className="gcl-status-thead">
               <tr
+                className="gcl-status-header-row"
                 style={{
                   height: '34px',
                   background: '#1a1a1f',
@@ -116,14 +117,14 @@ export default function LiveTeamStatus({
                   fontFamily: "'Rajdhani', sans-serif",
                 }}
               >
-                <th style={{ width: '60px', textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>#</th>
-                <th style={{ textAlign: 'left', padding: '0 14px' }}>TEAM NAME</th>
-                <th style={{ width: '130px', textAlign: 'center', padding: '0 12px' }}>ITEMS WON</th>
-                <th style={{ width: '180px', textAlign: 'center', padding: '0 14px' }}>TOTAL SPENT</th>
-                <th style={{ width: '180px', textAlign: 'center', padding: '0 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>REMAINING</th>
+                <th className="gcl-status-th col-rank" style={{ width: '60px', textAlign: 'center', padding: '0 8px', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px' }}>#</th>
+                <th className="gcl-status-th col-team" style={{ textAlign: 'left', padding: '0 14px' }}>TEAM NAME</th>
+                <th className="gcl-status-th col-items" style={{ width: '130px', textAlign: 'center', padding: '0 12px' }}>ITEMS WON</th>
+                <th className="gcl-status-th col-spent" style={{ width: '180px', textAlign: 'center', padding: '0 14px' }}>TOTAL SPENT</th>
+                <th className="gcl-status-th col-remaining" style={{ width: '180px', textAlign: 'center', padding: '0 14px', borderTopRightRadius: '6px', borderBottomRightRadius: '6px' }}>REMAINING</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="gcl-status-tbody">
               {displayRows.length === 0 ? (
                 <tr>
                   <td
@@ -149,6 +150,7 @@ export default function LiveTeamStatus({
                   return (
                     <tr
                       key={row.id}
+                      className="gcl-status-row"
                       style={{
                         height: isSelected ? '38px' : '36px',
                         background: rowBg,
@@ -157,6 +159,7 @@ export default function LiveTeamStatus({
                     >
                       {/* Rank index # */}
                       <td
+                        className="gcl-status-td col-rank"
                         style={{
                           textAlign: 'center',
                           padding: '0 8px',
@@ -185,20 +188,22 @@ export default function LiveTeamStatus({
 
                       {/* Team Name + YOU badge */}
                       <td
+                        className="gcl-status-td col-team"
                         style={{
                           textAlign: 'left',
                           padding: '0 14px',
                           borderTop: isSelected ? '1px solid #7a1a22' : 'none',
                           borderBottom: isSelected ? '1px solid #7a1a22' : 'none',
+                          minWidth: 0,
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '15px', color: '#f4f4f6', fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <span className="gcl-status-team-name" style={{ fontSize: '15px', color: '#f4f4f6', fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
                             {row.name}
                           </span>
                           {isSelected && (
                             <div
-                              className="chip"
+                              className="chip shrink-0"
                               style={{
                                 width: '38px',
                                 height: '20px',
@@ -214,6 +219,7 @@ export default function LiveTeamStatus({
 
                       {/* Items Won this round */}
                       <td
+                        className="gcl-status-td col-items"
                         style={{
                           textAlign: 'center',
                           verticalAlign: 'middle',
@@ -249,6 +255,7 @@ export default function LiveTeamStatus({
 
                       {/* Total Spent this round */}
                       <td
+                        className="gcl-status-td col-spent"
                         style={{
                           textAlign: 'center',
                           padding: '0 14px',
@@ -265,6 +272,7 @@ export default function LiveTeamStatus({
 
                       {/* Remaining */}
                       <td
+                        className="gcl-status-td col-remaining"
                         style={{
                           textAlign: 'center',
                           padding: '0 14px',

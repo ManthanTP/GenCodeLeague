@@ -463,24 +463,35 @@
   justify-content: center;
 }
 
-/* === ARENA DYNAMIC GRID (Left 1156px, Right 369px, Gap 26px) === */
+/* === ARENA DYNAMIC GRID (Desktop: Left minmax(0, 1fr), Right 340px sidebar) === */
 .gcl-live-arena-grid {
   display: grid;
   grid-template-columns: 1fr;
   width: 100%;
-}
-
-.gcl-live-arena-grid.has-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 375px;
   gap: 20px;
-  width: 100%;
 }
 
-.gcl-live-arena-grid.no-panel {
-  display: grid;
-  grid-template-columns: 1fr;
-  width: 100%;
+@media (min-width: 1024px) {
+  .gcl-live-arena-grid.has-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .gcl-live-arena-grid.no-panel {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .gcl-live-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 21px;
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .gcl-live-bid-row {
@@ -494,28 +505,55 @@
   grid-template-columns: 1fr 1fr;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1023px) {
   .gcl-live-arena-grid,
   .gcl-live-arena-grid.has-panel,
   .gcl-live-arena-grid.no-panel {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .gcl-live-main-column {
+    display: contents !important;
+  }
+
+  .gcl-question-card {
+    order: 1 !important;
+    width: 100% !important;
+  }
+
+  .gcl-live-bid-row {
+    order: 2 !important;
+    width: 100% !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .gcl-sidebar-enter {
+    order: 3 !important;
+    width: 100% !important;
+  }
+
+  .gcl-live-team-status-wrap {
+    order: 4 !important;
+    width: 100% !important;
   }
 }
 
-@media (max-width: 768px) {
-  .gcl-live-bid-row,
-  .gcl-live-arena-grid.no-panel .gcl-live-bid-row {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-}
-
-/* === RESPONSIVE LIVE CONTAINER & QUESTION CARD === */
+/* === FULL WIDTH LIVE CONTAINER & QUESTION CARD === */
 .gcl-live-container {
   width: 100%;
-  padding: 10px 24px 24px 24px;
+  max-width: none;
+  margin: 0;
+  padding: 20px clamp(14px, 2vw, 28px) 56px;
   box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  .gcl-live-container {
+    padding: 16px clamp(14px, 2vw, 28px) 40px;
+  }
 }
 
 .gcl-question-card {
@@ -543,6 +581,14 @@
   text-align: left;
 }
 
+.gcl-question-header-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
 .gcl-question-timer {
   width: 188px;
   height: 120px;
@@ -555,29 +601,379 @@
   justify-content: center;
   flex-shrink: 0;
   z-index: 10;
+  box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-  .gcl-live-container {
-    padding: 8px 12px 24px 12px;
-  }
+.gcl-question-timer-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.gcl-question-timer-digits {
+  font-size: 46px;
+  font-weight: 700;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.gcl-question-timer-bar-wrap {
+  width: 161px;
+  height: 7px;
+  border-radius: 4px;
+  background: #26262c;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+@media (max-width: 1023px) {
   .gcl-question-card {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px 14px;
-    gap: 16px;
-    min-height: auto;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 16px !important;
+    gap: 16px !important;
+    min-height: auto !important;
   }
+
   .gcl-question-content {
-    padding: 0;
-    width: 100%;
+    padding: 0 !important;
+    width: 100% !important;
   }
+
+  .gcl-question-header-row {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    margin-bottom: 10px !important;
+  }
+
+  .gcl-question-title {
+    font-size: clamp(18px, 5vw, 28px) !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
   .gcl-question-timer {
-    width: 100%;
-    height: 90px;
+    width: 100% !important;
+    height: auto !important;
+    padding: 12px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
   }
+
+  .gcl-question-timer-top {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .gcl-question-timer-digits {
+    font-size: clamp(32px, 9vw, 48px) !important;
+    margin-top: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .gcl-question-timer-bar-wrap {
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 4px !important;
+  }
+
   .strip {
-    display: none;
+    display: none !important;
+  }
+
+  /* Current Bid Card Mobile Stack */
+  .gcl-current-bid-card {
+    min-height: auto !important;
+    padding: 16px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .gcl-current-bid-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .gcl-current-bid-ref {
+    font-size: 12px !important;
+    color: #9a9aa3 !important;
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  .gcl-current-bid-body {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .gcl-current-bid-team-side {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+
+  .gcl-current-bid-divider {
+    display: none !important;
+  }
+
+  .gcl-current-bid-amount-side {
+    text-align: right !important;
+    flex-shrink: 0 !important;
+  }
+
+  .gcl-current-bid-amount {
+    font-size: clamp(26px, 8vw, 44px) !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+  }
+
+  /* Selected Team Panel on Mobile */
+  .gcl-selected-team-panel {
+    min-height: auto !important;
+    width: 100% !important;
+  }
+
+  .gcl-team-identity-card {
+    height: auto !important;
+    min-height: auto !important;
+    padding: 16px 14px !important;
+  }
+}
+
+/* === PREVIOUS BIDS CARD === */
+.gcl-prev-bids-card {
+  min-height: 161px;
+  position: relative;
+  overflow: hidden;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: #18181c;
+  border: 1px solid #292930;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.gcl-prev-bids-header {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 90px 60px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 6px 8px;
+  border-bottom: 1px solid #282830;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8e8e98;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.gcl-prev-bids-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 220px;
+  scrollbar-width: thin;
+  scrollbar-color: #2e2e38 #121216;
+}
+
+.gcl-prev-bids-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.gcl-prev-bids-scroll::-webkit-scrollbar-thumb {
+  background: #2e2e38;
+  border-radius: 3px;
+}
+
+.gcl-prev-bids-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 90px 60px;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  background: #141418;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.gcl-prev-bids-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: #22222a;
+  color: #e2e2e8;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Rajdhani', sans-serif;
+  white-space: nowrap;
+}
+
+.gcl-prev-bids-team {
+  font-size: 12px !important;
+  color: #f4f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Inter', sans-serif;
+}
+
+.gcl-prev-bids-amount {
+  font-size: 13px !important;
+  font-weight: 700;
+  color: #ff4350;
+  font-family: 'Rajdhani', sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gcl-prev-bids-time {
+  font-size: 11px !important;
+  color: #8e8e98;
+  font-family: var(--font-mono, monospace);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* === LIVE TEAM STATUS RESPONSIVE GRID === */
+.gcl-status-table-wrap {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  .gcl-status-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .gcl-status-thead,
+  .gcl-status-tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  .gcl-status-header-row,
+  .gcl-status-row {
+    display: grid !important;
+    align-items: center !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+    padding: 0 10px !important;
+  }
+
+  /* 480px to 1023px */
+  @media (min-width: 480px) {
+    .gcl-status-header-row,
+    .gcl-status-row {
+      grid-template-columns: 36px minmax(0, 1.5fr) 64px 1fr 1fr !important;
+      gap: 10px !important;
+    }
+  }
+
+  /* Under 480px */
+  @media (max-width: 479px) {
+    .gcl-status-header-row,
+    .gcl-status-row {
+      grid-template-columns: 30px minmax(0, 1fr) 44px auto auto !important;
+      gap: 6px !important;
+      padding: 0 6px !important;
+    }
+  }
+
+  .gcl-status-th,
+  .gcl-status-td {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    font-size: 12.5px !important;
+  }
+
+  .gcl-status-th.col-rank,
+  .gcl-status-td.col-rank {
+    justify-content: center !important;
+  }
+
+  .gcl-status-th.col-items,
+  .gcl-status-td.col-items {
+    justify-content: center !important;
+  }
+
+  .gcl-status-th.col-spent,
+  .gcl-status-td.col-spent,
+  .gcl-status-th.col-remaining,
+  .gcl-status-td.col-remaining {
+    justify-content: flex-end !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  .gcl-status-team-name {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+  }
+
+  /* Shorten header labels visually with CSS only */
+  .col-items.gcl-status-th {
+    font-size: 0 !important;
+  }
+  .col-items.gcl-status-th::after {
+    content: "ITEMS";
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .col-spent.gcl-status-th {
+    font-size: 0 !important;
+  }
+  .col-spent.gcl-status-th::after {
+    content: "SPENT";
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .col-remaining.gcl-status-th {
+    font-size: 0 !important;
+  }
+  .col-remaining.gcl-status-th::after {
+    content: "LEFT";
+    font-size: 11px;
+    font-weight: 700;
   }
 }
 

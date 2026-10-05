@@ -38,18 +38,29 @@ import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from
 import './LiveScreens.css';
 
 // Two-handled Trophy Cup inline SVG component for the podium
-function TrophyCup({ size = 76, color = '#f5b73b' }: { size?: number; color?: string }) {
+function TrophyCup({
+  size = 76,
+  color = '#f5b73b',
+  className,
+  style,
+}: {
+  size?: number;
+  color?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <svg
       width={size}
       height={size}
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ filter: `drop-shadow(0 0 16px ${color}88)` }}
+      style={{ filter: `drop-shadow(0 0 16px ${color}88)`, ...style }}
     >
       <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
       <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
@@ -625,8 +636,8 @@ export default function LiveView() {
       {/* 3. ACTIVE ROUND STATE (EXACT MATCH TO BLUEPRINT) */}
       {gameState === 'active' && (
         <div className="gcl-live-container">
-          {/* Top Right Controls: Viewing as Guest Dropdown & Icon-only Fullscreen Button */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '6px' }}>
+          {/* Top Right Controls: Viewing as Guest Dropdown & Icon-only Fullscreen Button (44px touch targets) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '8px' }}>
             {!isTeamLeader && (
               <div style={{ position: 'relative', width: '270px' }}>
                 <select
@@ -635,7 +646,7 @@ export default function LiveView() {
                   className="panel"
                   style={{
                     width: '100%',
-                    height: '35px',
+                    height: '44px',
                     borderRadius: '8px',
                     background: '#18181c',
                     border: '1px solid #2c2c33',
@@ -667,8 +678,8 @@ export default function LiveView() {
               onClick={toggleFullscreen}
               className="panel"
               style={{
-                width: '35px',
-                height: '35px',
+                width: '44px',
+                height: '44px',
                 padding: 0,
                 borderRadius: '8px',
                 background: '#18181c',
@@ -689,7 +700,7 @@ export default function LiveView() {
           {/* Main Arena Dynamic Grid (Left 1156px, Right 369px, Gap 26px / Full width if no panel) */}
           <div className={`gcl-live-arena-grid ${isTeamPanelOpen && selectedTeam ? 'has-panel' : 'no-panel'}`}>
             {/* LEFT COLUMN: 1156px (Question box, Bids row, Live Team Status) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
+            <div className="gcl-live-main-column" style={{ display: 'flex', flexDirection: 'column', gap: '21px', width: '100%', minWidth: 0 }}>
               {/* 1. Question / Item Box with 3-Piece Red Diagonal Laser Strips */}
               <div className="panel red gcl-question-card">
                 {/* 3 Strips with exact blueprint clip-path */}
@@ -718,7 +729,7 @@ export default function LiveView() {
 
                 {/* Left-aligned content: starts past corner laser effect */}
                 <div className="gcl-question-content">
-                  <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '14px' }}>
+                  <div className="gcl-question-header-row" style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                       <span style={{ fontSize: '17px', fontWeight: 700, color: '#e6e6ea', letterSpacing: '0.6px', fontFamily: "'Rajdhani', sans-serif" }}>
                         {currentRound.name.toUpperCase()}
@@ -756,6 +767,7 @@ export default function LiveView() {
 
                   {alreadySoldItem ? (
                     <h2
+                      className="gcl-question-title"
                       style={{
                         fontSize: 'clamp(28px, 2.4vw, 40px)',
                         fontWeight: 800,
@@ -773,6 +785,7 @@ export default function LiveView() {
                     </h2>
                   ) : isRevealed ? (
                     <h2
+                      className="gcl-question-title"
                       style={{
                         fontSize: 'clamp(28px, 2.4vw, 40px)',
                         fontWeight: 800,
@@ -790,6 +803,7 @@ export default function LiveView() {
                     </h2>
                   ) : (
                     <h2
+                      className="gcl-question-title"
                       style={{
                         fontSize: 'clamp(26px, 2.2vw, 36px)',
                         fontWeight: 700,
@@ -807,40 +821,42 @@ export default function LiveView() {
                   )}
                 </div>
 
-                {/* Right: BID TIMER */}
+                {/* Right: BID TIMER (Under question on mobile, full width with digits right and bar underneath) */}
                 <div
                   className="panel gcl-question-timer"
                   style={{
                     border: alreadySoldItem ? '1px solid rgba(232, 33, 46, 0.5)' : undefined,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {alreadySoldItem ? (
-                      <Lock size={22} style={{ color: '#e8212e' }} />
-                    ) : (
-                      <Clock size={22} style={{ color: '#e8212e' }} />
-                    )}
-                    <span style={{ fontSize: '19px', fontWeight: 600, color: alreadySoldItem ? '#ff4d5a' : '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
-                      {alreadySoldItem ? 'QUESTION SOLD' : 'BID TIMER'}
-                    </span>
+                  <div className="gcl-question-timer-top">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {alreadySoldItem ? (
+                        <Lock size={22} style={{ color: '#e8212e' }} />
+                      ) : (
+                        <Clock size={22} style={{ color: '#e8212e' }} />
+                      )}
+                      <span style={{ fontSize: '19px', fontWeight: 600, color: alreadySoldItem ? '#ff4d5a' : '#c8c8ce', fontFamily: "'Rajdhani', sans-serif" }}>
+                        {alreadySoldItem ? 'QUESTION SOLD' : 'BID TIMER'}
+                      </span>
+                    </div>
+                    <div
+                      className="gcl-question-timer-digits"
+                      style={{
+                        fontSize: alreadySoldItem ? '34px' : '46px',
+                        fontWeight: 700,
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontVariantNumeric: 'tabular-nums',
+                        lineHeight: 1,
+                        color: alreadySoldItem ? '#ff4d5a' : '#f4f4f6',
+                        letterSpacing: alreadySoldItem ? '0.05em' : 'normal',
+                      }}
+                    >
+                      {alreadySoldItem
+                        ? 'LOCKED'
+                        : timerFormatted}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: alreadySoldItem ? '34px' : '46px',
-                      fontWeight: 700,
-                      fontFamily: "'Rajdhani', sans-serif",
-                      fontVariantNumeric: 'tabular-nums',
-                      lineHeight: 1,
-                      marginTop: '4px',
-                      color: alreadySoldItem ? '#ff4d5a' : '#f4f4f6',
-                      letterSpacing: alreadySoldItem ? '0.05em' : 'normal',
-                    }}
-                  >
-                    {alreadySoldItem
-                      ? 'LOCKED'
-                      : timerFormatted}
-                  </div>
-                  <div style={{ width: '161px', height: '7px', borderRadius: '4px', background: '#26262c', marginTop: '6px', overflow: 'hidden' }}>
+                  <div className="gcl-question-timer-bar-wrap">
                     <div
                       style={{
                         height: '7px',
@@ -870,9 +886,8 @@ export default function LiveView() {
 
                   return (
                     <div
-                      className="panel red gcl-card-animate card--sheen"
+                      className="panel red gcl-card-animate card--sheen gcl-current-bid-card"
                       style={{
-                        minHeight: '161px',
                         position: 'relative',
                         overflow: 'hidden',
                         padding: '16px 24px',
@@ -880,11 +895,10 @@ export default function LiveView() {
                         flexDirection: 'column',
                         justifyContent: 'space-between',
                         flex: 1,
-                        minWidth: '320px',
                       }}
                     >
                       {/* Header: Pulsing red dot + CURRENT BID + Question Ref */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                      <div className="gcl-current-bid-header" style={{ zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                           <div className="dot" style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#e8212e' }} />
                           <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
@@ -912,7 +926,7 @@ export default function LiveView() {
                             </span>
                           )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="gcl-current-bid-ref" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                             Question Ref:
                           </span>
@@ -923,8 +937,8 @@ export default function LiveView() {
                       </div>
 
                       {/* Content: Vertical Gavel Tile, Bidding Team, Divider, Current Amount */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
+                      <div className="gcl-current-bid-body" style={{ zIndex: 10 }}>
+                        <div className="gcl-current-bid-team-side" style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
                           <div
                             className={`panel ${isFireActive ? 'gcl-fire-aura' : ''}`}
                             style={{
@@ -962,13 +976,14 @@ export default function LiveView() {
                         </div>
 
                         {/* Vertical divider */}
-                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
+                        <div className="gcl-current-bid-divider" style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
 
-                        <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
+                        <div className="gcl-current-bid-amount-side" style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
                           <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                             Current Amount
                           </p>
                           <p
+                            className="gcl-current-bid-amount"
                             style={{
                               fontSize: '40px',
                               fontWeight: 700,
@@ -994,9 +1009,8 @@ export default function LiveView() {
 
                   return (
                     <div
-                      className="panel gcl-card-animate"
+                      className="panel gcl-card-animate gcl-current-bid-card"
                       style={{
-                        minHeight: '161px',
                         position: 'relative',
                         overflow: 'hidden',
                         padding: '16px 24px',
@@ -1004,13 +1018,12 @@ export default function LiveView() {
                         flexDirection: 'column',
                         justifyContent: 'space-between',
                         flex: 1,
-                        minWidth: '320px',
                         background: '#18181d',
                         borderColor: '#2f2f38',
                       }}
                     >
                       {/* Header */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                      <div className="gcl-current-bid-header" style={{ zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                           <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)' }} />
                           <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '0.5px', color: '#f4f4f6', fontFamily: "'Rajdhani', sans-serif" }}>
@@ -1031,7 +1044,7 @@ export default function LiveView() {
                             SOLD
                           </span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="gcl-current-bid-ref" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '13px', color: '#9a9aa3', fontFamily: "'Inter', sans-serif" }}>
                             Question Ref:
                           </span>
@@ -1042,8 +1055,8 @@ export default function LiveView() {
                       </div>
 
                       {/* Content */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
+                      <div className="gcl-current-bid-body" style={{ zIndex: 10 }}>
+                        <div className="gcl-current-bid-team-side" style={{ display: 'flex', alignItems: 'center', gap: '20px', minWidth: 0 }}>
                           <div
                             className="panel"
                             style={{
@@ -1080,13 +1093,14 @@ export default function LiveView() {
                         </div>
 
                         {/* Vertical divider */}
-                        <div style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
+                        <div className="gcl-current-bid-divider" style={{ width: '1px', height: '65px', background: '#2e2e34' }} />
 
-                        <div style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
+                        <div className="gcl-current-bid-amount-side" style={{ minWidth: 0, textAlign: 'left', flexShrink: 0 }}>
                           <p style={{ fontSize: '12px', color: '#9a9aa3', letterSpacing: '0.5px', margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif" }}>
                             Final Bid
                           </p>
                           <p
+                            className="gcl-current-bid-amount"
                             style={{
                               fontSize: '40px',
                               fontWeight: 700,
@@ -1110,19 +1124,7 @@ export default function LiveView() {
                 const renderPreviousBidsCard = () => {
                   return (
                     <div
-                      className="panel gcl-card-animate"
-                      style={{
-                        minHeight: '161px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        padding: '14px 20px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flex: 1,
-                        minWidth: '320px',
-                        background: '#18181c',
-                        borderColor: '#292930',
-                      }}
+                      className="panel gcl-card-animate gcl-prev-bids-card"
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1137,26 +1139,14 @@ export default function LiveView() {
                       </div>
 
                       {/* Column Headers */}
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '90px 1fr 100px',
-                          alignItems: 'center',
-                          padding: '0 8px 6px 8px',
-                          borderBottom: '1px solid #282830',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#8e8e98',
-                          fontFamily: "'Rajdhani', sans-serif",
-                          letterSpacing: '0.05em',
-                        }}
-                      >
-                        <div>ROUND-QUESTION</div>
+                      <div className="gcl-prev-bids-header">
+                        <div>ROUND-Q</div>
                         <div>TEAM NAME</div>
                         <div style={{ textAlign: 'right' }}>VALUE</div>
+                        <div style={{ textAlign: 'right' }}>TIME</div>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '6px', overflowY: 'auto', maxHeight: '86px', zIndex: 10 }}>
+                      <div className="gcl-prev-bids-scroll" style={{ zIndex: 10 }}>
                         {previousBidsDisplayList.length === 0 ? (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: '#9a9aa3', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
                             No previous purchases in this round
@@ -1165,42 +1155,19 @@ export default function LiveView() {
                           previousBidsDisplayList.map((bid) => (
                             <div
                               key={bid.id}
-                              className="gcl-row-enter"
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '90px 1fr 100px',
-                                alignItems: 'center',
-                                gap: '8px',
-                                height: '28px',
-                                minHeight: '28px',
-                                background: '#141418',
-                                border: '1px solid rgba(255, 255, 255, 0.04)',
-                                borderRadius: '4px',
-                                padding: '0 8px',
-                              }}
+                              className="gcl-row-enter gcl-prev-bids-row"
                             >
-                              <div
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  height: '20px',
-                                  padding: '0 6px',
-                                  borderRadius: '3px',
-                                  background: '#22222a',
-                                  color: '#e2e2e8',
-                                  fontSize: '12px',
-                                  fontWeight: 700,
-                                  fontFamily: "'Rajdhani', sans-serif",
-                                }}
-                              >
+                              <div className="gcl-prev-bids-chip">
                                 {bid.compactRef}
                               </div>
-                              <span style={{ fontSize: '14px', color: '#f4f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Inter', sans-serif" }}>
+                              <span className="gcl-prev-bids-team">
                                 {bid.teamName}
                               </span>
-                              <span style={{ fontSize: '16px', fontWeight: 700, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                              <span className="gcl-prev-bids-amount">
                                 {formatCurrency(bid.amount)}
+                              </span>
+                              <span className="gcl-prev-bids-time">
+                                {bid.time}
                               </span>
                             </div>
                           ))
@@ -1236,7 +1203,7 @@ export default function LiveView() {
                 // CASE 4: 1 sold & active bid -> SHOW CURRENT BID + LAST SUCCESSFUL BID
                 if (soldCount === 1 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                    <div className="gcl-live-bid-row">
                       {renderCurrentBidCard()}
                       {renderLastSuccessfulBidCard()}
                     </div>
@@ -1246,7 +1213,7 @@ export default function LiveView() {
                 // CASE 5 & 8: 2+ sold & no active bid -> SHOW LAST SUCCESSFUL BID + PREVIOUS BIDS (older purchases)
                 if (soldCount >= 2 && !hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                    <div className="gcl-live-bid-row">
                       {renderLastSuccessfulBidCard()}
                       {renderPreviousBidsCard()}
                     </div>
@@ -1256,7 +1223,7 @@ export default function LiveView() {
                 // CASE 6 & 7: 2+ sold & active bid -> SHOW CURRENT BID + PREVIOUS BIDS (all purchases)
                 if (soldCount >= 2 && hasCurrent) {
                   return (
-                    <div className="gcl-live-bid-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                    <div className="gcl-live-bid-row">
                       {renderCurrentBidCard()}
                       {renderPreviousBidsCard()}
                     </div>
@@ -1267,20 +1234,22 @@ export default function LiveView() {
               })()}
 
               {/* 3. Live Team Status Table (1156px x 385px) */}
-              <LiveTeamStatus
-                teams={availableTeams}
-                myTeamId={effectiveMyTeamId}
-                items={items}
-                currentRoundIndex={roundIdx}
-                startingBudget={edition?.starting_budget || 50000000}
-              />
+              <div className="gcl-live-team-status-wrap" style={{ width: '100%' }}>
+                <LiveTeamStatus
+                  teams={availableTeams}
+                  myTeamId={effectiveMyTeamId}
+                  items={items}
+                  currentRoundIndex={roundIdx}
+                  startingBudget={edition?.starting_budget || 50000000}
+                />
+              </div>
             </div>
 
             {/* RIGHT COLUMN: 369px x 715px SELECTED TEAM & ITEMS WON (Shown only when team is selected) */}
             {isTeamPanelOpen && selectedTeam && (
               <div className="gcl-sidebar-enter" style={{ width: '100%', minWidth: 0 }}>
                 <div
-                  className="panel red"
+                  className="panel red gcl-selected-team-panel"
                   style={{
                     width: '100%',
                     minHeight: '715px',
@@ -1320,7 +1289,7 @@ export default function LiveView() {
 
                 {/* Team Identity Card (340px x 358px, #18181c, border #25252b) */}
                 <div
-                  className="panel"
+                  className="panel gcl-team-identity-card"
                   style={{
                     width: '100%',
                     height: '358px',
@@ -1671,7 +1640,7 @@ export default function LiveView() {
         }
 
         return (
-          <div className="page-shell live-screen-container">
+          <div className="live-screen-container">
             {/* Centered Header */}
             <div className="text-center mb-8">
               <div className="inline-block mb-3">
@@ -2169,132 +2138,135 @@ export default function LiveView() {
         const stageNum: 1 | 2 | 3 = roundIdx === 0 ? 1 : roundIdx === 1 ? 2 : 3;
 
         return (
-          <div className="page-shell live-screen-container">
-            {/* Progress Stepper at top */}
-            <ProgressStepper currentStage={stageNum} />
+          <div className="live-screen-container">
+            <div className="live-intermission-layout">
+              {/* Left Column (Sticky on Desktop, Centered Hero on Mobile) */}
+              <div className="live-intermission-left" aria-live="polite">
+                <ProgressStepper currentStage={stageNum} />
 
-            {/* Centered Stage Header */}
-            <div className="text-center mb-6">
-              <div className="inline-block mb-3">
-                <span className="badge-official">ROUND {stageNum} COMPLETE</span>
-              </div>
+                <div className="inline-block mb-3">
+                  <span className="badge-official">ROUND {stageNum} COMPLETE</span>
+                </div>
 
-              {roundIdx === 0 ? (
-                <>
-                  <h1
-                    style={{
-                      fontFamily: "'Rajdhani', sans-serif",
-                      fontSize: 'clamp(36px, 6vw, 64px)',
-                      fontWeight: 900,
-                      lineHeight: 1.05,
-                      color: '#ffffff',
-                      textTransform: 'uppercase',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    ROUND 1 INTERMISSION
-                  </h1>
-                  <p
-                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                    style={{ letterSpacing: '0.2em' }}
-                  >
-                    ROUND 2 WILL START SOON. STAND BY…
-                  </p>
-                </>
-              ) : roundIdx === 1 ? (
-                <>
-                  <h1
-                    style={{
-                      fontFamily: "'Rajdhani', sans-serif",
-                      fontSize: 'clamp(36px, 6vw, 64px)',
-                      fontWeight: 900,
-                      lineHeight: 1.05,
-                      color: '#ffffff',
-                      textTransform: 'uppercase',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    ROUND 2 INTERMISSION
-                  </h1>
-                  <p
-                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                    style={{ letterSpacing: '0.2em' }}
-                  >
-                    ROUND 3 WILL START SOON. STAND BY…
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h1
-                    style={{
-                      fontFamily: "'Rajdhani', sans-serif",
-                      fontSize: 'clamp(32px, 5.5vw, 64px)',
-                      fontWeight: 900,
-                      lineHeight: 1.1,
-                      color: '#ffffff',
-                      textTransform: 'uppercase',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    <div>RESULTS WILL BE</div>
-                    <div>ANNOUNCED SOON</div>
-                  </h1>
-                  <p
-                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
-                    style={{ letterSpacing: '0.2em' }}
-                  >
-                    STAND BY…
-                  </p>
-                </>
-              )}
+                {roundIdx === 0 ? (
+                  <>
+                    <h1
+                      className="live-intermission-title"
+                      style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontSize: 'clamp(36px, 6vw, 64px)',
+                        fontWeight: 900,
+                        lineHeight: 1.05,
+                        color: '#ffffff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      ROUND 1 INTERMISSION
+                    </h1>
+                    <p
+                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                      style={{ letterSpacing: '0.2em' }}
+                    >
+                      ROUND 2 WILL START SOON. STAND BY…
+                    </p>
+                  </>
+                ) : roundIdx === 1 ? (
+                  <>
+                    <h1
+                      className="live-intermission-title"
+                      style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontSize: 'clamp(36px, 6vw, 64px)',
+                        fontWeight: 900,
+                        lineHeight: 1.05,
+                        color: '#ffffff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      ROUND 2 INTERMISSION
+                    </h1>
+                    <p
+                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                      style={{ letterSpacing: '0.2em' }}
+                    >
+                      ROUND 3 WILL START SOON. STAND BY…
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1
+                      className="live-intermission-title"
+                      style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontSize: 'clamp(32px, 5.5vw, 64px)',
+                        fontWeight: 900,
+                        lineHeight: 1.1,
+                        color: '#ffffff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      <div>RESULTS WILL BE</div>
+                      <div>ANNOUNCED SOON</div>
+                    </h1>
+                    <p
+                      className="live-intermission-subtext text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                      style={{ letterSpacing: '0.2em' }}
+                    >
+                      STAND BY…
+                    </p>
+                  </>
+                )}
 
-              {/* Circular Stand By Indicator */}
-              <div className="live-standby-ring" aria-hidden="true">
-                <svg className="live-standby-spinner" viewBox="0 0 88 88" fill="none">
-                  <circle cx="44" cy="44" r="38" stroke="#262630" strokeWidth="3" />
-                  <circle
-                    cx="44"
-                    cy="44"
-                    r="38"
-                    stroke="#ff2a3d"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeDasharray="60 180"
+                {/* Circular Stand By Indicator */}
+                <div className="live-standby-ring" aria-hidden="true">
+                  <svg className="live-standby-spinner" viewBox="0 0 88 88" fill="none">
+                    <circle cx="44" cy="44" r="38" stroke="#262630" strokeWidth="3" />
+                    <circle
+                      cx="44"
+                      cy="44"
+                      r="38"
+                      stroke="#ff2a3d"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeDasharray="60 180"
+                    />
+                  </svg>
+                  <div
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      background: '#ff2a3d',
+                      boxShadow: '0 0 10px #ff2a3d',
+                    }}
                   />
-                </svg>
-                <div
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    background: '#ff2a3d',
-                    boxShadow: '0 0 10px #ff2a3d',
-                  }}
-                />
+                </div>
+
+                {/* Notice Banner (existing notices only) */}
+                {roundIdx === 0 && (
+                  <div className="live-amber-notice">
+                    ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
+                  </div>
+                )}
+                {roundIdx === 1 && (
+                  <div className="live-amber-notice">
+                    💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
+                  </div>
+                )}
               </div>
 
-              {/* Notice Banner (existing notices only) */}
-              {roundIdx === 0 && (
-                <div className="live-amber-notice">
-                  ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
-                </div>
-              )}
-              {roundIdx === 1 && (
-                <div className="live-amber-notice">
-                  💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
-                </div>
-              )}
-            </div>
-
-            {/* Summary Card (max-width 760px, centered) */}
-            <div
-              className="live-card-glow"
-              style={{
-                maxWidth: '760px',
-                margin: '0 auto',
-                padding: '16px',
-              }}
-            >
+              {/* Right Column: Summary Card (Full column width, scrollable on desktop) */}
+              <div className="live-intermission-right" style={{ width: '100%', minWidth: 0 }}>
+                <div
+                  className="live-card-glow live-intermission-card"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                  }}
+                >
               {/* Header row with red dot */}
               <div
                 style={{
@@ -2762,8 +2734,10 @@ export default function LiveView() {
               </div>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      </div>
+    );
+  })()}
 
       {/* 5. WINNER REVEAL STATE (Screen 5: Final Champions Reveal) */}
       {gameState === 'winner_reveal' && (() => {
@@ -2777,7 +2751,7 @@ export default function LiveView() {
         const thirdName = thirdTeam?.name || (podiumState as any)?.thirdTeamName || (podiumState.thirdTeamId ? '3rd Place' : '');
 
         return (
-          <div className="page-shell live-screen-container">
+          <div className="live-screen-container">
             {/* Header: huge gold-gradient "CHAMPIONS" with glow */}
             <div className="text-center mb-10">
               <h1 className="live-champions-header-title">CHAMPIONS</h1>
@@ -2789,171 +2763,152 @@ export default function LiveView() {
               </p>
             </div>
 
-            {/* Podium (max-width 760px, centered, 3 columns, bottom-aligned, stepped heights) */}
-            <div className="live-podium-grid" aria-live="polite">
-              {/* 2nd Place Column (Left) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', width: '100%' }}>
-                  {podiumState.secondRevealed && (secondTeam || secondName) ? (
-                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <TrophyCup size={76} color="#c3c7d2" />
+            {/* Podium (full width 3-column grid with soft radial spotlight) */}
+            <div className={`live-podium-spotlight-wrap ${podiumState.firstRevealed ? 'is-gold-spotlight' : 'is-red-spotlight'}`}>
+              <div className="live-podium-grid" aria-live="polite">
+                {/* 2nd Place Column (Left) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', width: '100%' }}>
+                    {podiumState.secondRevealed && (secondTeam || secondName) ? (
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <TrophyCup className="live-trophy-silver" color="#c3c7d2" />
+                        </div>
+                        <h2
+                          className="live-podium-name"
+                          style={{
+                            color: '#e2e5ec',
+                          }}
+                        >
+                          {secondName}
+                        </h2>
                       </div>
-                      <h2
-                        style={{
-                          fontFamily: "'Rajdhani', sans-serif",
-                          fontSize: 'clamp(17px, 2.5vw, 24px)',
-                          fontWeight: 800,
-                          color: '#e2e5ec',
-                          marginTop: '8px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          padding: '0 4px',
-                        }}
-                      >
-                        {secondName}
-                      </h2>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="live-podium-hidden-circle">?</div>
-                      <p
-                        style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          color: '#6a6a78',
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          textAlign: 'center',
-                        }}
-                      >
-                        HIDDEN
-                      </p>
-                    </div>
-                  )}
+                    ) : (
+                      <div>
+                        <div className="live-podium-hidden-circle">?</div>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#6a6a78',
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            textAlign: 'center',
+                          }}
+                        >
+                          HIDDEN
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className={`live-podium-block live-podium-h-2 ${
+                      podiumState.secondRevealed ? 'live-podium-block-silver' : 'live-podium-block-dark'
+                    }`}
+                    style={{ width: '100%', fontSize: '42px' }}
+                  >
+                    2
+                  </div>
                 </div>
-                <div
-                  className={`live-podium-block live-podium-h-2 ${
-                    podiumState.secondRevealed ? 'live-podium-block-silver' : 'live-podium-block-dark'
-                  }`}
-                  style={{ width: '100%', fontSize: '42px' }}
-                >
-                  2
-                </div>
-              </div>
 
-              {/* 1st Place Column (Center) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2 }}>
-                <div style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '14px', width: '100%' }}>
-                  {podiumState.firstRevealed && (firstTeam || firstName) ? (
-                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <TrophyCup size={104} color="#f5b73b" />
+                {/* 1st Place Column (Center) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2 }}>
+                  <div style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '14px', width: '100%' }}>
+                    {podiumState.firstRevealed && (firstTeam || firstName) ? (
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <TrophyCup className="live-trophy-gold" color="#f5b73b" />
+                        </div>
+                        <h2
+                          className="live-podium-name"
+                          style={{
+                            color: '#ffd700',
+                            filter: 'drop-shadow(0 0 12px rgba(245, 183, 59, 0.4))',
+                          }}
+                        >
+                          {firstName}
+                        </h2>
                       </div>
-                      <h2
-                        style={{
-                          fontFamily: "'Rajdhani', sans-serif",
-                          fontSize: 'clamp(20px, 3.2vw, 28px)',
-                          fontWeight: 900,
-                          color: '#ffd700',
-                          marginTop: '8px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          padding: '0 4px',
-                          filter: 'drop-shadow(0 0 12px rgba(245, 183, 59, 0.4))',
-                        }}
-                      >
-                        {firstName}
-                      </h2>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="live-podium-hidden-circle">?</div>
-                      <p
-                        style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          color: '#6a6a78',
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          textAlign: 'center',
-                        }}
-                      >
-                        HIDDEN
-                      </p>
-                    </div>
-                  )}
+                    ) : (
+                      <div>
+                        <div className="live-podium-hidden-circle">?</div>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#6a6a78',
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            textAlign: 'center',
+                          }}
+                        >
+                          HIDDEN
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className={`live-podium-block live-podium-h-1 ${
+                      podiumState.firstRevealed ? 'live-podium-block-gold' : 'live-podium-block-dark'
+                    }`}
+                    style={{ width: '100%', fontSize: '56px' }}
+                  >
+                    1
+                  </div>
                 </div>
-                <div
-                  className={`live-podium-block live-podium-h-1 ${
-                    podiumState.firstRevealed ? 'live-podium-block-gold' : 'live-podium-block-dark'
-                  }`}
-                  style={{ width: '100%', fontSize: '56px' }}
-                >
-                  1
-                </div>
-              </div>
 
-              {/* 3rd Place Column (Right) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', width: '100%' }}>
-                  {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
-                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <TrophyCup size={64} color="#e8743b" />
+                {/* 3rd Place Column (Right) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', width: '100%' }}>
+                    {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <TrophyCup className="live-trophy-bronze" color="#e8743b" />
+                        </div>
+                        <h2
+                          className="live-podium-name"
+                          style={{
+                            color: '#f8b48f',
+                          }}
+                        >
+                          {thirdName}
+                        </h2>
                       </div>
-                      <h2
-                        style={{
-                          fontFamily: "'Rajdhani', sans-serif",
-                          fontSize: 'clamp(16px, 2.2vw, 22px)',
-                          fontWeight: 800,
-                          color: '#f8b48f',
-                          marginTop: '8px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          padding: '0 4px',
-                        }}
-                      >
-                        {thirdName}
-                      </h2>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="live-podium-hidden-circle">?</div>
-                      <p
-                        style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          color: '#6a6a78',
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          textAlign: 'center',
-                        }}
-                      >
-                        HIDDEN
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div
-                  className={`live-podium-block live-podium-h-3 ${
-                    podiumState.thirdRevealed ? 'live-podium-block-bronze' : 'live-podium-block-dark'
-                  }`}
-                  style={{ width: '100%', fontSize: '36px' }}
-                >
-                  3
+                    ) : (
+                      <div>
+                        <div className="live-podium-hidden-circle">?</div>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            color: '#6a6a78',
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            textAlign: 'center',
+                          }}
+                        >
+                          HIDDEN
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className={`live-podium-block live-podium-h-3 ${
+                      podiumState.thirdRevealed ? 'live-podium-block-bronze' : 'live-podium-block-dark'
+                    }`}
+                    style={{ width: '100%', fontSize: '36px' }}
+                  >
+                    3
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Final Championship Standings Table (max-width 760px, centered) */}
-            <div style={{ maxWidth: '760px', margin: '48px auto 0 auto' }}>
+            {/* Final Championship Standings Table (FULL width, remove 760px cap) */}
+            <div style={{ width: '100%', margin: '48px 0 0 0' }}>
               <div
                 style={{
                   display: 'flex',
