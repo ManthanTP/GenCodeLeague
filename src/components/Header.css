@@ -1,0 +1,393 @@
+/* ====================================================================
+   GEN CODE LEAGUE — HEADER & NAVIGATION COMPONENT STYLES
+   - Red glowing active pill for current page route
+   - Standardized desktop pills (1024px+)
+   - Mobile sliding drawer (<1024px)
+   ==================================================================== */
+
+/* Nav container with 6px vertical padding so active red glow is never clipped */
+.gcl-desktop-nav-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 1023px) {
+  .gcl-desktop-nav-wrap {
+    display: none !important;
+  }
+}
+
+/* Inactive Nav Pill */
+.gcl-nav-pill {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 9px;
+  background: #18181c;
+  border: 1px solid #24242c;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #f4f4f6;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  outline: none;
+}
+
+.gcl-nav-pill:hover {
+  background: #202026;
+  border-color: #5a1a22;
+  color: #ffffff;
+}
+
+.gcl-nav-pill:focus-visible {
+  outline: 2px solid #ff2a3d !important;
+  outline-offset: 2px !important;
+}
+
+/* Active Nav Pill: red glow */
+.gcl-nav-pill.active {
+  border: 1px solid #ff2a3d !important;
+  background: linear-gradient(#2a0c12, #160609) !important;
+  color: #ff5a6a !important;
+  box-shadow: 0 0 16px rgba(255, 42, 61, 0.40), inset 0 0 12px rgba(255, 42, 61, 0.12) !important;
+}
+
+.gcl-nav-pill.active svg {
+  color: #ff5a6a !important;
+  stroke: #ff5a6a !important;
+}
+
+/* Tight fit between 1024px and 1279px */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .gcl-nav-pill {
+    padding: 8px 12px !important;
+    font-size: 14px;
+    gap: 6px;
+  }
+
+  .gcl-header-budget-label {
+    display: none !important;
+  }
+}
+
+/* Responsive Stat Cards visibility */
+@media (max-width: 1023px) {
+  .gcl-header-teams-chip {
+    display: none !important;
+  }
+  .gcl-header-budget-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gcl-header-budget-mobile {
+    display: none !important;
+  }
+  .gcl-header-hamburger {
+    display: none !important;
+  }
+}
+
+/* Mobile Header Hamburger Button (44x44px, rounded 10px) */
+.gcl-header-hamburger {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: #18181c;
+  border: 1px solid #2c2c33;
+  color: #f4f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.gcl-header-hamburger:hover {
+  background: #202026;
+  border-color: #5a1a22;
+  color: #ff4d5a;
+}
+
+.gcl-header-hamburger:focus-visible {
+  outline: 2px solid #ff2a3d !important;
+  outline-offset: 2px !important;
+}
+
+/* Hide small subtitle under 420px to prevent crowding */
+@media (max-width: 420px) {
+  .gcl-header-brand-subline {
+    display: none !important;
+  }
+}
+
+/* Dark Overlay Behind Drawer */
+.gcl-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.gcl-mobile-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Mobile Drawer (width min(86vw, 340px), full height) */
+.gcl-mobile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(86vw, 340px);
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(14, 14, 18, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid #3d0f14;
+  box-shadow: -8px 0 32px rgba(255, 42, 61, 0.18);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.25s ease;
+}
+
+.gcl-mobile-drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Top bar inside drawer */
+.gcl-drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  border-bottom: 1px solid #23232c;
+  flex-shrink: 0;
+}
+
+.gcl-drawer-close-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: #18181c;
+  border: 1px solid #2c2c33;
+  color: #f4f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.gcl-drawer-close-btn:hover {
+  background: #202026;
+  border-color: #5a1a22;
+  color: #ff4d5a;
+}
+
+.gcl-drawer-close-btn:focus-visible {
+  outline: 2px solid #ff2a3d !important;
+  outline-offset: 2px !important;
+}
+
+/* Drawer Nav List */
+.gcl-drawer-nav {
+  padding: 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Drawer Nav Row (52px tall, 44px+ touch target) */
+.gcl-drawer-row {
+  width: 100%;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 12px;
+  background: #141419;
+  border: 1px solid #24242c;
+  color: #f4f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  box-sizing: border-box;
+  position: relative;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.gcl-drawer-row:hover {
+  background: #1c1c23;
+  border-color: #5a1a22;
+  color: #ffffff;
+}
+
+.gcl-drawer-row:focus-visible {
+  outline: 2px solid #ff2a3d !important;
+  outline-offset: 2px !important;
+}
+
+/* Drawer Nav Row Active */
+.gcl-drawer-row.active {
+  border: 1px solid #ff2a3d !important;
+  background: linear-gradient(#2a0c12, #160609) !important;
+  color: #ff5a6a !important;
+  box-shadow: 0 0 16px rgba(255, 42, 61, 0.40), inset 0 0 12px rgba(255, 42, 61, 0.12) !important;
+}
+
+/* 3px red accent bar on left edge of active row */
+.gcl-drawer-row.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: #ff2a3d;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px #ff2a3d;
+}
+
+.gcl-drawer-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gcl-drawer-icon-tile {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  background: #1c1c24;
+  border: 1px solid #282834;
+  color: #8e8e9a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.gcl-drawer-row.active .gcl-drawer-icon-tile {
+  background: rgba(255, 42, 61, 0.2);
+  border-color: rgba(255, 42, 61, 0.4);
+  color: #ff5a6a;
+}
+
+.gcl-drawer-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.gcl-drawer-chevron {
+  color: #555562;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.gcl-drawer-row.active .gcl-drawer-chevron {
+  color: #ff5a6a;
+  transform: translateX(2px);
+}
+
+/* Drawer Bottom Stats */
+.gcl-drawer-bottom {
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid #23232c;
+  background: rgba(14, 14, 18, 0.98);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.gcl-drawer-stat-tile {
+  background: #18181c;
+  border: 1px solid #2c2c33;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.gcl-drawer-stat-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #9a9aa3;
+  font-weight: 400;
+}
+
+.gcl-drawer-stat-val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .gcl-mobile-overlay,
+  .gcl-mobile-drawer,
+  .gcl-nav-pill,
+  .gcl-drawer-row,
+  .gcl-drawer-chevron {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

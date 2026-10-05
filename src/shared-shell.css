@@ -370,3 +370,16 @@ select:focus-visible {
     transform: none !important;
   }
 }
+
+/* Team dropdown select (hide native arrow) */
+.team-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none !important;
+  padding-right: 40px;
+}
+.team-select::-ms-expand {
+  display: none;
+}
+

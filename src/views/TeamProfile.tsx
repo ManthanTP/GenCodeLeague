@@ -432,8 +432,15 @@ export default function TeamProfile() {
                     <select
                       value={team.id}
                       onChange={(e) => navigate(`/teams/${e.target.value}`)}
-                      className="w-full appearance-none bg-[#111116] border border-[#24242e] text-white rounded-xl px-3.5 py-2.5 text-xs font-bold font-mono focus:outline-none focus:border-[#e8212e] pr-9 cursor-pointer"
-                      style={{ fontFamily: "'Rajdhani', sans-serif" }}
+                      className="team-select w-full bg-[#111116] border border-[#24242e] text-white rounded-xl px-3.5 py-2.5 text-xs font-bold font-mono focus:outline-none focus:border-[#ff2a3d] cursor-pointer truncate"
+                      style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        WebkitAppearance: 'none',
+                        MozAppearance: 'none',
+                        appearance: 'none',
+                        backgroundImage: 'none',
+                        paddingRight: '40px',
+                      }}
                     >
                       {allEditionTeams.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -443,7 +450,7 @@ export default function TeamProfile() {
                     </select>
                     <ChevronDown
                       size={16}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a8a93] pointer-events-none"
+                      style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#8a8a93' }}
                     />
                   </div>
                 )}
