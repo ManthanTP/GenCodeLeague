@@ -29,42 +29,49 @@ export function useFitText(text: string, isRevealed: boolean = true) {
           return;
         }
 
-        const clientW = container.clientWidth;
-        const clientH = container.clientHeight;
+        const cs = window.getComputedStyle(container);
+        const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
 
-        if (clientW <= 0 || clientH <= 0) {
+        const availW = container.clientWidth - padX;
+        const availH = container.clientHeight - padY;
+
+        if (availW <= 10 || availH <= 10) {
           isFitting = false;
           return;
         }
 
         const isMobile = window.innerWidth < 700;
-        const minFont = 16;
-        const maxFont = Math.max(minFont, isMobile ? window.innerWidth * 0.09 : window.innerWidth * 0.11);
+        const minFont = isMobile ? 11 : 13;
+        const maxFont = Math.max(minFont, isMobile ? Math.min(window.innerWidth * 0.12, 40) : Math.min(window.innerWidth * 0.12, 120));
 
-        const checkOverflow = () => {
-          if (container.scrollHeight > container.clientHeight) return true;
-          if (container.scrollWidth > container.clientWidth) return true;
-          if (textEl.scrollHeight > textEl.clientHeight) return true;
-          if (textEl.scrollWidth > textEl.clientWidth) return true;
+        const checkOverflow = (fontSize: number) => {
+          // 1. Text rendered height exceeds container available height
+          if (textEl.offsetHeight > availH + 0.5) return true;
 
-          const cRect = container.getBoundingClientRect();
-          const tRect = textEl.getBoundingClientRect();
-          if (tRect.height > cRect.height + 0.5) return true;
-          if (tRect.width > cRect.width + 0.5) return true;
+          // 2. Line clamp: if text wrapped past 4 lines, scrollHeight exceeds offsetHeight by > half a line
+          if ((textEl.scrollHeight - textEl.offsetHeight) > (fontSize * 0.6)) return true;
+
+          // 3. Horizontal overflow: any word or line wider than available width
+          if (textEl.scrollWidth > availW + 2) return true;
+
+          // 4. Container scroll overflow: container itself must not scroll
+          if (container.scrollHeight > container.clientHeight + 0.5) return true;
+          if (container.scrollWidth > container.clientWidth + 0.5) return true;
 
           return false;
         };
 
-        // Binary search between min 16px and max 11vw (9vw mobile), 10 steps
+        // Binary search between minFont and maxFont across 14 steps for high precision
         let low = minFont;
         let high = maxFont;
         let best = minFont;
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 14; i++) {
           const mid = (low + high) / 2;
           textEl.style.fontSize = `${mid}px`;
 
-          if (!checkOverflow()) {
+          if (!checkOverflow(mid)) {
             best = mid;
             low = mid; // fits: try larger
           } else {
@@ -75,9 +82,9 @@ export function useFitText(text: string, isRevealed: boolean = true) {
         let finalSize = Math.floor(best);
         textEl.style.fontSize = `${finalSize}px`;
 
-        // Verification: reduce by 2px until it fits fully
-        while (finalSize > 8 && checkOverflow()) {
-          finalSize -= 2;
+        // Verification safety loop: decrement by 1px if needed
+        while (finalSize > minFont && checkOverflow(finalSize)) {
+          finalSize -= 1;
           textEl.style.fontSize = `${finalSize}px`;
         }
 
