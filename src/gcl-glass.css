@@ -544,10 +544,13 @@
 /* === FULL WIDTH LIVE CONTAINER & QUESTION CARD === */
 .gcl-live-container {
   width: 100%;
-  max-width: none;
+  max-width: 100%;
+  min-width: 0;
   margin: 0;
   padding: 20px clamp(14px, 2vw, 28px) 56px;
   box-sizing: border-box;
+  overflow-x: clip;
+  position: relative;
 }
 
 @media (max-width: 1023px) {
@@ -870,19 +873,24 @@
 /* === LIVE TEAM STATUS RESPONSIVE GRID === */
 .gcl-status-table-wrap {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  overflow-x: clip;
 }
 
 @media (max-width: 1023px) {
   .gcl-status-table {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
   }
   .gcl-status-thead,
   .gcl-status-tbody {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
   }
   .gcl-status-header-row,
   .gcl-status-row {
@@ -890,6 +898,9 @@
     align-items: center !important;
     height: 44px !important;
     min-height: 44px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
     padding: 0 10px !important;
   }
@@ -907,7 +918,7 @@
   @media (max-width: 479px) {
     .gcl-status-header-row,
     .gcl-status-row {
-      grid-template-columns: 30px minmax(0, 1fr) 44px auto auto !important;
+      grid-template-columns: 28px minmax(0, 1fr) 40px auto auto !important;
       gap: 6px !important;
       padding: 0 6px !important;
     }
@@ -946,6 +957,8 @@
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     font-size: 13px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
   }
 
   /* Shorten header labels visually with CSS only */

@@ -551,6 +551,12 @@ export default function LiveView() {
     <div
       className={`min-h-screen text-white font-sans gcl-live-page gcl-page-enter ${isFullscreen ? 'gcl-fullscreen-active' : ''}`}
       style={{
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflowX: 'clip',
+        boxSizing: 'border-box',
+        position: 'relative',
         ...(isFullscreen
           ? {
               position: 'fixed',
@@ -560,7 +566,7 @@ export default function LiveView() {
               bottom: 0,
               zIndex: 99999,
               overflowY: 'auto',
-              width: '100vw',
+              width: '100%',
               minHeight: '100vh',
             }
           : {}),
@@ -2767,10 +2773,10 @@ export default function LiveView() {
             <div className={`live-podium-spotlight-wrap ${podiumState.firstRevealed ? 'is-gold-spotlight' : 'is-red-spotlight'}`}>
               <div className="live-podium-grid" aria-live="polite">
                 {/* 2nd Place Column (Left) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', width: '100%' }}>
+                <div className="live-podium-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', minWidth: 0 }}>
+                  <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                     {podiumState.secondRevealed && (secondTeam || secondName) ? (
-                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', maxWidth: '100%', minWidth: 0, textAlign: 'center', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-silver" color="#c3c7d2" />
                         </div>
@@ -2784,9 +2790,10 @@ export default function LiveView() {
                         </h2>
                       </div>
                     ) : (
-                      <div>
+                      <div style={{ width: '100%', textAlign: 'center' }}>
                         <div className="live-podium-hidden-circle">?</div>
                         <p
+                          className="live-podium-hidden-label"
                           style={{
                             fontFamily: 'var(--font-mono, monospace)',
                             fontSize: '11px',
@@ -2813,10 +2820,10 @@ export default function LiveView() {
                 </div>
 
                 {/* 1st Place Column (Center) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2 }}>
-                  <div style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '14px', width: '100%' }}>
+                <div className="live-podium-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, width: '100%', minWidth: 0 }}>
+                  <div style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                     {podiumState.firstRevealed && (firstTeam || firstName) ? (
-                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', maxWidth: '100%', minWidth: 0, textAlign: 'center', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-gold" color="#f5b73b" />
                         </div>
@@ -2831,9 +2838,10 @@ export default function LiveView() {
                         </h2>
                       </div>
                     ) : (
-                      <div>
+                      <div style={{ width: '100%', textAlign: 'center' }}>
                         <div className="live-podium-hidden-circle">?</div>
                         <p
+                          className="live-podium-hidden-label"
                           style={{
                             fontFamily: 'var(--font-mono, monospace)',
                             fontSize: '11px',
@@ -2860,10 +2868,10 @@ export default function LiveView() {
                 </div>
 
                 {/* 3rd Place Column (Right) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', width: '100%' }}>
+                <div className="live-podium-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', minWidth: 0 }}>
+                  <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                     {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
-                      <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div className="live-podium-revealed-wrap" style={{ width: '100%', maxWidth: '100%', minWidth: 0, textAlign: 'center', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <TrophyCup className="live-trophy-bronze" color="#e8743b" />
                         </div>
@@ -2877,9 +2885,10 @@ export default function LiveView() {
                         </h2>
                       </div>
                     ) : (
-                      <div>
+                      <div style={{ width: '100%', textAlign: 'center' }}>
                         <div className="live-podium-hidden-circle">?</div>
                         <p
+                          className="live-podium-hidden-label"
                           style={{
                             fontFamily: 'var(--font-mono, monospace)',
                             fontSize: '11px',
@@ -2908,7 +2917,7 @@ export default function LiveView() {
             </div>
 
             {/* Final Championship Standings Table (FULL width, remove 760px cap) */}
-            <div style={{ width: '100%', margin: '48px 0 0 0' }}>
+            <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, margin: '48px 0 0 0', boxSizing: 'border-box' }}>
               <div
                 style={{
                   display: 'flex',
@@ -2916,10 +2925,14 @@ export default function LiveView() {
                   justifyContent: 'center',
                   gap: '10px',
                   marginBottom: '16px',
+                  flexWrap: 'wrap',
+                  textAlign: 'center',
+                  maxWidth: '100%',
                 }}
               >
                 <Crown size={22} className="text-yellow-400 shrink-0" />
                 <h2
+                  className="live-championship-title"
                   style={{
                     fontFamily: "'Rajdhani', sans-serif",
                     fontSize: '22px',
@@ -2933,7 +2946,7 @@ export default function LiveView() {
                 </h2>
               </div>
 
-              <div className="live-card-glow" style={{ padding: '16px' }}>
+              <div className="live-card-glow" style={{ padding: '16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                 {/* Header row (Desktop only) */}
                 <div
                   className="live-table-header"
@@ -2996,9 +3009,10 @@ export default function LiveView() {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            gap: '6px',
                             minWidth: 0,
                             paddingRight: '6px',
+                            overflow: 'hidden',
                           }}
                         >
                           {isGrandChampion && (
@@ -3013,13 +3027,15 @@ export default function LiveView() {
                           <span
                             style={{
                               fontFamily: "'Rajdhani', sans-serif",
-                              fontSize: '16px',
+                              fontSize: '15px',
                               fontWeight: 800,
                               color: '#ffffff',
                               letterSpacing: '0.02em',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              minWidth: 0,
+                              flex: '0 1 auto',
                             }}
                           >
                             {team.name}
@@ -3084,6 +3100,8 @@ export default function LiveView() {
                             alignItems: 'flex-end',
                             gap: '2px',
                             textAlign: 'right',
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           <span
@@ -3093,6 +3111,7 @@ export default function LiveView() {
                               color: '#2fd16f',
                               fontFamily: 'var(--font-mono, monospace)',
                               fontVariantNumeric: 'tabular-nums',
+                              whiteSpace: 'nowrap',
                             }}
                           >
                             {formatCurrency(team.totalRemaining)}
@@ -3104,6 +3123,7 @@ export default function LiveView() {
                               color: '#ff2a3d',
                               fontFamily: 'var(--font-mono, monospace)',
                               fontVariantNumeric: 'tabular-nums',
+                              whiteSpace: 'nowrap',
                             }}
                           >
                             {formatCurrency(team.totalSpent)}
