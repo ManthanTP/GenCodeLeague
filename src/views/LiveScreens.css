@@ -921,6 +921,7 @@
     word-break: break-word !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     white-space: normal !important;
     line-height: 1.15 !important;
