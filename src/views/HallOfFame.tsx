@@ -168,7 +168,7 @@ export default function HallOfFame() {
               <h2 className="gcl-card-title mb-4">
                 All-time records
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-4 gap-4">
                 <div className="gcl-inner-tile">
                   <p className="text-xs text-[#8a8a93] font-sans">Tournament champion</p>
                   <p
@@ -227,11 +227,11 @@ export default function HallOfFame() {
                 </div>
               </div>
 
-              {/* 3 Step Compact Podium Cards — Medal Variants */}
-              <div className="flex flex-col sm:flex-row items-end justify-center gap-4 lg:gap-6 pt-2">
+              {/* 3 Step Compact Podium Cards — 3 Columns Filling Width */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-end gap-4 lg:gap-6 pt-2 w-full">
                 {/* 2nd Place: Runner-up (Left, Medium) */}
                 <div
-                  className="gcl-card gcl-card--silver gcl-card--interactive p-4 flex flex-col items-center text-center w-full sm:w-[220px] md:w-[240px]"
+                  className="gcl-card gcl-card--silver gcl-card--interactive p-4 flex flex-col items-center text-center w-full"
                   style={{ minHeight: '225px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">
@@ -265,7 +265,7 @@ export default function HallOfFame() {
 
                 {/* 1st Place: Grand Champion (Center, Tallest, Glowing Gold Border + Sheen) */}
                 <div
-                  className="gcl-card gcl-card--gold gcl-card--sheen gcl-card--interactive p-4 sm:p-5 flex flex-col items-center text-center w-full sm:w-[260px] md:w-[280px] order-first sm:order-none"
+                  className="gcl-card gcl-card--gold gcl-card--sheen gcl-card--interactive p-4 sm:p-5 flex flex-col items-center text-center w-full order-first sm:order-none"
                   style={{ minHeight: '265px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">
@@ -301,7 +301,7 @@ export default function HallOfFame() {
 
                 {/* 3rd Place: Third Place (Right, Smallest, Glowing Bronze Border) */}
                 <div
-                  className="gcl-card gcl-card--bronze gcl-card--interactive p-4 flex flex-col items-center text-center w-full sm:w-[200px] md:w-[220px]"
+                  className="gcl-card gcl-card--bronze gcl-card--interactive p-4 flex flex-col items-center text-center w-full"
                   style={{ minHeight: '210px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">

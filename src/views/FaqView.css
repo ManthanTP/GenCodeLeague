@@ -398,6 +398,7 @@
   font-size: 14px;
   line-height: 1.6;
   color: #c9c9d1;
+  max-width: 80ch;
   padding: 0 18px 18px 66px;
   margin: 0;
   box-sizing: border-box;
