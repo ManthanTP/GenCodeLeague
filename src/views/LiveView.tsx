@@ -21,6 +21,7 @@ import {
   Trophy,
   Flame,
   Lock,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +35,82 @@ import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
+import './LiveScreens.css';
+
+// Two-handled Trophy Cup inline SVG component for the podium
+function TrophyCup({ size = 76, color = '#f5b73b' }: { size?: number; color?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ filter: `drop-shadow(0 0 16px ${color}88)` }}
+    >
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34" />
+      <path d="M6 4h12v6c0 3.31-2.69 6-6 6s-6-2.69-6-6V4Z" fill={`${color}22`} />
+    </svg>
+  );
+}
+
+// Progress Stepper for Intermission screens
+function ProgressStepper({ currentStage }: { currentStage: 1 | 2 | 3 }) {
+  const steps = [
+    { num: 1, label: 'ROUND 1' },
+    { num: 2, label: 'ROUND 2' },
+    { num: 3, label: 'ROUND 3' },
+    { num: 4, label: 'FINAL' },
+  ];
+
+  return (
+    <div className="live-stepper-wrap" aria-label="Tournament progress">
+      {steps.map((step, idx) => {
+        const isCompleted = step.num <= currentStage;
+        const isUpcoming = step.num === currentStage + 1;
+
+        return (
+          <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
+            <div className="live-step-node">
+              <div
+                className={`live-step-circle ${
+                  isCompleted
+                    ? 'live-step-completed'
+                    : isUpcoming
+                    ? 'live-step-upcoming'
+                    : 'live-step-dim'
+                }`}
+              >
+                {isCompleted ? <Check size={16} strokeWidth={3} /> : step.num}
+              </div>
+              <span
+                className="live-step-label"
+                style={{
+                  color: isCompleted ? '#ffffff' : isUpcoming ? '#ff4d5a' : '#656573',
+                }}
+              >
+                {step.label}
+              </span>
+            </div>
+            {idx < steps.length - 1 && (
+              <div
+                className={`live-step-line ${
+                  step.num < currentStage + 1 ? 'completed' : ''
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function LiveView() {
   const navigate = useNavigate();
@@ -1527,339 +1604,775 @@ export default function LiveView() {
         </div>
       )}
 
-      {/* 3b. ROUND 1 LEADERBOARD REVEAL STATE (Sequential Manual Reveal, Scores Strictly Excluded) */}
+      {/* 3b. ROUND 1 LEADERBOARD REVEAL STATE (Screen 1: Sequential Manual Reveal) */}
       {(gameState === 'leaderboard_reveal' ||
         eventState?.round_state === 'LEADERBOARD_REVEAL' ||
-        eventState?.round_state === 'LEADERBOARD_HIDDEN') && (
-        <div className="live-page-container">
-          <div className="text-center mb-8">
-            <div className="inline-block mb-3">
-              <span className="badge-official">ROUND 1 OFFICIAL STANDINGS</span>
-            </div>
-            <h1 className="champions-title">LEADERBOARD REVEAL</h1>
-            <p
-              className="text-base sm:text-lg text-slate-400 font-mono uppercase tracking-widest gcl-display"
-              style={{ letterSpacing: '0.2em' }}
-            >
-              ROUND 1 FINAL POSITIONS (REVEALING FROM BOTTOM TO TOP)
-            </p>
-          </div>          <div className="max-w-5xl w-full mx-auto px-2">
-            <div className="gcl-table-card">
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
-                  alignItems: 'center',
-                  padding: '12px 18px',
-                  background: '#16161c',
-                  borderBottom: '1px solid #26262e',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#9a9aa3',
-                  fontFamily: "'Rajdhani', sans-serif",
-                  letterSpacing: '0.05em',
-                }}
+        eventState?.round_state === 'LEADERBOARD_HIDDEN') && (() => {
+        const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
+        const totalCount = Math.max(
+          teams.length,
+          effectiveReveals.length,
+          r1Snapshot?.results?.length || 0
+        );
+
+        // Compute standings rows and find the most recently revealed team
+        const rowDataList = Array.from({ length: totalCount }, (_, i) => {
+          const position = i + 1;
+          const reveal = effectiveReveals.find((r) => r.position === position);
+          const isRevealed = Boolean(reveal?.is_revealed);
+          const r1Result = (reveal?.team_id ? r1Snapshot?.results?.find((r) => r.id === reveal.team_id) : null) || r1Snapshot?.results?.[position - 1];
+          const teamObj = teams.find((t) => t.id === reveal?.team_id) || (r1Result?.id ? teams.find((t) => t.id === r1Result.id) : undefined);
+
+          const teamDisplayName =
+            reveal?.team_name ||
+            teamObj?.name ||
+            r1Result?.name ||
+            (isRevealed ? `Team ${position}` : '???');
+
+          const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
+          const teamId = reveal?.team_id || teamObj?.id || r1Result?.id;
+          const r1TeamItems = items.filter((it) => it.team_id === teamId && Number(it.round_index) === 0);
+          const r1ItemsCount = r1Result?.itemsCount ?? r1TeamItems.length;
+          const r1TotalSpent = r1Result?.totalSpent ?? r1TeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+          const startingBudget = edition?.starting_budget || 50000000;
+          const r1Remaining = r1Result?.remainingBudget !== undefined ? r1Result.remainingBudget : Math.max(0, startingBudget - r1TotalSpent);
+
+          return {
+            position,
+            isRevealed,
+            teamDisplayName,
+            isMyTeam,
+            r1ItemsCount,
+            r1TotalSpent,
+            r1Remaining,
+            revealedAt: reveal?.revealed_at,
+          };
+        });
+
+        // Most recently revealed team for Spotlight Card
+        const revealedRows = rowDataList.filter((r) => r.isRevealed);
+        let latestSpotlight: typeof rowDataList[0] | null = null;
+        if (revealedRows.length > 0) {
+          const withTime = revealedRows.filter((r) => r.revealedAt);
+          if (withTime.length > 0) {
+            latestSpotlight = [...revealedRows].sort((a, b) => {
+              const tA = a.revealedAt ? new Date(a.revealedAt).getTime() : 0;
+              const tB = b.revealedAt ? new Date(b.revealedAt).getTime() : 0;
+              if (tB !== tA) return tB - tA;
+              return a.position - b.position;
+            })[0];
+          } else {
+            // Bottom to top: smallest position number is revealed last
+            latestSpotlight = [...revealedRows].sort((a, b) => a.position - b.position)[0];
+          }
+        }
+
+        return (
+          <div className="live-screen-container">
+            {/* Centered Header */}
+            <div className="text-center mb-8">
+              <div className="inline-block mb-3">
+                <span className="badge-official">ROUND 1 OFFICIAL STANDINGS</span>
+              </div>
+              <h1 className="live-reveal-header-title">LEADERBOARD REVEAL</h1>
+              <p
+                className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                style={{ letterSpacing: '0.2em' }}
               >
-                <div>POS</div>
-                <div>TEAM NAME</div>
-                <div style={{ textAlign: 'center' }}>ITEMS BOUGHT</div>
-                <div style={{ textAlign: 'right' }}>TOTAL SPENT</div>
-                <div style={{ textAlign: 'right' }}>TOTAL REMAINING</div>
-                <div style={{ textAlign: 'right' }}>STATUS</div>
+                Revealing from bottom to top
+              </p>
+            </div>
+
+            {/* Two Column Layout on Desktop, Single Column on Mobile */}
+            <div className="live-reveal-grid">
+              {/* Left Column: Spotlight Card (Sticky on Desktop) */}
+              <div className="live-spotlight-card">
+                <div
+                  className="live-card-glow"
+                  style={{ padding: '24px', textAlign: 'center' }}
+                  aria-live="polite"
+                >
+                  {!latestSpotlight ? (
+                    <div style={{ padding: '40px 16px' }}>
+                      <div
+                        style={{
+                          width: '72px',
+                          height: '72px',
+                          borderRadius: '50%',
+                          background: 'rgba(255, 42, 61, 0.12)',
+                          border: '1px solid rgba(255, 42, 61, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          margin: '0 auto 16px auto',
+                        }}
+                      >
+                        <Lock size={36} className="text-red-500" />
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: '28px',
+                          fontWeight: 800,
+                          color: '#ffffff',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        Who's next?
+                      </div>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '11px',
+                          color: '#8a8a95',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          marginTop: '6px',
+                        }}
+                      >
+                        Awaiting team reveal
+                      </p>
+                    </div>
+                  ) : (
+                    <div key={latestSpotlight.position} className="live-spotlight-content">
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: '#8a8a95',
+                          letterSpacing: '0.15em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        POSITION
+                      </div>
+
+                      {/* Huge Position Number */}
+                      <div
+                        style={{
+                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: '110px',
+                          fontWeight: 900,
+                          lineHeight: 1,
+                          marginTop: '4px',
+                          marginBottom: '8px',
+                          color:
+                            latestSpotlight.position === 1
+                              ? '#f5b73b'
+                              : latestSpotlight.position === 2
+                              ? '#c3c7d2'
+                              : latestSpotlight.position === 3
+                              ? '#e8743b'
+                              : '#8a8a95',
+                          filter:
+                            latestSpotlight.position === 1
+                              ? 'drop-shadow(0 0 20px rgba(245, 183, 59, 0.45))'
+                              : latestSpotlight.position === 2
+                              ? 'drop-shadow(0 0 16px rgba(195, 199, 210, 0.35))'
+                              : latestSpotlight.position === 3
+                              ? 'drop-shadow(0 0 16px rgba(232, 116, 59, 0.35))'
+                              : 'none',
+                        }}
+                      >
+                        {String(latestSpotlight.position).padStart(2, '0')}
+                      </div>
+
+                      {/* Team Name with Medal Icon for Top 3 */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          marginBottom: '20px',
+                        }}
+                      >
+                        {latestSpotlight.position === 1 && (
+                          <Crown size={22} className="text-yellow-400 shrink-0 animate-bounce" />
+                        )}
+                        {latestSpotlight.position === 2 && (
+                          <Medal size={22} className="text-slate-300 shrink-0" />
+                        )}
+                        {latestSpotlight.position === 3 && (
+                          <Medal size={22} className="text-orange-400 shrink-0" />
+                        )}
+                        <span
+                          style={{
+                            fontFamily: "'Rajdhani', sans-serif",
+                            fontSize: '22px',
+                            fontWeight: 800,
+                            color: '#ffffff',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          {latestSpotlight.teamDisplayName}
+                        </span>
+                      </div>
+
+                      {/* Two Small Tiles: Spent (red) & Remaining (green) */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '10px',
+                            background: 'rgba(255, 42, 61, 0.08)',
+                            border: '1px solid rgba(255, 42, 61, 0.22)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#ff6675',
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                              marginBottom: '2px',
+                            }}
+                          >
+                            SPENT
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 800,
+                              color: '#ff2a3d',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(latestSpotlight.r1TotalSpent)}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '10px',
+                            background: 'rgba(47, 209, 111, 0.08)',
+                            border: '1px solid rgba(47, 209, 111, 0.22)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#4ee38b',
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                              marginBottom: '2px',
+                            }}
+                          >
+                            REMAINING
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 800,
+                              color: '#2fd16f',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(latestSpotlight.r1Remaining)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                {(() => {
-                  const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
-                  const totalCount = Math.max(
-                    teams.length,
-                    effectiveReveals.length,
-                    r1Snapshot?.results?.length || 0
-                  );
+              {/* Right Column: Standings Card */}
+              <div className="live-card-glow" style={{ padding: '16px' }}>
+                {/* Header row (Pos, Team, Items, Spent, Remaining, Status) - Desktop only */}
+                <div
+                  className="live-table-header"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '44px minmax(0, 1.4fr) 100px 120px 120px 105px',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 16px',
+                    background: '#16161c',
+                    borderRadius: '10px',
+                    borderBottom: '1px solid #26262e',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: '#8a8a95',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <div>POS</div>
+                  <div>TEAM</div>
+                  <div style={{ textAlign: 'center' }}>ITEMS</div>
+                  <div style={{ textAlign: 'right' }}>SPENT</div>
+                  <div style={{ textAlign: 'right' }}>REMAINING</div>
+                  <div style={{ textAlign: 'right' }}>STATUS</div>
+                </div>
 
-                  return Array.from({ length: totalCount }, (_, i) => {
-                    const position = i + 1;
-                    const reveal = effectiveReveals.find((r) => r.position === position);
-                    const isRevealed = Boolean(reveal?.is_revealed);
-                    const r1Result = (reveal?.team_id ? r1Snapshot?.results?.find((r) => r.id === reveal.team_id) : null) || r1Snapshot?.results?.[position - 1];
-                    const teamObj = teams.find((t) => t.id === reveal?.team_id) || (r1Result?.id ? teams.find((t) => t.id === r1Result.id) : undefined);
-
-                    // Robust fallback for team name: never blank during reveal time
-                    const teamDisplayName =
-                      reveal?.team_name ||
-                      teamObj?.name ||
-                      r1Result?.name ||
-                      (isRevealed ? `Team ${position}` : '???');
-
-                    const isMyTeam = isRevealed && (reveal?.team_id === myTeamId || teamObj?.id === myTeamId || r1Result?.id === myTeamId);
-
-                    const teamId = reveal?.team_id || teamObj?.id || r1Result?.id;
-                    const r1TeamItems = items.filter((it) => it.team_id === teamId && Number(it.round_index) === 0);
-                    const r1ItemsCount = r1Result?.itemsCount ?? r1TeamItems.length;
-                    const r1TotalSpent = r1Result?.totalSpent ?? r1TeamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-                    const startingBudget = edition?.starting_budget || 50000000;
-                    const r1Remaining = r1Result?.remainingBudget !== undefined ? r1Result.remainingBudget : Math.max(0, startingBudget - r1TotalSpent);
+                {/* Team Rows */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {rowDataList.map((row) => {
+                    const {
+                      position,
+                      isRevealed,
+                      teamDisplayName,
+                      isMyTeam,
+                      r1ItemsCount,
+                      r1TotalSpent,
+                      r1Remaining,
+                    } = row;
 
                     if (!isRevealed) {
                       return (
                         <div
                           key={position}
-                          className="gcl-leaderboard-row-reveal gcl-leaderboard-unrevealed"
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
-                            alignItems: 'center',
-                            padding: '10px 18px',
-                          }}
+                          className="live-standings-row-grid live-row-locked"
                         >
-                          <div className="flex items-center">
-                            <div className="gcl-pos-badge gcl-pos-muted opacity-60">
-                              ?
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm sm:text-base font-bold text-slate-500 tracking-widest flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                          <div className="live-rank-chip live-rank-chip-plain">?</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                color: '#656573',
+                                letterSpacing: '0.08em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: '7px',
+                                  height: '7px',
+                                  borderRadius: '50%',
+                                  background: '#ff2a3d',
+                                  display: 'inline-block',
+                                }}
+                              />
                               AWAITING REVEAL
                             </span>
                           </div>
-                          <div style={{ textAlign: 'center', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
-                          <div style={{ textAlign: 'right', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
-                          <div style={{ textAlign: 'right', color: '#555562', fontFamily: "'Rajdhani', sans-serif" }}>-</div>
-                          <div className="text-right font-mono text-xs uppercase tracking-wider text-slate-600">
+                          <div className="live-col-desktop" style={{ textAlign: 'center', color: '#454552' }}>-</div>
+                          <div className="live-col-desktop" style={{ textAlign: 'right', color: '#454552' }}>-</div>
+                          <div className="live-col-desktop" style={{ textAlign: 'right', color: '#454552' }}>-</div>
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#555563',
+                              letterSpacing: '0.08em',
+                            }}
+                          >
+                            LOCKED
+                          </div>
+                          {/* Mobile compact summary */}
+                          <div
+                            className="live-col-mobile"
+                            style={{
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '11px',
+                              color: '#555563',
+                            }}
+                          >
                             LOCKED
                           </div>
                         </div>
                       );
                     }
 
+                    // Revealed Row
+                    const medalClass =
+                      position === 1
+                        ? 'live-medal-gold'
+                        : position === 2
+                        ? 'live-medal-silver'
+                        : position === 3
+                        ? 'live-medal-bronze'
+                        : 'live-row-plain';
+
+                    const chipClass =
+                      position === 1
+                        ? 'live-rank-chip-gold'
+                        : position === 2
+                        ? 'live-rank-chip-silver'
+                        : position === 3
+                        ? 'live-rank-chip-bronze'
+                        : 'live-rank-chip-plain';
+
                     return (
                       <div
                         key={position}
-                        className={`gcl-leaderboard-row-reveal animate-reveal-up ${
-                          position === 1
-                            ? 'gcl-leaderboard-champion'
-                            : position === 2
-                            ? 'gcl-leaderboard-runnerup'
-                            : position === 3
-                            ? 'gcl-leaderboard-third'
-                            : isMyTeam
-                            ? 'gcl-leaderboard-me'
-                            : ''
-                        }`}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '50px 1.4fr 110px 130px 130px 110px',
-                          alignItems: 'center',
-                          padding: '10px 18px',
-                        }}
+                        className={`live-standings-row-grid ${medalClass} live-row-reveal-flip`}
                       >
-                        <div className="flex items-center">
-                          <div
-                            className={`gcl-pos-badge ${
-                              position === 1
-                                ? 'gcl-pos-gold'
-                                : position === 2
-                                ? 'gcl-pos-silver'
-                                : position === 3
-                                ? 'gcl-pos-bronze'
-                                : isMyTeam
-                                ? 'gcl-pos-cyan'
-                                : 'gcl-pos-muted'
-                            }`}
-                          >
-                            {String(position).padStart(2, '0')}
-                          </div>
+                        {/* Chip */}
+                        <div className={`live-rank-chip ${chipClass}`}>
+                          {String(position).padStart(2, '0')}
                         </div>
 
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        {/* Team Name */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            minWidth: 0,
+                            paddingRight: '6px',
+                          }}
+                        >
                           {position === 1 && (
-                            <Crown size={22} className="text-yellow-400 shrink-0 animate-bounce" />
+                            <Crown size={18} className="text-yellow-400 shrink-0 animate-bounce" />
                           )}
                           {position === 2 && (
-                            <Medal size={20} className="text-slate-300 shrink-0" />
+                            <Medal size={18} className="text-slate-300 shrink-0" />
                           )}
                           {position === 3 && (
-                            <Medal size={20} className="text-orange-400 shrink-0" />
+                            <Medal size={18} className="text-orange-400 shrink-0" />
                           )}
-                          <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
+                          <span
+                            style={{
+                              fontFamily: "'Rajdhani', sans-serif",
+                              fontSize: '16px',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              letterSpacing: '0.02em',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
                             {teamDisplayName}
                           </span>
                           {isMyTeam && <span className="badge-you-inline">YOU</span>}
                         </div>
 
-                        <div style={{ textAlign: 'center' }}>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              background: '#202028',
-                              color: '#f4f4f6',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              fontFamily: "'Rajdhani', sans-serif",
-                            }}
-                          >
+                        {/* Items (desktop) */}
+                        <div className="live-col-desktop" style={{ textAlign: 'center' }}>
+                          <span className="live-items-pill">
                             {r1ItemsCount} {r1ItemsCount === 1 ? 'item' : 'items'}
                           </span>
                         </div>
 
-                        <div style={{ textAlign: 'right', fontSize: '15px', fontWeight: 700, color: '#ff4350', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums' }}>
+                        {/* Spent (desktop) */}
+                        <div
+                          className="live-col-desktop"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: '#ff2a3d',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
                           {formatCurrency(r1TotalSpent)}
                         </div>
 
-                        <div style={{ textAlign: 'right', fontSize: '15px', fontWeight: 700, color: '#3fe085', fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums' }}>
+                        {/* Remaining (desktop) */}
+                        <div
+                          className="live-col-desktop"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: '#2fd16f',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
                           {formatCurrency(r1Remaining)}
                         </div>
 
-                        <div className="text-right font-mono text-xs uppercase tracking-wider">
+                        {/* Status (desktop) */}
+                        <div
+                          className="live-col-desktop"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            letterSpacing: '0.05em',
+                          }}
+                        >
                           {position === 1 ? (
-                            <span className="text-yellow-400 font-bold">1ST PLACE</span>
+                            <span style={{ color: '#f5b73b' }}>1ST PLACE</span>
                           ) : position === 2 ? (
-                            <span className="text-slate-300 font-bold">2ND PLACE</span>
+                            <span style={{ color: '#c3c7d2' }}>2ND PLACE</span>
                           ) : position === 3 ? (
-                            <span className="text-orange-400 font-bold">3RD PLACE</span>
+                            <span style={{ color: '#e8743b' }}>3RD PLACE</span>
                           ) : (
-                            <span className="text-slate-400">REVEALED</span>
+                            <span style={{ color: '#8a8a95' }}>REVEALED</span>
                           )}
+                        </div>
+
+                        {/* Mobile view: remaining / spent */}
+                        <div
+                          className="live-col-mobile"
+                          style={{
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: '2px',
+                            textAlign: 'right',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 800,
+                              color: '#2fd16f',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(r1Remaining)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#ff2a3d',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(r1TotalSpent)}
+                          </span>
                         </div>
                       </div>
                     );
-                  });
-                })()}
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* 4. INTERMISSION STATE */}
-      {gameState === 'intermission' && (
-        <div className="live-centered-screen" style={{ padding: '24px 16px' }}>
-          {roundIdx === 1 ? (
-            /* ROUND 2 INTERMISSION — COMPLETED STANDINGS & BUDGET CARRYOVER NOTICE */
-            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
-              <div className="text-center mb-6">
-                <div className="inline-block mb-3">
-                  <span className="badge-official">ROUND 2 COMPLETE</span>
-                </div>
-                <h1 className="intermission-title">ROUND 2 INTERMISSION</h1>
-                <p className="intermission-subtitle">ROUND 3 WILL START SOON — STAND BY...</p>
-                <div className="intermission-warning-banner mt-4">
-                  💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
-                </div>
+      {/* 4. INTERMISSION STATE (Screens 2, 3, 4: Round 1, Round 2, Round 3 Intermissions) */}
+      {gameState === 'intermission' && (() => {
+        const stageNum: 1 | 2 | 3 = roundIdx === 0 ? 1 : roundIdx === 1 ? 2 : 3;
+
+        return (
+          <div className="live-screen-container">
+            {/* Progress Stepper at top */}
+            <ProgressStepper currentStage={stageNum} />
+
+            {/* Centered Stage Header */}
+            <div className="text-center mb-6">
+              <div className="inline-block mb-3">
+                <span className="badge-official">ROUND {stageNum} COMPLETE</span>
               </div>
 
-              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
-                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 2 STANDINGS SUMMARY</span>
-                  </div>
-                  <span className="text-slate-400 font-mono">ROUND 2 SUMMARY</span>
-                </div>
-                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
-                  <div>#</div>
-                  <div>TEAM NAME</div>
-                  <div className="text-center">TOTAL ITEMS</div>
-                  <div className="text-right">TOTAL SPENT</div>
-                  <div className="text-right">REMAINING</div>
-                </div>
+              {roundIdx === 0 ? (
+                <>
+                  <h1
+                    style={{
+                      fontFamily: "'Rajdhani', sans-serif",
+                      fontSize: 'clamp(36px, 6vw, 64px)',
+                      fontWeight: 900,
+                      lineHeight: 1.05,
+                      color: '#ffffff',
+                      textTransform: 'uppercase',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    ROUND 1 INTERMISSION
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                    style={{ letterSpacing: '0.2em' }}
+                  >
+                    ROUND 2 WILL START SOON. STAND BY…
+                  </p>
+                </>
+              ) : roundIdx === 1 ? (
+                <>
+                  <h1
+                    style={{
+                      fontFamily: "'Rajdhani', sans-serif",
+                      fontSize: 'clamp(36px, 6vw, 64px)',
+                      fontWeight: 900,
+                      lineHeight: 1.05,
+                      color: '#ffffff',
+                      textTransform: 'uppercase',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    ROUND 2 INTERMISSION
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                    style={{ letterSpacing: '0.2em' }}
+                  >
+                    ROUND 3 WILL START SOON. STAND BY…
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1
+                    style={{
+                      fontFamily: "'Rajdhani', sans-serif",
+                      fontSize: 'clamp(32px, 5.5vw, 64px)',
+                      fontWeight: 900,
+                      lineHeight: 1.1,
+                      color: '#ffffff',
+                      textTransform: 'uppercase',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    <div>RESULTS WILL BE</div>
+                    <div>ANNOUNCED SOON</div>
+                  </h1>
+                  <p
+                    className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                    style={{ letterSpacing: '0.2em' }}
+                  >
+                    STAND BY…
+                  </p>
+                </>
+              )}
 
-                <div className="divide-y divide-[#222228]">
-                  {[...teams]
-                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-                    .map((team, idx) => {
-                      const isMyTeam = team.id === myTeamId;
-                      const teamItems = items.filter((it) => it.team_id === team.id && it.round_index === 1);
-                      const totalItems = teamItems.length;
-                      const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
-                      const startingBudget = edition?.starting_budget || 50000000;
-                      const r2Remaining = Math.max(0, startingBudget - totalSpent);
-                      const r3Budget = startingBudget + r2Remaining;
-                      const displayRemaining = team.budget > startingBudget ? team.budget : (eventState?.round_state === 'NEXT_ROUND_READY' ? r3Budget : team.budget);
-
-                      return (
-                        <div
-                          key={team.id}
-                          className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
-                          style={{
-                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (idx % 2 === 0 ? '#18181d' : '#121216'),
-                            padding: '12px 18px',
-                          }}
-                        >
-                          <div className="flex items-center">
-                            <div className="gcl-pos-badge gcl-pos-cyan text-sm">
-                              {String(idx + 1).padStart(2, '0')}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
-                              {team.name}
-                            </span>
-                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                          </div>
-                          <div className="text-center">
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '3px 10px',
-                                borderRadius: '4px',
-                                background: '#202028',
-                                color: '#f4f4f6',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                fontFamily: "'Rajdhani', sans-serif",
-                              }}
-                            >
-                              {totalItems} {totalItems === 1 ? 'item' : 'items'}
-                            </span>
-                          </div>
-                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
-                            {formatCurrency(totalSpent)}
-                          </div>
-                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
-                            {formatCurrency(displayRemaining)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
+              {/* Circular Stand By Indicator */}
+              <div className="live-standby-ring" aria-hidden="true">
+                <svg className="live-standby-spinner" viewBox="0 0 88 88" fill="none">
+                  <circle cx="44" cy="44" r="38" stroke="#262630" strokeWidth="3" />
+                  <circle
+                    cx="44"
+                    cy="44"
+                    r="38"
+                    stroke="#ff2a3d"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray="60 180"
+                  />
+                </svg>
+                <div
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: '#ff2a3d',
+                    boxShadow: '0 0 10px #ff2a3d',
+                  }}
+                />
               </div>
-            </div>
-          ) : roundIdx === 0 ? (
-            /* ROUND 1 INTERMISSION — COMPLETED STANDINGS & BUDGET RESET NOTICE */
-            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
-              <div className="text-center mb-6">
-                <div className="inline-block mb-3">
-                  <span className="badge-official">ROUND 1 COMPLETE</span>
-                </div>
-                <h1 className="intermission-title">ROUND 1 INTERMISSION</h1>
-                <p className="intermission-subtitle">ROUND 2 WILL START SOON — STAND BY...</p>
-                <div className="intermission-warning-banner mt-4">
+
+              {/* Notice Banner (existing notices only) */}
+              {roundIdx === 0 && (
+                <div className="live-amber-notice">
                   ⚠️ BUDGET RESET NOTICE: ALL TEAMS RESET TO STARTING BUDGET FOR ROUND 2 ⚠️
                 </div>
+              )}
+              {roundIdx === 1 && (
+                <div className="live-amber-notice">
+                  💰 BUDGET CARRYOVER NOTICE: ROUND 2 REMAINING BUDGET CARRIES OVER INTO ROUND 3 💰
+                </div>
+              )}
+            </div>
+
+            {/* Summary Card (max-width 760px, centered) */}
+            <div
+              className="live-card-glow"
+              style={{
+                maxWidth: '760px',
+                margin: '0 auto',
+                padding: '16px',
+              }}
+            >
+              {/* Header row with red dot */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 12px 12px 12px',
+                  borderBottom: '1px solid #24242e',
+                  marginBottom: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: '#ff2a3d',
+                      boxShadow: '0 0 8px #ff2a3d',
+                      display: 'inline-block',
+                    }}
+                    className="animate-pulse"
+                  />
+                  <span
+                    style={{
+                      fontFamily: "'Rajdhani', sans-serif",
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      color: '#ff6675',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    ROUND {stageNum} STANDINGS SUMMARY
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    color: '#8a8a95',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  ROUND {stageNum} SUMMARY
+                </span>
               </div>
 
-              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
-                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 1 STANDINGS SUMMARY</span>
-                  </div>
-                  <span className="text-slate-400 font-mono">ROUND 1 SUMMARY</span>
-                </div>
-                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
-                  <div>POS</div>
-                  <div>TEAM NAME</div>
-                  <div className="text-center">TOTAL ITEMS</div>
-                  <div className="text-right">TOTAL SPENT</div>
-                  <div className="text-right">REMAINING</div>
-                </div>
+              {/* Table header (Desktop only) */}
+              <div
+                className="live-table-header"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px minmax(0, 1.4fr) 100px 120px 120px',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '8px 16px',
+                  background: '#16161c',
+                  borderRadius: '8px',
+                  borderBottom: '1px solid #26262e',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: '#8a8a95',
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  marginBottom: '8px',
+                }}
+              >
+                <div>#</div>
+                <div>TEAM NAME</div>
+                <div style={{ textAlign: 'center' }}>ITEMS</div>
+                <div style={{ textAlign: 'right' }}>SPENT</div>
+                <div style={{ textAlign: 'right' }}>REMAINING</div>
+              </div>
 
-                <div className="divide-y divide-[#222228]">
-                  {(() => {
+              {/* Table rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {roundIdx === 0 ? (
+                  /* Round 1 Summary Rows (keeps position chip & top 3 medal style) */
+                  (() => {
                     const r1Snapshot = pastRounds.find((r) => r.roundIndex === 0);
                     const sourceList = (r1Snapshot?.results && r1Snapshot.results.length > 0)
                       ? r1Snapshot.results
@@ -1875,367 +2388,778 @@ export default function LiveView() {
                       const totalSpent = entry.totalSpent ?? teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
                       const remaining = entry.remainingBudget ?? (teamObj?.budget ?? Math.max(0, (edition?.starting_budget || 50000000) - totalSpent));
 
+                      const medalClass =
+                        position === 1
+                          ? 'live-medal-gold'
+                          : position === 2
+                          ? 'live-medal-silver'
+                          : position === 3
+                          ? 'live-medal-bronze'
+                          : 'live-row-plain';
+
+                      const chipClass =
+                        position === 1
+                          ? 'live-rank-chip-gold'
+                          : position === 2
+                          ? 'live-rank-chip-silver'
+                          : position === 3
+                          ? 'live-rank-chip-bronze'
+                          : 'live-rank-chip-plain';
+
                       return (
                         <div
                           key={entry.id || position}
-                          className={`gcl-leaderboard-row ${
-                            position === 1
-                              ? 'gcl-leaderboard-champion'
-                              : position === 2
-                              ? 'gcl-leaderboard-runnerup'
-                              : position === 3
-                              ? 'gcl-leaderboard-third'
-                              : isMyTeam
-                              ? 'gcl-leaderboard-me'
-                              : ''
-                          }`}
-                          style={{
-                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (i % 2 === 0 ? '#18181d' : '#121216'),
-                            padding: '12px 18px',
-                          }}
+                          className={`live-summary-row-grid ${medalClass}`}
                         >
-                          <div className="flex items-center">
-                            <div
-                              className={`gcl-pos-badge ${
-                                position === 1
-                                  ? 'gcl-pos-gold'
-                                  : position === 2
-                                  ? 'gcl-pos-silver'
-                                  : position === 3
-                                  ? 'gcl-pos-bronze'
-                                  : isMyTeam
-                                  ? 'gcl-pos-cyan'
-                                  : 'gcl-pos-muted'
-                              }`}
-                            >
-                              {String(position).padStart(2, '0')}
-                            </div>
+                          <div className={`live-rank-chip ${chipClass}`}>
+                            {String(position).padStart(2, '0')}
                           </div>
 
-                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              minWidth: 0,
+                              paddingRight: '6px',
+                            }}
+                          >
                             {position === 1 && (
-                              <Crown size={22} className="text-yellow-400 shrink-0" />
+                              <Crown size={18} className="text-yellow-400 shrink-0" />
                             )}
                             {position === 2 && (
-                              <Medal size={20} className="text-slate-300 shrink-0" />
+                              <Medal size={18} className="text-slate-300 shrink-0" />
                             )}
                             {position === 3 && (
-                              <Medal size={20} className="text-orange-400 shrink-0" />
+                              <Medal size={18} className="text-orange-400 shrink-0" />
                             )}
-                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
+                            <span
+                              style={{
+                                fontFamily: "'Rajdhani', sans-serif",
+                                fontSize: '16px',
+                                fontWeight: 800,
+                                color: '#ffffff',
+                                letterSpacing: '0.02em',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               {teamName}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
 
-                          <div className="text-center">
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '3px 10px',
-                                borderRadius: '4px',
-                                background: '#202028',
-                                color: '#f4f4f6',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                fontFamily: "'Rajdhani', sans-serif",
-                              }}
-                            >
+                          <div className="live-col-desktop" style={{ textAlign: 'center' }}>
+                            <span className="live-items-pill">
                               {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
                             </span>
                           </div>
 
-                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#ff2a3d',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
                             {formatCurrency(totalSpent)}
                           </div>
 
-                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#2fd16f',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
                             {formatCurrency(remaining)}
+                          </div>
+
+                          {/* Mobile compact summary */}
+                          <div
+                            className="live-col-mobile"
+                            style={{
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              gap: '2px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                color: '#2fd16f',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(remaining)}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#ff2a3d',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(totalSpent)}
+                            </span>
                           </div>
                         </div>
                       );
                     });
-                  })()}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* AFTER ROUND 3 OR TIE BREAKER INTERMISSION */
-            <div className="max-w-5xl w-full mx-auto space-y-6 gcl-card-animate">
-              <div className="text-center mb-6">
-                <div className="inline-block mb-3">
-                  <span className="badge-official">ROUND 3 COMPLETE</span>
-                </div>
-                <h1 className="intermission-title">
-                  {isAfterRound3 ? 'RESULTS WILL BE ANNOUNCED SOON' : 'NEXT ROUND WILL START SOON'}
-                </h1>
-                <p className="intermission-subtitle">STAND BY...</p>
-              </div>
+                  })()
+                ) : roundIdx === 1 ? (
+                  /* Round 2 Summary Rows (keeps existing order, plain rows only) */
+                  [...teams]
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                    .map((team, idx) => {
+                      const isMyTeam = team.id === myTeamId;
+                      const teamItems = items.filter((it) => it.team_id === team.id && it.round_index === 1);
+                      const totalItems = teamItems.length;
+                      const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+                      const startingBudget = edition?.starting_budget || 50000000;
+                      const r2Remaining = Math.max(0, startingBudget - totalSpent);
+                      const r3Budget = startingBudget + r2Remaining;
+                      const displayRemaining = team.budget > startingBudget ? team.budget : (eventState?.round_state === 'NEXT_ROUND_READY' ? r3Budget : team.budget);
 
-              <div className="gcl-table-card" style={{ background: '#141418', border: '1px solid #282832', borderRadius: '14px', overflow: 'hidden' }}>
-                <div className="px-5 py-3 bg-[#18181f] border-b border-[#26262e] flex items-center justify-between text-xs font-mono font-bold text-red-400 uppercase tracking-widest">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                    <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '14px', letterSpacing: '0.05em' }}>ROUND 3 STANDINGS SUMMARY</span>
-                  </div>
-                  <span className="text-slate-400 font-mono">ROUND 3 SUMMARY</span>
-                </div>
-                <div className="gcl-leaderboard-header" style={{ background: '#16161c', padding: '12px 18px', borderBottom: '1px solid #24242c' }}>
-                  <div>#</div>
-                  <div>TEAM NAME</div>
-                  <div className="text-center">TOTAL ITEMS</div>
-                  <div className="text-right">TOTAL SPENT</div>
-                  <div className="text-right">REMAINING</div>
-                </div>
+                      return (
+                        <div
+                          key={team.id}
+                          className="live-summary-row-grid live-row-plain"
+                        >
+                          <div className="live-rank-chip live-rank-chip-plain">
+                            {String(idx + 1).padStart(2, '0')}
+                          </div>
 
-                <div className="divide-y divide-[#222228]">
-                  {[...teams]
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              minWidth: 0,
+                              paddingRight: '6px',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: "'Rajdhani', sans-serif",
+                                fontSize: '16px',
+                                fontWeight: 800,
+                                color: '#ffffff',
+                                letterSpacing: '0.02em',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {team.name}
+                            </span>
+                            {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          </div>
+
+                          <div className="live-col-desktop" style={{ textAlign: 'center' }}>
+                            <span className="live-items-pill">
+                              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                            </span>
+                          </div>
+
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#ff2a3d',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(totalSpent)}
+                          </div>
+
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#2fd16f',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(displayRemaining)}
+                          </div>
+
+                          {/* Mobile compact summary */}
+                          <div
+                            className="live-col-mobile"
+                            style={{
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              gap: '2px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                color: '#2fd16f',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(displayRemaining)}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#ff2a3d',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(totalSpent)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  /* Round 3 Summary Rows (keeps existing order, plain rows only) */
+                  [...teams]
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((team, idx) => {
                       const isMyTeam = team.id === myTeamId;
                       const teamItems = items.filter((it) => it.team_id === team.id && it.round_index === 2);
                       const totalItems = teamItems.length;
                       const totalSpent = teamItems.reduce((acc, it) => acc + (it.cost || 0), 0);
+
                       return (
                         <div
                           key={team.id}
-                          className={`gcl-leaderboard-row ${isMyTeam ? 'gcl-leaderboard-me' : ''}`}
-                          style={{
-                            background: isMyTeam ? 'rgba(232, 33, 46, 0.12)' : (idx % 2 === 0 ? '#18181d' : '#121216'),
-                            padding: '12px 18px',
-                          }}
+                          className="live-summary-row-grid live-row-plain"
                         >
-                          <div className="flex items-center">
-                            <div className="gcl-pos-badge gcl-pos-cyan text-sm">
-                              {String(idx + 1).padStart(2, '0')}
-                            </div>
+                          <div className="live-rank-chip live-rank-chip-plain">
+                            {String(idx + 1).padStart(2, '0')}
                           </div>
-                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                            <span className="font-extrabold text-white text-base sm:text-lg tracking-wide truncate">
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              minWidth: 0,
+                              paddingRight: '6px',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: "'Rajdhani', sans-serif",
+                                fontSize: '16px',
+                                fontWeight: 800,
+                                color: '#ffffff',
+                                letterSpacing: '0.02em',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               {team.name}
                             </span>
                             {isMyTeam && <span className="badge-you-inline">YOU</span>}
                           </div>
-                          <div className="text-center">
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '3px 10px',
-                                borderRadius: '4px',
-                                background: '#202028',
-                                color: '#f4f4f6',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                fontFamily: "'Rajdhani', sans-serif",
-                              }}
-                            >
+
+                          <div className="live-col-desktop" style={{ textAlign: 'center' }}>
+                            <span className="live-items-pill">
                               {totalItems} {totalItems === 1 ? 'item' : 'items'}
                             </span>
                           </div>
-                          <div className="text-right font-mono font-semibold text-red-400 text-sm sm:text-base">
+
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#ff2a3d',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
                             {formatCurrency(totalSpent)}
                           </div>
-                          <div className="text-right font-mono font-bold text-green-400 text-sm sm:text-base">
+
+                          <div
+                            className="live-col-desktop"
+                            style={{
+                              textAlign: 'right',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: '#2fd16f',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
                             {formatCurrency(team.budget)}
+                          </div>
+
+                          {/* Mobile compact summary */}
+                          <div
+                            className="live-col-mobile"
+                            style={{
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              gap: '2px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                color: '#2fd16f',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(team.budget)}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#ff2a3d',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            >
+                              {formatCurrency(totalSpent)}
+                            </span>
                           </div>
                         </div>
                       );
-                    })}
-                </div>
+                    })
+                )}
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* 5. WINNER REVEAL STATE (Sequential Manual Reveal Podium matching Old GCL reference) */}
-      {gameState === 'winner_reveal' && (
-        <div className="live-page-container">
-          <div className="text-center mb-12">
-            <h1 className="champions-title">CHAMPIONS</h1>
-            <p className="text-xl text-slate-400 font-mono uppercase tracking-widest gcl-display" style={{ letterSpacing: '0.2em' }}>
-              Grand Final Standings
-            </p>
           </div>
+        );
+      })()}
 
-          {/* Grand Champions Podium */}
-          {(() => {
-            const firstTeam = teams.find((t) => t.id === podiumState.firstTeamId);
-            const firstName = firstTeam?.name || (podiumState as any)?.firstTeamName || (podiumState.firstTeamId ? 'Champion' : '');
+      {/* 5. WINNER REVEAL STATE (Screen 5: Final Champions Reveal) */}
+      {gameState === 'winner_reveal' && (() => {
+        const firstTeam = teams.find((t) => t.id === podiumState.firstTeamId);
+        const firstName = firstTeam?.name || (podiumState as any)?.firstTeamName || (podiumState.firstTeamId ? 'Champion' : '');
 
-            const secondTeam = teams.find((t) => t.id === podiumState.secondTeamId);
-            const secondName = secondTeam?.name || (podiumState as any)?.secondTeamName || (podiumState.secondTeamId ? 'Runner-Up' : '');
+        const secondTeam = teams.find((t) => t.id === podiumState.secondTeamId);
+        const secondName = secondTeam?.name || (podiumState as any)?.secondTeamName || (podiumState.secondTeamId ? 'Runner-Up' : '');
 
-            const thirdTeam = teams.find((t) => t.id === podiumState.thirdTeamId);
-            const thirdName = thirdTeam?.name || (podiumState as any)?.thirdTeamName || (podiumState.thirdTeamId ? '3rd Place' : '');
+        const thirdTeam = teams.find((t) => t.id === podiumState.thirdTeamId);
+        const thirdName = thirdTeam?.name || (podiumState as any)?.thirdTeamName || (podiumState.thirdTeamId ? '3rd Place' : '');
 
-            return (
-              <div className="podium-wrapper">
-                {/* 2nd Place Pedestal (Left) */}
-                <div className="podium-col order-2 md:order-1">
-                  <div className="podium-badge mb-4">
-                    {podiumState.secondRevealed && (secondTeam || secondName) ? (
-                      <div className="animate-reveal-up">
-                        <Medal size={56} className="text-slate-300 mx-auto mb-2" />
-                        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-100">{secondName}</h2>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="podium-hidden-circle">?</div>
-                        <p className="podium-hidden-label">HIDDEN</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className={`podium-step ${podiumState.secondRevealed ? 'podium-silver' : 'podium-dark'}`}>
-                    <span className="podium-number">2</span>
-                  </div>
-                </div>
-
-                {/* 1st Place Champion Pedestal (Middle) */}
-                <div className="podium-col order-1 md:order-2 scale-105 z-20">
-                  <div className="podium-badge mb-6">
-                    {podiumState.firstRevealed && (firstTeam || firstName) ? (
-                      <div className="animate-reveal-up">
-                        <Crown size={72} className="text-yellow-400 mx-auto mb-2 animate-bounce" />
-                        <h2 className="text-3xl md:text-4xl font-black text-yellow-300">{firstName}</h2>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="podium-hidden-circle">?</div>
-                        <p className="podium-hidden-label">HIDDEN</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className={`podium-step ${podiumState.firstRevealed ? 'podium-gold' : 'podium-dark'}`}>
-                    <span className="podium-number">1</span>
-                  </div>
-                </div>
-
-                {/* 3rd Place Pedestal (Right) */}
-                <div className="podium-col order-3 md:order-3">
-                  <div className="podium-badge mb-4">
-                    {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
-                      <div className="animate-reveal-up">
-                        <Medal size={56} className="text-orange-400 mx-auto mb-2" />
-                        <h2 className="text-2xl md:text-3xl font-extrabold text-orange-200">{thirdName}</h2>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="podium-hidden-circle">?</div>
-                        <p className="podium-hidden-label">HIDDEN</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className={`podium-step ${podiumState.thirdRevealed ? 'podium-bronze' : 'podium-dark'}`}>
-                    <span className="podium-number">3</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Grand Champion Final Standings (All Rounds Combined - Scores Strictly Hidden) */}
-          <div className="max-w-5xl w-full mx-auto mt-12 px-2">
-            <div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
-              <Crown size={28} className="text-yellow-400 shrink-0" />
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide text-center">
-                Final Championship Standings
-              </h2>
+        return (
+          <div className="live-screen-container">
+            {/* Header: huge gold-gradient "CHAMPIONS" with glow */}
+            <div className="text-center mb-10">
+              <h1 className="live-champions-header-title">CHAMPIONS</h1>
+              <p
+                className="text-xs sm:text-sm text-slate-400 font-mono uppercase tracking-widest mt-2"
+                style={{ letterSpacing: '0.2em' }}
+              >
+                Grand final standings
+              </p>
             </div>
-            <div className="gcl-table-container">
-              {/* Header row - Strictly no scores in Live View */}
-              <div className="grid-live-final-header">
-                <div>TEAM NAME</div>
-                <div className="text-center">ITEMS WON</div>
-                <div className="text-right">TOTAL SPENT</div>
-                <div className="text-right">TOTAL REM.</div>
-              </div>
 
-              {/* Rows */}
-              <div className="space-y-1">
-                {overallStats.map((team) => {
-                  const isGrandChampion =
-                    ((team.id === podiumState.firstTeamId || team.name === (podiumState as any)?.firstTeamName) &&
-                    podiumState.firstRevealed);
-                  const isRunnerUp =
-                    ((team.id === podiumState.secondTeamId || team.name === (podiumState as any)?.secondTeamName) &&
-                    podiumState.secondRevealed);
-                  const isThirdPlace =
-                    ((team.id === podiumState.thirdTeamId || team.name === (podiumState as any)?.thirdTeamName) &&
-                    podiumState.thirdRevealed);
-                  const isOutOfBudget = team.totalRemaining <= 0;
-                  const isMyTeam = team.id === myTeamId;
-
-                  return (
-                    <div
-                      key={team.id}
-                      className={`grid-live-final-row ${
-                        isGrandChampion
-                          ? 'gcl-row-champion'
-                          : isRunnerUp
-                          ? 'gcl-row-runnerup'
-                          : isThirdPlace
-                          ? 'gcl-row-third'
-                          : isMyTeam
-                          ? 'grid-live-status-me'
-                          : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 pr-2">
-                        {isGrandChampion && (
-                          <Crown size={20} className="text-yellow-400 shrink-0 animate-bounce" />
-                        )}
-                        {isRunnerUp && (
-                          <Medal size={20} className="text-slate-300 shrink-0 animate-pulse" />
-                        )}
-                        {isThirdPlace && (
-                          <Award size={20} className="text-amber-500 shrink-0 animate-pulse" />
-                        )}
-                        <span className="font-bold text-white text-base md:text-lg truncate">
-                          {team.name}
-                        </span>
-                        {isMyTeam && <span className="badge-you-inline">YOU</span>}
-                        {isOutOfBudget && (
-                          <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
-                        )}
-                        {isGrandChampion && (
-                          <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 rounded-full ml-1">
-                            GRAND CHAMPION
-                          </span>
-                        )}
-                        {isRunnerUp && (
-                          <span className="text-[10px] font-black tracking-widest text-slate-200 uppercase bg-slate-400/20 border border-slate-300/40 px-2 py-0.5 rounded-full ml-1">
-                            RUNNER-UP
-                          </span>
-                        )}
-                        {isThirdPlace && (
-                          <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-amber-600/20 border border-amber-600/40 px-2 py-0.5 rounded-full ml-1">
-                            3RD PLACE
-                          </span>
-                        )}
+            {/* Podium (max-width 760px, centered, 3 columns, bottom-aligned, stepped heights) */}
+            <div className="live-podium-grid" aria-live="polite">
+              {/* 2nd Place Column (Left) */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', width: '100%' }}>
+                  {podiumState.secondRevealed && (secondTeam || secondName) ? (
+                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <TrophyCup size={76} color="#c3c7d2" />
                       </div>
-
-                      <div className="text-center font-mono">
-                        <span className="badge-items-sm">
-                          {team.totalItems} {team.totalItems === 1 ? 'item' : 'items'}
-                        </span>
-                      </div>
-
-                      <div className="text-right font-mono font-semibold text-red-400 text-base md:text-lg">
-                        {formatCurrency(team.totalSpent)}
-                      </div>
-
-                      <div className="text-right font-mono font-black text-green-400 text-lg md:text-xl">
-                        {formatCurrency(team.totalRemaining)}
-                      </div>
+                      <h2
+                        style={{
+                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: 'clamp(17px, 2.5vw, 24px)',
+                          fontWeight: 800,
+                          color: '#e2e5ec',
+                          marginTop: '8px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          padding: '0 4px',
+                        }}
+                      >
+                        {secondName}
+                      </h2>
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div>
+                      <div className="live-podium-hidden-circle">?</div>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: '#6a6a78',
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          textAlign: 'center',
+                        }}
+                      >
+                        HIDDEN
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`live-podium-block live-podium-h-2 ${
+                    podiumState.secondRevealed ? 'live-podium-block-silver' : 'live-podium-block-dark'
+                  }`}
+                  style={{ width: '100%', fontSize: '42px' }}
+                >
+                  2
+                </div>
+              </div>
+
+              {/* 1st Place Column (Center) */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2 }}>
+                <div style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '14px', width: '100%' }}>
+                  {podiumState.firstRevealed && (firstTeam || firstName) ? (
+                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <TrophyCup size={104} color="#f5b73b" />
+                      </div>
+                      <h2
+                        style={{
+                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: 'clamp(20px, 3.2vw, 28px)',
+                          fontWeight: 900,
+                          color: '#ffd700',
+                          marginTop: '8px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          padding: '0 4px',
+                          filter: 'drop-shadow(0 0 12px rgba(245, 183, 59, 0.4))',
+                        }}
+                      >
+                        {firstName}
+                      </h2>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="live-podium-hidden-circle">?</div>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: '#6a6a78',
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          textAlign: 'center',
+                        }}
+                      >
+                        HIDDEN
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`live-podium-block live-podium-h-1 ${
+                    podiumState.firstRevealed ? 'live-podium-block-gold' : 'live-podium-block-dark'
+                  }`}
+                  style={{ width: '100%', fontSize: '56px' }}
+                >
+                  1
+                </div>
+              </div>
+
+              {/* 3rd Place Column (Right) */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ minHeight: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', width: '100%' }}>
+                  {podiumState.thirdRevealed && (thirdTeam || thirdName) ? (
+                    <div className="live-podium-revealed-wrap" style={{ width: '100%', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <TrophyCup size={64} color="#e8743b" />
+                      </div>
+                      <h2
+                        style={{
+                          fontFamily: "'Rajdhani', sans-serif",
+                          fontSize: 'clamp(16px, 2.2vw, 22px)',
+                          fontWeight: 800,
+                          color: '#f8b48f',
+                          marginTop: '8px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          padding: '0 4px',
+                        }}
+                      >
+                        {thirdName}
+                      </h2>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="live-podium-hidden-circle">?</div>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: '#6a6a78',
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          textAlign: 'center',
+                        }}
+                      >
+                        HIDDEN
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`live-podium-block live-podium-h-3 ${
+                    podiumState.thirdRevealed ? 'live-podium-block-bronze' : 'live-podium-block-dark'
+                  }`}
+                  style={{ width: '100%', fontSize: '36px' }}
+                >
+                  3
+                </div>
+              </div>
+            </div>
+
+            {/* Final Championship Standings Table (max-width 760px, centered) */}
+            <div style={{ maxWidth: '760px', margin: '48px auto 0 auto' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  marginBottom: '16px',
+                }}
+              >
+                <Crown size={22} className="text-yellow-400 shrink-0" />
+                <h2
+                  style={{
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: '#ffffff',
+                    letterSpacing: '0.04em',
+                    margin: 0,
+                  }}
+                >
+                  Final Championship Standings
+                </h2>
+              </div>
+
+              <div className="live-card-glow" style={{ padding: '16px' }}>
+                {/* Header row (Desktop only) */}
+                <div
+                  className="live-table-header"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1.4fr) 110px 130px 130px',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '8px 16px',
+                    background: '#16161c',
+                    borderRadius: '8px',
+                    borderBottom: '1px solid #26262e',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: '#8a8a95',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <div>TEAM NAME</div>
+                  <div style={{ textAlign: 'center' }}>ITEMS WON</div>
+                  <div style={{ textAlign: 'right' }}>TOTAL SPENT</div>
+                  <div style={{ textAlign: 'right' }}>TOTAL REM.</div>
+                </div>
+
+                {/* Rows: EXACT ORDER PRESERVED from overallStats */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {overallStats.map((team) => {
+                    const isGrandChampion = Boolean(
+                      ((team.id === podiumState.firstTeamId || team.name === (podiumState as any)?.firstTeamName) &&
+                        podiumState.firstRevealed)
+                    );
+                    const isRunnerUp = Boolean(
+                      ((team.id === podiumState.secondTeamId || team.name === (podiumState as any)?.secondTeamName) &&
+                        podiumState.secondRevealed)
+                    );
+                    const isThirdPlace = Boolean(
+                      ((team.id === podiumState.thirdTeamId || team.name === (podiumState as any)?.thirdTeamName) &&
+                        podiumState.thirdRevealed)
+                    );
+                    const isOutOfBudget = team.totalRemaining <= 0;
+                    const isMyTeam = team.id === myTeamId;
+
+                    const rowClass = isGrandChampion
+                      ? 'live-medal-gold'
+                      : isRunnerUp
+                      ? 'live-medal-silver'
+                      : isThirdPlace
+                      ? 'live-medal-bronze'
+                      : 'live-row-plain';
+
+                    return (
+                      <div
+                        key={team.id}
+                        className={`live-final-row-grid ${rowClass}`}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            minWidth: 0,
+                            paddingRight: '6px',
+                          }}
+                        >
+                          {isGrandChampion && (
+                            <Crown size={18} className="text-yellow-400 shrink-0 animate-bounce" />
+                          )}
+                          {isRunnerUp && (
+                            <Medal size={18} className="text-slate-300 shrink-0" />
+                          )}
+                          {isThirdPlace && (
+                            <Medal size={18} className="text-orange-400 shrink-0" />
+                          )}
+                          <span
+                            style={{
+                              fontFamily: "'Rajdhani', sans-serif",
+                              fontSize: '16px',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              letterSpacing: '0.02em',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {team.name}
+                          </span>
+                          {isMyTeam && <span className="badge-you-inline">YOU</span>}
+                          {isOutOfBudget && (
+                            <span className="badge-out-of-budget">⚠️ OUT OF BUDGET</span>
+                          )}
+                          {isGrandChampion && (
+                            <span className="live-badge-champion">GRAND CHAMPION</span>
+                          )}
+                          {isRunnerUp && (
+                            <span className="live-badge-runnerup">RUNNER-UP</span>
+                          )}
+                          {isThirdPlace && (
+                            <span className="live-badge-third">3RD PLACE</span>
+                          )}
+                        </div>
+
+                        {/* Items won pill (desktop) */}
+                        <div className="live-col-desktop" style={{ textAlign: 'center' }}>
+                          <span className="live-items-pill">
+                            {team.totalItems} {team.totalItems === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+
+                        {/* Total spent (desktop) */}
+                        <div
+                          className="live-col-desktop"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: '#ff2a3d',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {formatCurrency(team.totalSpent)}
+                        </div>
+
+                        {/* Total remaining (desktop) */}
+                        <div
+                          className="live-col-desktop"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: '#2fd16f',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {formatCurrency(team.totalRemaining)}
+                        </div>
+
+                        {/* Mobile compact summary */}
+                        <div
+                          className="live-col-mobile"
+                          style={{
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: '2px',
+                            textAlign: 'right',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 800,
+                              color: '#2fd16f',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(team.totalRemaining)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#ff2a3d',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {formatCurrency(team.totalSpent)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
