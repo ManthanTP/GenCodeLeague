@@ -650,7 +650,7 @@ export default function LiveView() {
             {/* Team Selector on Waiting Screen */}
             <div className="team-selector-card">
               <p className="team-selector-label">
-                <UserCircle size={20} /> Join as Team (Optional)
+                <UserCircle size={20} /> Select the Team
               </p>
               <select
                 value={myTeamId}
