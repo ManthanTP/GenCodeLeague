@@ -657,7 +657,7 @@ export default function LiveView() {
                 onChange={(e) => setMyTeamId(e.target.value)}
                 className="gcl-select"
               >
-                <option value="">Select your team</option>
+                <option value="">Viewing as Guest (Select Team)</option>
                 {sortedTeamsDropdown.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
