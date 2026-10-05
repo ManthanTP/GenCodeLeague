@@ -45,19 +45,33 @@ export function useFitText(text: string, isRevealed: boolean = true) {
         const minFont = isMobile ? 11 : 13;
         const maxFont = Math.max(minFont, isMobile ? Math.min(window.innerWidth * 0.12, 40) : Math.min(window.innerWidth * 0.12, 120));
 
+        const block = container.closest('.live-podium-block') || container.parentElement;
+        const csBlock = block ? window.getComputedStyle(block) : null;
+        const padB = csBlock ? (parseFloat(csBlock.paddingBottom) || 12) : 12;
+        const padT = csBlock ? (parseFloat(csBlock.paddingTop) || 12) : 12;
+
         const checkOverflow = (fontSize: number) => {
           // 1. Text rendered height exceeds container available height
-          if (textEl.offsetHeight > availH + 0.5) return true;
+          if (textEl.offsetHeight > availH - 1) return true;
 
           // 2. Line clamp: if text wrapped past 4 lines, scrollHeight exceeds offsetHeight by > half a line
-          if ((textEl.scrollHeight - textEl.offsetHeight) > (fontSize * 0.6)) return true;
+          if ((textEl.scrollHeight - textEl.offsetHeight) > (fontSize * 0.5)) return true;
 
           // 3. Horizontal overflow: any word or line wider than available width
-          if (textEl.scrollWidth > availW + 2) return true;
+          if (textEl.scrollWidth > availW + 1) return true;
 
           // 4. Container scroll overflow: container itself must not scroll
           if (container.scrollHeight > container.clientHeight + 0.5) return true;
           if (container.scrollWidth > container.clientWidth + 0.5) return true;
+
+          // 5. Hard boundary against parent block: text rect MUST NEVER cross block bottom or rank chip at top
+          if (block) {
+            const bRect = block.getBoundingClientRect();
+            const tRect = textEl.getBoundingClientRect();
+            if (tRect.bottom > (bRect.bottom - padB + 0.5)) return true;
+            if (tRect.top < (bRect.top + padT + 28)) return true;
+            if (block.scrollHeight > block.clientHeight + 0.5) return true;
+          }
 
           return false;
         };

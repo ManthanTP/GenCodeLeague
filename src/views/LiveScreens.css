@@ -992,8 +992,9 @@
 .live-podium-name-area,
 .name-area,
 .live-podium-team-name-box {
-  flex: 1 1 auto !important;
+  flex: 1 1 0px !important;
   min-height: 0 !important;
+  max-height: 100% !important;
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
