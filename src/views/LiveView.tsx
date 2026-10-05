@@ -36,7 +36,29 @@ import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
 import { ShimmerText } from '../components/ui/shimmer-text';
+import { useFitText } from '../hooks/useFitText';
 import './LiveScreens.css';
+
+// Auto-fitting Team Name inside the Champions podium block
+function PodiumTeamName({
+  name,
+  isRevealed,
+}: {
+  name: string;
+  isRevealed: boolean;
+}) {
+  const { containerRef, textRef } = useFitText(name, isRevealed);
+
+  if (!isRevealed || !name) return null;
+
+  return (
+    <div ref={containerRef} className="live-podium-name-area">
+      <span ref={textRef} className="live-podium-team-name">
+        {name}
+      </span>
+    </div>
+  );
+}
 
 // Two-handled Trophy Cup inline SVG component for the podium
 function TrophyCup({
@@ -2777,11 +2799,10 @@ export default function LiveView() {
                     }`}
                   >
                     <span className="live-podium-rank-chip">2</span>
-                    {podiumState.secondRevealed && (secondTeam || secondName) && (
-                      <div className="live-podium-team-name-box">
-                        <span className="live-podium-team-name">{secondName}</span>
-                      </div>
-                    )}
+                    <PodiumTeamName
+                      name={secondName}
+                      isRevealed={Boolean(podiumState.secondRevealed && (secondTeam || secondName))}
+                    />
                   </div>
                 </div>
 
@@ -2820,11 +2841,10 @@ export default function LiveView() {
                     }`}
                   >
                     <span className="live-podium-rank-chip">1</span>
-                    {podiumState.firstRevealed && (firstTeam || firstName) && (
-                      <div className="live-podium-team-name-box">
-                        <span className="live-podium-team-name">{firstName}</span>
-                      </div>
-                    )}
+                    <PodiumTeamName
+                      name={firstName}
+                      isRevealed={Boolean(podiumState.firstRevealed && (firstTeam || firstName))}
+                    />
                   </div>
                 </div>
 
@@ -2863,11 +2883,10 @@ export default function LiveView() {
                     }`}
                   >
                     <span className="live-podium-rank-chip">3</span>
-                    {podiumState.thirdRevealed && (thirdTeam || thirdName) && (
-                      <div className="live-podium-team-name-box">
-                        <span className="live-podium-team-name">{thirdName}</span>
-                      </div>
-                    )}
+                    <PodiumTeamName
+                      name={thirdName}
+                      isRevealed={Boolean(podiumState.thirdRevealed && (thirdTeam || thirdName))}
+                    />
                   </div>
                 </div>
               </div>
