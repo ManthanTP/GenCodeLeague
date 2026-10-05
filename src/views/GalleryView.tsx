@@ -86,22 +86,25 @@ export default function GalleryView() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
+      <main className="page-shell space-y-6">
         {/* Hero Section */}
-        <div className="gcl-card-crimson p-6 sm:p-8 text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-bold tracking-wider">
-            <Image size={15} /> EVENT MEDIA GALLERY
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="flex flex-col items-center">
+            <div className="gcl-hero-pill">
+              <span className="gcl-hero-dot" />
+              <span>EVENT MEDIA GALLERY</span>
+            </div>
+            <h1 className="gcl-hero-title">
+              GCL In Action
+            </h1>
+            <p className="gcl-hero-desc">
+              Capturing the intensity, auction battles, keynote highlights, and crowning ceremonies of the GenCode League.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-            GCL In Action
-          </h1>
-          <p className="text-sm text-slate-400">
-            Capturing the intensity, auction battles, keynote highlights, and crowning ceremonies of the GenCode League.
-          </p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl gcl-card-crimson">
+        <div className="gcl-card flex flex-wrap items-center justify-between gap-4 p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
               <Filter size={14} /> Filter:
@@ -145,7 +148,7 @@ export default function GalleryView() {
             <p className="text-xs font-mono">Loading media gallery...</p>
           </div>
         ) : filteredPhotos.length === 0 ? (
-          <div className="py-20 text-center bg-slate-900/40 rounded-2xl border border-slate-800 p-8 backdrop-blur-md">
+          <div className="gcl-card py-20 text-center p-8">
             <Image size={48} className="text-slate-600 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-white">No Photos Uploaded</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
@@ -158,7 +161,7 @@ export default function GalleryView() {
               <div
                 key={photo.id}
                 onClick={() => setLightboxPhoto(photo)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/60 aspect-[4/3] cursor-pointer shadow-lg hover:border-red-500/60 transition-all"
+                className="gcl-card gcl-card--interactive !p-0 group relative aspect-[4/3] cursor-pointer"
               >
                 <img
                   src={photo.image_url}
@@ -187,7 +190,7 @@ export default function GalleryView() {
             onClick={() => setLightboxPhoto(null)}
           >
             <div
-              className="max-w-4xl w-full bg-[#131316] border border-[#26262b] rounded-3xl overflow-hidden shadow-2xl space-y-4 p-4"
+              className="max-w-4xl w-full gcl-card space-y-4 !p-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-2">

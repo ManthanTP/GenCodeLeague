@@ -266,43 +266,57 @@ export default function VerifyCertificate() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="verify-container px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      <main className="page-shell">
         {/* A. TOP BAR */}
-        <div className="flex items-center justify-between gap-4 py-1">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <Link
             to="/"
-            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all h-[40px]"
           >
             <ChevronLeft size={15} /> Back to Live Event
           </Link>
 
           <Link
             to="/my-certificates"
-            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all"
+            className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all h-[40px]"
           >
             <Search size={14} /> Search by Name
           </Link>
+        </div>
+
+        {/* Hero Card */}
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="gcl-hero-pill">
+            <span className="gcl-hero-dot" />
+            <span>PUBLIC VERIFICATION REGISTRY</span>
+          </div>
+          <h1 className="gcl-hero-title">
+            Certificate verification
+          </h1>
+          <p className="gcl-hero-desc">
+            Cryptographically authenticated credential issued by GenCode League.
+          </p>
         </div>
 
         {/* 5. LOADING SKELETON STATE */}
         {loading && (
           <div className="space-y-6">
             {/* Hero skeleton */}
-            <div className="panel p-6 sm:p-8 rounded-2xl verify-skeleton h-44 w-full" />
+            <div className="gcl-card p-6 sm:p-8 verify-skeleton h-44 w-full" />
             {/* 2-column skeleton */}
             <div className="verify-body-grid">
               <div className="space-y-6">
-                <div className="panel p-6 rounded-2xl verify-skeleton h-80 w-full" />
-                <div className="panel p-6 rounded-2xl verify-skeleton h-56 w-full" />
+                <div className="gcl-card p-6 verify-skeleton h-80 w-full" />
+                <div className="gcl-card p-6 verify-skeleton h-56 w-full" />
               </div>
-              <div className="panel p-6 rounded-2xl verify-skeleton h-[520px] w-full" />
+              <div className="gcl-card p-6 verify-skeleton h-[520px] w-full" />
             </div>
           </div>
         )}
 
         {/* RATE LIMITED STATE */}
         {!loading && rateLimited && (
-          <div className="panel red p-8 rounded-2xl text-center space-y-4 max-w-2xl mx-auto my-12">
+          <div className="gcl-card p-8 text-center space-y-4 max-w-2xl mx-auto my-12">
             <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto text-amber-400">
               <ShieldAlert size={36} />
             </div>
@@ -319,7 +333,7 @@ export default function VerifyCertificate() {
         {!loading && !rateLimited && notFound && (
           <div className="space-y-6">
             {/* Red Verdict Hero */}
-            <div className="panel red verify-hero-card border-1.5 border-[#ff2a3d]">
+            <div className="gcl-card verify-hero-card border-1.5 border-[#ff2a3d]">
               <div className="verify-hero-left">
                 {/* Red Cross Ring */}
                 <div className="verify-hero-badge-wrap">
@@ -361,7 +375,7 @@ export default function VerifyCertificate() {
             </div>
 
             {/* Centered Notice Card with Lock Icon */}
-            <div className="panel red p-8 rounded-2xl text-center space-y-4 max-w-lg mx-auto">
+            <div className="gcl-card p-8 text-center space-y-4 max-w-lg mx-auto">
               <div className="w-16 h-16 rounded-full bg-red-950/60 border border-red-500/40 flex items-center justify-center mx-auto text-red-400">
                 <Lock size={32} />
               </div>
@@ -388,7 +402,7 @@ export default function VerifyCertificate() {
           <div className="space-y-6">
             {/* B. VERDICT HERO CARD */}
             <div
-              className={`panel verify-hero-card ${
+              className={`gcl-card verify-hero-card ${
                 cert.status === 'valid' ? activeTheme.borderClass : 'verify-border-red'
               }`}
             >
@@ -511,7 +525,7 @@ export default function VerifyCertificate() {
               {/* ============================================================ */}
               <div className="flex flex-col gap-6 min-w-0">
                 {/* 1. Credential Details Card */}
-                <div className="panel p-5 sm:p-6 rounded-2xl border border-[#26262f] bg-[#121217] space-y-5">
+                <div className="gcl-card space-y-5">
                   {/* Recipient Headline Tile */}
                   <div className="flex items-center gap-4 pb-4 border-b border-[#23232c]">
                     <div
@@ -541,7 +555,7 @@ export default function VerifyCertificate() {
                   {/* 2x2 Grid of Detail Tiles */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Certificate Type */}
-                    <div className="p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] space-y-1">
+                    <div className="gcl-inner-tile space-y-1">
                       <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                         Certificate Type
                       </span>
@@ -555,7 +569,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Event / Edition */}
-                    <div className="p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] space-y-1">
+                    <div className="gcl-inner-tile space-y-1">
                       <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                         Event / Edition
                       </span>
@@ -565,7 +579,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Team Affiliation */}
-                    <div className="p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] space-y-1">
+                    <div className="gcl-inner-tile space-y-1">
                       <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                         Team Affiliation
                       </span>
@@ -576,7 +590,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Issued Date */}
-                    <div className="p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] space-y-1">
+                    <div className="gcl-inner-tile space-y-1">
                       <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                         Issued Date
                       </span>
@@ -588,7 +602,7 @@ export default function VerifyCertificate() {
 
                     {/* Optional Achievement Tile */}
                     {cert.achievement && (
-                      <div className="col-span-1 sm:col-span-2 p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] space-y-1">
+                      <div className="col-span-1 sm:col-span-2 gcl-inner-tile space-y-1">
                         <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                           Achievement / Honor
                         </span>
@@ -600,7 +614,7 @@ export default function VerifyCertificate() {
                   </div>
 
                   {/* Full-width Permanent Identifier Tile with Copy Button */}
-                  <div className="p-3.5 rounded-xl bg-[#16161c] border border-[#26262e] flex items-center justify-between gap-3">
+                  <div className="gcl-inner-tile flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#7e7e8b] font-bold block">
                         Permanent Identifier
@@ -629,7 +643,7 @@ export default function VerifyCertificate() {
                 </div>
 
                 {/* 2. Verification Checks Card */}
-                <div className="panel p-5 sm:p-6 rounded-2xl border border-[#26262f] bg-[#121217] space-y-4">
+                <div className="gcl-card space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-[#23232c]">
                     <span className="text-xs font-mono uppercase tracking-wider text-[#9a9aa3] font-bold">
                       VERIFICATION CHECKS
@@ -641,7 +655,7 @@ export default function VerifyCertificate() {
 
                   <div className="space-y-3 font-mono text-xs">
                     {/* Check 1: Registry Record */}
-                    <div className="verify-check-row flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#16161c]/80 border border-[#23232c]">
+                    <div className="gcl-inner-tile verify-check-row flex items-center justify-between gap-3 py-2 px-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
                         <span className="text-slate-200 truncate">Record found in GCL registry</span>
@@ -650,7 +664,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Check 2: Credential Status */}
-                    <div className="verify-check-row flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#16161c]/80 border border-[#23232c]">
+                    <div className="gcl-inner-tile verify-check-row flex items-center justify-between gap-3 py-2 px-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         {cert.status === 'valid' ? (
                           <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
@@ -670,7 +684,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Check 3: Issued Date */}
-                    <div className="verify-check-row flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#16161c]/80 border border-[#23232c]">
+                    <div className="gcl-inner-tile verify-check-row flex items-center justify-between gap-3 py-2 px-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
                         <span className="text-slate-200 truncate">Issued {formattedDate}</span>
@@ -679,7 +693,7 @@ export default function VerifyCertificate() {
                     </div>
 
                     {/* Check 4: Template Version */}
-                    <div className="verify-check-row flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#16161c]/80 border border-[#23232c]">
+                    <div className="gcl-inner-tile verify-check-row flex items-center justify-between gap-3 py-2 px-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
                         <span className="text-slate-200 truncate">Template version v{cert.template_version}</span>
@@ -693,7 +707,7 @@ export default function VerifyCertificate() {
               {/* ============================================================ */}
               {/* RIGHT COLUMN: Certificate Preview                             */}
               {/* ============================================================ */}
-              <div className="panel p-5 sm:p-6 rounded-2xl border border-[#26262f] bg-[#121217] space-y-4 min-w-0">
+              <div className="gcl-card space-y-4 min-w-0">
                 {/* Header Row: Title & Hide/Show Preview Control */}
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#23232c]">
                   <span className="text-xs font-mono uppercase tracking-wider text-[#9a9aa3] font-bold flex items-center gap-2">

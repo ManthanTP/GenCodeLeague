@@ -112,43 +112,39 @@ export default function HallOfFame() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="page-shell">
         {/* Section 1: Archive of past champions / Hall of fame Banner */}
-        <div className="gcl-card-crimson p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-xs text-[#8a8a93] font-sans">
-              Archive of past champions
-            </span>
-            <h1
-              className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"
-              style={{ fontFamily: "'Rajdhani', sans-serif" }}
-            >
-              Hall of fame
-            </h1>
-          </div>
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-center sm:text-left">
+            <div>
+              <div className="gcl-hero-pill">
+                <span className="gcl-hero-dot" />
+                <span>Archive of past champions</span>
+              </div>
+              <h1 className="gcl-hero-title mb-0">
+                Hall of fame
+              </h1>
+            </div>
 
-          <div className="flex items-center gap-3">
-            {editions.length > 1 ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                {editions.map((ed) => (
-                  <button
-                    key={ed.id}
-                    onClick={() => setSelectedEditionId(ed.id)}
-                    className={`px-3.5 py-1.5 text-xs font-bold font-mono tracking-wider rounded-lg transition-all ${
-                      selectedEditionId === ed.id
-                        ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_14px_rgba(232,33,46,0.6)]'
-                        : 'bg-[#111116] text-[#8a8a93] border border-[#24242e] hover:border-[#e8212e] hover:text-white'
-                    }`}
-                  >
-                    {ed.name}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="gcl-btn-outline-red px-3.5 py-1 text-xs font-bold font-mono tracking-wider cursor-default">
-                {editions.length > 0 ? `${editions.length} Edition` : '1 Edition'}
-              </div>
-            )}
+            <div className="flex items-center justify-center sm:justify-end gap-3">
+              {editions.length > 1 ? (
+                <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+                  {editions.map((ed) => (
+                    <button
+                      key={ed.id}
+                      onClick={() => setSelectedEditionId(ed.id)}
+                      className={`gcl-chip-btn ${selectedEditionId === ed.id ? 'active' : ''}`}
+                    >
+                      {ed.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="gcl-btn-outline-red px-3.5 py-1 text-xs font-bold font-mono tracking-wider cursor-default h-[40px] flex items-center">
+                  {editions.length > 0 ? `${editions.length} Edition` : '1 Edition'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -158,7 +154,7 @@ export default function HallOfFame() {
             <p className="text-xs font-mono">Loading Hall of Fame records...</p>
           </div>
         ) : editions.length === 0 ? (
-          <div className="py-20 text-center gcl-card-crimson p-8 rounded-2xl">
+          <div className="gcl-card text-center p-8 sm:p-12 mb-[16px]">
             <Trophy size={48} className="text-[#3a3a41] mx-auto mb-3" />
             <h3 className="text-xl font-bold text-white">No Editions Archived Yet</h3>
             <p className="text-xs text-[#9a9aa3] mt-1 max-w-md mx-auto font-sans">
@@ -168,15 +164,12 @@ export default function HallOfFame() {
         ) : (
           <>
             {/* Section 2: All-time records */}
-            <div className="gcl-card-crimson p-5 sm:p-7 space-y-4">
-              <h2
-                className="text-lg font-bold text-white tracking-wide"
-                style={{ fontFamily: "'Rajdhani', sans-serif" }}
-              >
+            <div className="gcl-card mb-[16px]">
+              <h2 className="gcl-card-title mb-4">
                 All-time records
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-[#0e0e14] border border-[#22222a] rounded-xl p-4">
+                <div className="gcl-inner-tile">
                   <p className="text-xs text-[#8a8a93] font-sans">Tournament champion</p>
                   <p
                     className="text-sm sm:text-base font-bold text-white mt-1 truncate"
@@ -185,7 +178,7 @@ export default function HallOfFame() {
                     {records?.mostChampionships?.teamName || activeEdition?.champion?.name || '—'}
                   </p>
                 </div>
-                <div className="bg-[#0e0e14] border border-[#22222a] rounded-xl p-4">
+                <div className="gcl-inner-tile">
                   <p className="text-xs text-[#8a8a93] font-sans">Peak auction spend</p>
                   <p
                     className="text-sm sm:text-base font-bold text-[#ff4d5a] mt-1 truncate"
@@ -196,7 +189,7 @@ export default function HallOfFame() {
                       : '—'}
                   </p>
                 </div>
-                <div className="bg-[#0e0e14] border border-[#22222a] rounded-xl p-4">
+                <div className="gcl-inner-tile">
                   <p className="text-xs text-[#8a8a93] font-sans">Priciest lot</p>
                   <p
                     className="text-sm sm:text-base font-bold text-white mt-1 truncate"
@@ -205,7 +198,7 @@ export default function HallOfFame() {
                     {records?.highestBidWon?.itemName || '—'}
                   </p>
                 </div>
-                <div className="bg-[#0e0e14] border border-[#22222a] rounded-xl p-4">
+                <div className="gcl-inner-tile">
                   <p className="text-xs text-[#8a8a93] font-sans">Tournament purse</p>
                   <p
                     className="text-sm sm:text-base font-bold text-white mt-1 font-mono"
@@ -218,36 +211,27 @@ export default function HallOfFame() {
             </div>
 
             {/* Section 3: Podium (Clean glowing borders, compact sizes) */}
-            <div
-              className="gcl-card-crimson p-5 sm:p-7 space-y-6"
-              style={{
-                background:
-                  'radial-gradient(circle at 10% 20%, rgba(232, 33, 46, 0.08) 0%, transparent 45%), linear-gradient(165deg, #15151b, #0c0c10)',
-              }}
-            >
+            <div className="gcl-card mb-[16px]">
               {/* Podium Header */}
-              <div className="flex items-center justify-between gap-3 pb-1">
+              <div className="flex items-center justify-between gap-3 pb-1 mb-4">
                 <div>
-                  <h2
-                    className="text-lg sm:text-xl font-bold text-white tracking-wide"
-                    style={{ fontFamily: "'Rajdhani', sans-serif" }}
-                  >
+                  <h2 className="gcl-card-title">
                     Podium
                   </h2>
                   <p className="text-xs text-[#8a8a93] font-mono mt-0.5">
                     Final result, {activeEdition?.name || 'GCL 2025'}
                   </p>
                 </div>
-                <div className="gcl-btn-outline-red px-3 py-1 text-xs font-mono font-bold tracking-wider cursor-default">
+                <div className="gcl-btn-outline-red px-3 py-1 text-xs font-mono font-bold tracking-wider cursor-default h-[40px] flex items-center">
                   {activeEdition?.name || 'GCL 2025'}
                 </div>
               </div>
 
-              {/* 3 Step Compact Podium Cards — Glowing Borders */}
+              {/* 3 Step Compact Podium Cards — Medal Variants */}
               <div className="flex flex-col sm:flex-row items-end justify-center gap-4 lg:gap-6 pt-2">
                 {/* 2nd Place: Runner-up (Left, Medium) */}
                 <div
-                  className="gcl-podium-silver p-4 flex flex-col items-center text-center w-full sm:w-[220px] md:w-[240px] transition-all"
+                  className="gcl-card gcl-card--silver gcl-card--interactive p-4 flex flex-col items-center text-center w-full sm:w-[220px] md:w-[240px]"
                   style={{ minHeight: '225px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">
@@ -272,16 +256,16 @@ export default function HallOfFame() {
                   {activeEdition?.runner_up_team_id && (
                     <Link
                       to={`/teams/${activeEdition.runner_up_team_id}`}
-                      className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs"
+                      className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs h-[40px] flex items-center justify-center"
                     >
                       View profile
                     </Link>
                   )}
                 </div>
 
-                {/* 1st Place: Grand Champion (Center, Tallest, Glowing Gold Border) */}
+                {/* 1st Place: Grand Champion (Center, Tallest, Glowing Gold Border + Sheen) */}
                 <div
-                  className="gcl-podium-gold p-4 sm:p-5 flex flex-col items-center text-center w-full sm:w-[260px] md:w-[280px] transition-all order-first sm:order-none"
+                  className="gcl-card gcl-card--gold gcl-card--sheen gcl-card--interactive p-4 sm:p-5 flex flex-col items-center text-center w-full sm:w-[260px] md:w-[280px] order-first sm:order-none"
                   style={{ minHeight: '265px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">
@@ -308,7 +292,7 @@ export default function HallOfFame() {
                   {activeEdition?.champion_team_id && (
                     <Link
                       to={`/teams/${activeEdition.champion_team_id}`}
-                      className="mt-3 gcl-btn-outline-red px-4 py-1 text-xs"
+                      className="mt-3 gcl-btn-outline-red px-4 py-1 text-xs h-[40px] flex items-center justify-center"
                     >
                       View profile
                     </Link>
@@ -317,7 +301,7 @@ export default function HallOfFame() {
 
                 {/* 3rd Place: Third Place (Right, Smallest, Glowing Bronze Border) */}
                 <div
-                  className="gcl-podium-bronze p-4 flex flex-col items-center text-center w-full sm:w-[200px] md:w-[220px] transition-all"
+                  className="gcl-card gcl-card--bronze gcl-card--interactive p-4 flex flex-col items-center text-center w-full sm:w-[200px] md:w-[220px]"
                   style={{ minHeight: '210px' }}
                 >
                   <div className="w-full flex flex-col items-center flex-1 justify-center">
@@ -342,7 +326,7 @@ export default function HallOfFame() {
                   {activeEdition?.third_place_team_id && (
                     <Link
                       to={`/teams/${activeEdition.third_place_team_id}`}
-                      className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs"
+                      className="mt-3 gcl-btn-outline-red px-3.5 py-1 text-xs h-[40px] flex items-center justify-center"
                     >
                       View profile
                     </Link>
@@ -352,10 +336,10 @@ export default function HallOfFame() {
 
               {/* View Edition Details Button */}
               {activeEdition && (
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-center pt-6">
                   <Link
                     to={`/editions/${activeEdition.id}`}
-                    className="gcl-btn-outline-red px-6 py-2.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2"
+                    className="gcl-btn-outline-red px-6 py-2.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 h-[44px]"
                   >
                     View edition details
                     <ArrowRight size={14} />

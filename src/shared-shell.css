@@ -1,0 +1,372 @@
+/* ====================================================================
+   GEN CODE LEAGUE — SHARED PAGE SHELL & CARD DESIGN SYSTEM
+   Standardizes content width, padding, cards, heroes, controls, and accessibility.
+   Reference: Announcements page design.
+   ==================================================================== */
+
+/* --------------------------------------------------------------------
+   1. SHARED PAGE SHELL (one wrapper used by every page below header)
+   -------------------------------------------------------------------- */
+.page-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 24px 56px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .page-shell {
+    padding: 16px 14px 40px;
+  }
+}
+
+/* Vertical rhythm rules */
+.page-shell > .gcl-card--hero,
+.gcl-hero-block {
+  margin-bottom: 22px;
+}
+
+.page-shell > .gcl-card:not(:last-child),
+.gcl-card-block {
+  margin-bottom: 16px;
+}
+
+.gcl-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --------------------------------------------------------------------
+   2. SHARED BOX (CARD) DESIGN
+   -------------------------------------------------------------------- */
+.gcl-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 20px;
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #ff2a3d 0, #4a0e15 24%, #2a0a10 60%, #ff2a3d 100%) border-box;
+  box-shadow: 0 0 28px rgba(255, 42, 61, 0.12);
+  box-sizing: border-box;
+}
+
+/* Hero card modifier (34px 28px padding, centered text, subtle diagonal sheen) */
+.gcl-card--hero {
+  padding: 34px 28px;
+  text-align: center;
+}
+
+.gcl-card--hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0 12%, rgba(255, 42, 61, 0.11) 12.5%, transparent 30%);
+  z-index: 1;
+}
+
+.gcl-card--hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Standalone subtle sheen for featured cards (e.g. champion) */
+.gcl-card--sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0 12%, rgba(255, 42, 61, 0.11) 12.5%, transparent 30%);
+  z-index: 1;
+}
+
+.gcl-card--sheen > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Medal variants */
+.gcl-card--gold {
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #f5b73b 0, #4a360e 24%, #2a1f0a 60%, #f5b73b 100%) border-box;
+  box-shadow: 0 0 28px rgba(245, 183, 59, 0.12);
+}
+
+.gcl-card--silver {
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #c3c7d2 0, #363840 24%, #1f2024 60%, #c3c7d2 100%) border-box;
+  box-shadow: 0 0 28px rgba(195, 199, 210, 0.12);
+}
+
+.gcl-card--bronze {
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #e8743b 0, #42200f 24%, #261208 60%, #e8743b 100%) border-box;
+  box-shadow: 0 0 28px rgba(232, 116, 59, 0.12);
+}
+
+/* Accent variant: 3px rounded gold bar on left edge, inset 14px top/bottom */
+.gcl-card--accent::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  background: #f5b73b;
+  border-radius: 9999px;
+  box-shadow: 0 0 14px rgba(245, 183, 59, 0.55);
+  z-index: 3;
+}
+
+/* Interactive variant */
+.gcl-card--interactive {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.gcl-card--interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 34px rgba(255, 42, 61, 0.27);
+}
+
+.gcl-card--interactive.gcl-card--gold:hover {
+  box-shadow: 0 0 34px rgba(245, 183, 59, 0.32);
+}
+
+.gcl-card--interactive.gcl-card--silver:hover {
+  box-shadow: 0 0 34px rgba(195, 199, 210, 0.32);
+}
+
+.gcl-card--interactive.gcl-card--bronze:hover {
+  box-shadow: 0 0 34px rgba(232, 116, 59, 0.32);
+}
+
+/* Inner tiles */
+.gcl-inner-tile {
+  background: #14141a;
+  border: 1px solid #24242c;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------
+   3. SHARED HERO, TITLES AND CONTROLS
+   -------------------------------------------------------------------- */
+/* Outlined Red Hero Pill */
+.gcl-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 42, 61, 0.1);
+  border: 1px solid rgba(255, 42, 61, 0.4);
+  color: #ff4d5a;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.gcl-hero-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff2a3d;
+  box-shadow: 0 0 8px #ff2a3d;
+  animation: gclDotPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes gclDotPulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Hero Title */
+.gcl-hero-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1.08;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  .gcl-hero-title {
+    font-size: 54px;
+  }
+}
+
+/* Hero Description */
+.gcl-hero-desc {
+  max-width: 560px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #8e8e9a;
+  font-weight: 500;
+}
+
+/* Search Field */
+.gcl-search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 20px auto;
+}
+
+.gcl-search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e8e9a;
+  pointer-events: none;
+  transition: color 0.18s ease;
+}
+
+.gcl-search-input {
+  width: 100%;
+  height: 50px;
+  padding: 0 18px 0 50px;
+  border-radius: 14px;
+  background: #141419;
+  border: 1px solid #2a2a35;
+  color: #ffffff;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.gcl-search-input::placeholder {
+  color: #6a6a78;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+}
+
+.gcl-search-input:focus {
+  border-color: #ff2a3d;
+  background: #17171f;
+  box-shadow: 0 0 18px rgba(255, 42, 61, 0.35);
+}
+
+.gcl-search-input:focus + .gcl-search-icon,
+.gcl-search-wrapper:focus-within .gcl-search-icon {
+  color: #ff4d5a;
+}
+
+/* Chips and Filters */
+.gcl-chips-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.gcl-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  background: #141419;
+  border: 1px solid #282834;
+  color: #8e8e9a;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.gcl-chip-btn:hover {
+  border-color: #444455;
+  color: #ffffff;
+}
+
+.gcl-chip-btn.active,
+.gcl-chip-btn[aria-checked="true"] {
+  border-color: #ff2a3d;
+  background: rgba(255, 42, 61, 0.12);
+  color: #ff4d5a;
+  box-shadow: 0 0 14px rgba(255, 42, 61, 0.3);
+}
+
+.gcl-chip-count {
+  font-size: 11px;
+  color: #8e8e9a;
+  font-weight: 600;
+}
+
+.gcl-chip-btn.active .gcl-chip-count,
+.gcl-chip-btn[aria-checked="true"] .gcl-chip-count {
+  color: #ff9da6;
+}
+
+/* Section Headings inside Cards */
+.gcl-card-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+/* Standard button heights */
+.gcl-btn-standard {
+  height: 40px;
+}
+.gcl-btn-primary {
+  height: 44px;
+}
+
+/* --------------------------------------------------------------------
+   4. ACCESSIBILITY & RESPONSIVE
+   -------------------------------------------------------------------- */
+/* 2px Red Focus Rings */
+.gcl-chip-btn:focus-visible,
+.gcl-search-input:focus-visible,
+.gcl-card--interactive:focus-visible,
+.gcl-btn-outline-red:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #ff2a3d !important;
+  outline-offset: 2px !important;
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .gcl-hero-dot,
+  .gcl-card,
+  .gcl-card--interactive,
+  .gcl-chip-btn {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

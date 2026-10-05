@@ -320,37 +320,35 @@ export default function StudentCertificateLookup() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="vault-page-container px-3 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+      <main className="page-shell">
+        {/* Shared Hero Card */}
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="gcl-hero-pill">
+            <span className="gcl-hero-dot" />
+            <span>CREDENTIAL VAULT</span>
+          </div>
+          <h1 className="gcl-hero-title">
+            Your name.{' '}
+            <span className="text-[#e8212e] drop-shadow-[0_0_16px_rgba(232,33,46,0.35)]">
+              Your proof.
+            </span>
+          </h1>
+          <p className="gcl-hero-desc">
+            Certificates stay sealed. Enter your exact full name and only yours unlocks. Nobody else's is ever shown.
+          </p>
+        </div>
+
         <div className="vault-layout-grid">
           {/* ================================================================ */}
           {/* LEFT COLUMN: Search & Unlocked Certificates List                */}
           {/* ================================================================ */}
-          <div className="flex flex-col gap-5 sm:gap-6 min-w-0">
-            {/* Pill & Headline */}
-            <div className="space-y-2 sm:space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[rgba(232,33,46,0.12)] border border-[#ff4d5a]/40 text-[#ff4d5a] text-xs font-mono font-bold tracking-wider uppercase shadow-[0_0_12px_rgba(232,33,46,0.2)]">
-                <Award size={15} /> CREDENTIAL VAULT
-              </div>
-              <h1
-                className="text-[32px] sm:text-[44px] lg:text-[52px] font-black uppercase tracking-tight leading-none text-white"
-                style={{ fontFamily: "'Rajdhani', sans-serif" }}
-              >
-                Your name.{' '}
-                <span className="text-[#e8212e] drop-shadow-[0_0_16px_rgba(232,33,46,0.35)]">
-                  Your proof.
-                </span>
-              </h1>
-              <p className="text-xs sm:text-sm text-[#9a9aa3] font-medium font-sans leading-relaxed">
-                Certificates stay sealed. Enter your exact full name and only yours unlocks. Nobody else's is ever shown.
-              </p>
-            </div>
-
+          <div className="flex flex-col gap-5 min-w-0">
             {/* Search Input Field with embedded Solid Red Unlock Button */}
             <form onSubmit={handleSearch} className="space-y-3">
-              <div className="vault-search-box">
+              <div className="gcl-search-wrapper" style={{ margin: '0', maxWidth: '100%' }}>
                 <Search
                   size={18}
-                  className="absolute left-3.5 text-[#9a9aa3] pointer-events-none"
+                  className="gcl-search-icon"
                   aria-hidden="true"
                 />
                 <input
@@ -359,7 +357,8 @@ export default function StudentCertificateLookup() {
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
                   placeholder="Enter your full name to unlock"
-                  className="vault-search-input"
+                  className="gcl-search-input"
+                  style={{ paddingRight: '110px' }}
                   aria-label="Enter your full name to unlock certificates"
                   autoFocus
                 />
@@ -404,11 +403,7 @@ export default function StudentCertificateLookup() {
                 <button
                   type="button"
                   onClick={() => handleEditionChipClick('all')}
-                  className={`px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                    selectedEditionId === 'all'
-                      ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
-                      : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
-                  }`}
+                  className={`gcl-chip-btn ${selectedEditionId === 'all' ? 'active' : ''}`}
                   role="radio"
                   aria-checked={selectedEditionId === 'all'}
                 >
@@ -421,11 +416,7 @@ export default function StudentCertificateLookup() {
                       key={ed.id}
                       type="button"
                       onClick={() => handleEditionChipClick(ed.id)}
-                      className={`px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#e8212e] text-white border border-[#ff2a38] shadow-[0_0_12px_rgba(232,33,46,0.4)]'
-                          : 'bg-[#18181c] text-[#9a9aa3] hover:text-white border border-[#2c2c33] hover:border-[#3e3e48]'
-                      }`}
+                      className={`gcl-chip-btn ${isSelected ? 'active' : ''}`}
                       role="radio"
                       aria-checked={isSelected}
                     >
@@ -438,9 +429,9 @@ export default function StudentCertificateLookup() {
 
             {/* Left Column Status: Before Unlock vs Unlocked Certificates List */}
             {!hasSearched || exactMatches.length === 0 ? (
-              <div className="vault-dashed-frame space-y-2.5">
-                <Lock size={22} className="text-[#9a9aa3] opacity-60" aria-hidden="true" />
-                <p className="text-xs font-sans text-[#8e8e9a] max-w-xs leading-relaxed">
+              <div className="gcl-card text-center p-8">
+                <Lock size={28} className="text-[#9a9aa3] opacity-60 mx-auto mb-2" aria-hidden="true" />
+                <p className="text-xs font-sans text-[#8e8e9a] max-w-xs mx-auto leading-relaxed">
                   Nothing is listed here. Certificates only appear after you enter your exact full name.
                 </p>
               </div>
@@ -477,10 +468,8 @@ export default function StudentCertificateLookup() {
                             setVerifyStep(0);
                           }
                         }}
-                        className={`p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                          isSelected
-                            ? 'bg-[#181015] border border-[#ff2a38] shadow-[0_0_16px_rgba(255,42,56,0.3)]'
-                            : 'bg-[#121216] border border-[#26262e] hover:border-[#383844] hover:bg-[#18181f]'
+                        className={`gcl-card gcl-card--interactive p-3.5 cursor-pointer flex items-center justify-between gap-3 ${
+                          isSelected ? 'gcl-card--accent' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -521,7 +510,7 @@ export default function StudentCertificateLookup() {
           <div className="flex flex-col gap-4 sm:gap-5 min-w-0">
             {/* LOCKED STAGE: Initial State */}
             {!hasSearched && (
-              <div className="panel gcl-card-crimson vault-stage-card flex items-center justify-center p-4 sm:p-10">
+              <div className="gcl-card vault-stage-card flex items-center justify-center p-4 sm:p-10">
                 <div className="vault-dashed-frame max-w-lg w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4">
                   <div className="vault-lock-pulsing">
                     <Lock size={48} className="text-[#e8212e] sm:w-16 sm:h-16" />
@@ -542,7 +531,7 @@ export default function StudentCertificateLookup() {
             {hasSearched && exactMatches.length === 0 && (
               <div
                 key={`failed-${shakeKey}`}
-                className="panel red vault-stage-card flex items-center justify-center p-4 sm:p-10"
+                className="gcl-card vault-stage-card flex items-center justify-center p-4 sm:p-10"
               >
                 <div className="vault-dashed-frame max-w-lg w-full h-full flex flex-col items-center justify-center gap-3 sm:gap-4 vault-lock-shake">
                   <div className="p-3.5 sm:p-4 rounded-full bg-[#201014] border border-[#ff2a38]/40 shadow-[0_0_24px_rgba(255,42,56,0.35)]">
@@ -562,7 +551,7 @@ export default function StudentCertificateLookup() {
 
             {/* UNLOCKED STAGE: Certificate Artwork & Actions */}
             {hasSearched && exactMatches.length > 0 && activeCert && (
-              <div className="vault-unlocked-stage min-w-0">
+              <div className="gcl-card vault-unlocked-stage min-w-0 p-4 sm:p-6">
                 {/* 3D Perspective Stage Container */}
                 <div
                   ref={stageContainerRef}
@@ -708,7 +697,7 @@ export default function StudentCertificateLookup() {
                 {/* VERIFY PANEL (Animated 3-step checklist ticking every 450ms) */}
                 {isVerifying && (
                   <div
-                    className="panel p-4 sm:p-5 rounded-xl border border-[#2e2e38] bg-[#101015] space-y-3.5 transition-all"
+                    className="gcl-inner-tile p-4 sm:p-5 space-y-3.5 transition-all mt-4"
                     role="region"
                     aria-live="polite"
                     aria-label="Certificate verification process"

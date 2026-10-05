@@ -5,10 +5,7 @@
 
 .verify-container {
   width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
   box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 /* 2-Column Body Grid (Left 420px, Right fills the rest) */

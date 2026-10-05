@@ -6,10 +6,7 @@
 /* Vault Container */
 .vault-page-container {
   width: 100%;
-  max-width: 1360px;
-  margin: 0 auto;
   box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 /* 2-Column Desktop Grid (Left 380-420px, Right fills the rest) */

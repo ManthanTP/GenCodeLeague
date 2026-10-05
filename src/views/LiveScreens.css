@@ -13,13 +13,13 @@
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 64px 16px;
+  padding: 24px 24px 56px;
   box-sizing: border-box;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .live-screen-container {
-    padding: 16px 14px 48px 14px;
+    padding: 16px 14px 40px;
   }
 }
 
@@ -29,24 +29,15 @@
   border-radius: 18px;
   background:
     linear-gradient(165deg, #15151b, #0c0c10) padding-box,
-    linear-gradient(135deg, #ff2a3d 0%, #4a0e15 22%, #2a0a10 60%, #ff2a3d 100%) border-box;
+    linear-gradient(135deg, #ff2a3d 0, #4a0e15 24%, #2a0a10 60%, #ff2a3d 100%) border-box;
   border: 1px solid transparent;
-  box-shadow: 0 0 26px rgba(255, 42, 61, 0.18);
+  box-shadow: 0 0 28px rgba(255, 42, 61, 0.12);
   overflow: hidden;
   box-sizing: border-box;
 }
 
 .live-card-glow::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 130px;
-  height: 130px;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 42, 61, 0.2), transparent 70%);
-  pointer-events: none;
-  border-top-right-radius: 18px;
-  z-index: 1;
+  display: none;
 }
 
 /* --- Shared Medal Row Styles --- */

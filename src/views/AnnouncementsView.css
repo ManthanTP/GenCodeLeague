@@ -4,16 +4,7 @@
 
 .announcements-page-wrap {
   width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 24px 16px 64px 16px;
   box-sizing: border-box;
-}
-
-@media (max-width: 640px) {
-  .announcements-page-wrap {
-    padding: 16px 14px 48px 14px;
-  }
 }
 
 /* Subtle diagonal red sheen for Hero Card (Hero Card Only) */

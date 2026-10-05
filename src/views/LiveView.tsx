@@ -1668,7 +1668,7 @@ export default function LiveView() {
         }
 
         return (
-          <div className="live-screen-container">
+          <div className="page-shell live-screen-container">
             {/* Centered Header */}
             <div className="text-center mb-8">
               <div className="inline-block mb-3">
@@ -2166,7 +2166,7 @@ export default function LiveView() {
         const stageNum: 1 | 2 | 3 = roundIdx === 0 ? 1 : roundIdx === 1 ? 2 : 3;
 
         return (
-          <div className="live-screen-container">
+          <div className="page-shell live-screen-container">
             {/* Progress Stepper at top */}
             <ProgressStepper currentStage={stageNum} />
 
@@ -2774,7 +2774,7 @@ export default function LiveView() {
         const thirdName = thirdTeam?.name || (podiumState as any)?.thirdTeamName || (podiumState.thirdTeamId ? '3rd Place' : '');
 
         return (
-          <div className="live-screen-container">
+          <div className="page-shell live-screen-container">
             {/* Header: huge gold-gradient "CHAMPIONS" with glow */}
             <div className="text-center mb-10">
               <h1 className="live-champions-header-title">CHAMPIONS</h1>

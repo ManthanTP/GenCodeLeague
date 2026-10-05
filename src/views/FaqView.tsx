@@ -128,32 +128,32 @@ export default function FaqView() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="faq-page-wrap">
+      <main className="page-shell">
         {/* HERO CARD: full width of content column (max-width 1120px), 34px vertical padding, subtle diagonal red sheen. Search field inside */}
-        <div className="faq-hero-card">
-          <div className="faq-hero-content">
-            <div className="faq-hero-tag-pill">
-              <span className="faq-pulse-dot" />
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="flex flex-col items-center">
+            <div className="gcl-hero-pill">
+              <span className="gcl-hero-dot" />
               <span>OFFICIAL LEAGUE KNOWLEDGE BASE</span>
             </div>
-            <h1 className="faq-hero-headline">
+            <h1 className="gcl-hero-title">
               Frequently Asked Questions
             </h1>
-            <p className="faq-hero-subline">
+            <p className="gcl-hero-desc mb-6">
               Authoritative documentation for technical auction bidding mechanics, budget equations, cryptographic certificate verification, and podium protocols.
             </p>
 
             {/* SEARCH FIELD: inside the hero, below description */}
-            <div className="faq-search-wrapper">
+            <div className="gcl-search-wrapper !mb-0">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by keywords (e.g. budget, certificate, tie breaker)..."
-                className="faq-search-input"
+                className="gcl-search-input"
                 aria-label="Search frequently asked questions"
               />
-              <Search size={18} className="faq-search-icon" />
+              <Search size={18} className="gcl-search-icon" />
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function FaqView() {
         {/* BODY LAYOUT: 2 columns on desktop (above 900px), 1 column on mobile */}
         <div className="faq-layout-grid">
           {/* SIDEBAR: desktop topic filters as full-width stacked buttons with label left, count right */}
-          <aside className="faq-sidebar">
+          <aside className="faq-sidebar gcl-card !p-3">
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
@@ -252,7 +252,7 @@ export default function FaqView() {
 
             {/* Questions Accordion List */}
             {filteredFaqs.length === 0 ? (
-              <div className="faq-empty-box">
+              <div className="gcl-card text-center py-12 px-6">
                 <FileQuestion size={44} className="text-[#52525b] mx-auto mb-3" />
                 <h3 className="faq-empty-title">No Matching Answers</h3>
                 <p className="faq-empty-desc">
@@ -266,7 +266,7 @@ export default function FaqView() {
                   return (
                     <div
                       key={faq.id}
-                      className={`faq-card ${isOpen ? 'expanded' : ''}`}
+                      className={`gcl-card gcl-card--interactive faq-card ${isOpen ? 'expanded' : ''} !p-0`}
                     >
                       <button
                         type="button"

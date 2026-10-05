@@ -103,13 +103,13 @@ export default function AnnouncementsView() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="announcements-page-wrap">
+      <main className="page-shell">
         {/* Admin Quick Jump Link if logged in */}
         {isAdmin && (
           <div className="flex justify-end mb-4">
             <button
               onClick={() => navigate('/123456789/GCL-0321/admin?tab=updates')}
-              className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#222228] text-white border border-[#2e2e36] hover:border-[var(--accent-red)] font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm font-mono"
+              className="px-4 py-2 rounded-xl bg-[#18181c] hover:bg-[#222228] text-white border border-[#2e2e36] hover:border-[var(--accent-red)] font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm font-mono h-[40px]"
             >
               <Radio size={14} className="text-[var(--accent-red)] animate-pulse" />
               <span>Admin Broadcast Console →</span>
@@ -118,19 +118,17 @@ export default function AnnouncementsView() {
         )}
 
         {/* HERO CARD: full width of content column (max-width 1120px), 34px vertical padding, subtle diagonal red sheen */}
-        <div className="announcements-hero-card">
-          <div className="announcements-hero-content">
-            <div className="hero-tag-pill">
-              <span className="hero-pulse-dot" />
-              <span>OFFICIAL LEAGUE BROADCASTS</span>
-            </div>
-            <h1 className="hero-headline">
-              Announcements & Bulletins
-            </h1>
-            <p className="hero-subline">
-              Real-time stage updates, schedule releases, tournament guidelines, and administrative bulletins.
-            </p>
+        <div className="gcl-card gcl-card--hero mb-[22px]">
+          <div className="gcl-hero-pill">
+            <span className="gcl-hero-dot" />
+            <span>OFFICIAL LEAGUE BROADCASTS</span>
           </div>
+          <h1 className="gcl-hero-title">
+            Announcements & Bulletins
+          </h1>
+          <p className="gcl-hero-desc">
+            Real-time stage updates, schedule releases, tournament guidelines, and administrative bulletins.
+          </p>
         </div>
 
         {/* SEARCH FIELD: one wide rounded field (max-width 640px, 50px tall, 14px radius, dark fill, 1px border), centered */}
@@ -147,7 +145,7 @@ export default function AnnouncementsView() {
         </div>
 
         {/* CHIPS: pill-shaped (7px 16px padding), dark fill with subtle border, active red */}
-        <div className="chips-row">
+        <div className="gcl-chips-row">
           <button
             type="button"
             onClick={() => setFilterType('all')}
@@ -168,10 +166,10 @@ export default function AnnouncementsView() {
 
         {/* List of Announcements */}
         {filtered.length === 0 ? (
-          <div className="gcl-empty-box">
+          <div className="gcl-card text-center p-12 mb-[16px]">
             <Bell size={48} className="text-[#52525b] mx-auto mb-3" />
-            <h3 className="gcl-empty-title">No Announcements Found</h3>
-            <p className="gcl-empty-desc">
+            <h3 className="gcl-card-title mb-2">No Announcements Found</h3>
+            <p className="text-xs text-[#8e8e9a] max-w-sm mx-auto font-sans leading-relaxed">
               No bulletins match "{search}". Check back soon for official updates.
             </p>
           </div>
@@ -180,7 +178,7 @@ export default function AnnouncementsView() {
             {filtered.map((ann) => (
               <div
                 key={ann.id}
-                className={`announcement-card ${ann.is_pinned ? 'announcement-card-pinned' : ''}`}
+                className={`gcl-card gcl-card--interactive ${ann.is_pinned ? 'gcl-card--accent' : ''}`}
               >
                 {/* Top row: tag on the left, date on the right in monospace style with calendar icon */}
                 <div className="flex items-center justify-between gap-3 flex-wrap">

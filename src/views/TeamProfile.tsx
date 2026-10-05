@@ -161,7 +161,7 @@ export default function TeamProfile() {
       <Header viewMode="live" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="page-shell space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
@@ -182,7 +182,7 @@ export default function TeamProfile() {
             <p className="text-xs font-mono">Loading team record...</p>
           </div>
         ) : !team ? (
-          <div className="py-20 text-center gcl-card-crimson p-8 rounded-2xl">
+          <div className="py-20 text-center gcl-card p-8">
             <Trophy size={48} className="text-[#3a3a41] mx-auto mb-3" />
             <h3 className="text-xl font-bold text-white">Team Record Not Found</h3>
             <p className="text-xs text-[#8a8a93] mt-1 font-sans">
@@ -194,7 +194,7 @@ export default function TeamProfile() {
             {/* LEFT MAIN CONTENT COLUMN */}
             <div className="space-y-6 min-w-0">
               {/* CARD 1: TEAM HEADER BANNER */}
-              <div className="gcl-card-crimson card--sheen p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className={`gcl-card ${podiumPosition === '1st' ? 'gcl-card--gold' : podiumPosition === '2nd' ? 'gcl-card--silver' : podiumPosition === '3rd' ? 'gcl-card--bronze' : ''} p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
                 <div>
                   <span className="text-xs font-mono text-[#8a8a93] block">
                     {edition?.name || 'GCL 2025'} • Team profile
@@ -237,11 +237,11 @@ export default function TeamProfile() {
                 )}
               </div>
 
-              {/* ROW OF 3 STAT CARDS (Matches Image 2 with Glowing Crimson Border) */}
+              {/* ROW OF 3 STAT CARDS (Standardized GCL Cards) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Lots won */}
-                <div className="gcl-card-crimson p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#261014] border border-[#e8212e]/40 flex items-center justify-center text-[#ff4d5a] shrink-0">
+                <div className="gcl-card p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#261014] border border-[#ff2a3d]/40 flex items-center justify-center text-[#ff4d5a] shrink-0">
                     <Package size={22} />
                   </div>
                   <div>
@@ -256,8 +256,8 @@ export default function TeamProfile() {
                 </div>
 
                 {/* Total spent (Red Number text) */}
-                <div className="gcl-card-crimson p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#261014] border border-[#e8212e]/40 flex items-center justify-center text-[#ff4d5a] shrink-0">
+                <div className="gcl-card p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#261014] border border-[#ff2a3d]/40 flex items-center justify-center text-[#ff4d5a] shrink-0">
                     <Coins size={22} />
                   </div>
                   <div>
@@ -272,7 +272,7 @@ export default function TeamProfile() {
                 </div>
 
                 {/* Remaining (Green Number text) */}
-                <div className="gcl-card-crimson p-5 flex items-center gap-4">
+                <div className="gcl-card p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#102418] border border-[#22c55e]/40 flex items-center justify-center text-[#22c55e] shrink-0">
                     <Wallet size={22} />
                   </div>
@@ -289,7 +289,7 @@ export default function TeamProfile() {
               </div>
 
               {/* CARD 2: BUDGET USED PROGRESS (Glowing red bar) */}
-              <div className="gcl-card-crimson p-5 sm:p-6 space-y-3">
+              <div className="gcl-card p-5 sm:p-6 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span
                     className="font-bold text-white tracking-wide text-sm"
@@ -317,7 +317,7 @@ export default function TeamProfile() {
               </div>
 
               {/* CARD 3: LOTS WON (N) */}
-              <div className="gcl-card-crimson p-5 sm:p-6 space-y-4">
+              <div className="gcl-card p-5 sm:p-6 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-[#22222a]">
                   <h2
                     className="text-base font-bold text-white tracking-wide"
@@ -339,7 +339,7 @@ export default function TeamProfile() {
                     {items.map((it, idx) => (
                       <div
                         key={it.id || idx}
-                        className="bg-[#0e0e14] border border-[#22222a] hover:border-[#e8212e]/50 rounded-xl p-3.5 flex items-center justify-between gap-3 transition-colors"
+                        className="gcl-inner-tile flex items-center justify-between gap-3 transition-colors hover:border-[#ff2a3d]/50"
                       >
                         <div className="flex items-center gap-3">
                           <div className="gcl-badge-square-red">
@@ -368,7 +368,7 @@ export default function TeamProfile() {
               </div>
 
               {/* CARD 4: CERTIFICATES (N) */}
-              <div className="gcl-card-crimson p-5 sm:p-6 space-y-4">
+              <div className="gcl-card p-5 sm:p-6 space-y-4">
                 <div className="pb-2 border-b border-[#22222a]">
                   <h2
                     className="text-base font-bold text-white tracking-wide"
@@ -387,7 +387,7 @@ export default function TeamProfile() {
                     {certificates.map((cert) => (
                       <div
                         key={cert.id}
-                        className="bg-[#0e0e14] border border-[#22222a] hover:border-[#e8212e]/50 rounded-xl p-3.5 flex items-center justify-between gap-3 transition-colors"
+                        className="gcl-inner-tile flex items-center justify-between gap-3 transition-colors hover:border-[#ff2a3d]/50"
                       >
                         <div>
                           <h4
@@ -418,7 +418,7 @@ export default function TeamProfile() {
 
             {/* RIGHT SIDEBAR COLUMN ("Selected team") */}
             <div className="space-y-4 w-full">
-              <div className="gcl-card-crimson p-5 sm:p-6 space-y-5">
+              <div className="gcl-card p-5 sm:p-6 space-y-5">
                 <h3
                   className="text-base font-bold text-white tracking-wide"
                   style={{ fontFamily: "'Rajdhani', sans-serif" }}
@@ -449,7 +449,7 @@ export default function TeamProfile() {
                 )}
 
                 {/* Team Identity Card */}
-                <div className="bg-[#0e0e14] border border-[#22222a] rounded-xl p-3.5 flex items-center gap-3.5">
+                <div className="gcl-inner-tile flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7a181f] to-[#1c0c11] border border-[#e8212e]/50 flex items-center justify-center text-lg shrink-0">
                     🦁
                   </div>
@@ -481,7 +481,7 @@ export default function TeamProfile() {
                       {designatedMembers.map((member, idx) => (
                         <div
                           key={member.id || idx}
-                          className="bg-[#0e0e14] border border-[#22222a] rounded-xl px-3.5 py-2 flex items-center justify-between text-xs"
+                          className="gcl-inner-tile flex items-center justify-between text-xs !py-2"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="text-[#8a8a93] font-mono text-[11px] w-4">
