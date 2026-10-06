@@ -648,7 +648,7 @@ export default function LiveView() {
               </p>
               <select
                 value={myTeamId}
-                onChange={(e) => setMyTeamId(e.target.value)}
+                onChange={(e) => handleSelectTeam(e.target.value)}
                 className="gcl-select"
               >
                 <option value="">Viewing as Guest (Select Team)</option>
