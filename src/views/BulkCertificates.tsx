@@ -29,6 +29,7 @@ import {
 } from '../utils/pdfGenerator';
 import type { CertificateType } from '../types/certificates';
 import type { Edition, Team } from '../types/database';
+import '../admin.css';
 
 interface CsvRow {
   index: number;
@@ -420,74 +421,78 @@ Priya Sharma,,volunteer`;
 
   if (authLoading || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      <div className="admin-shell min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#ff2a3d] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="gcl-live-page min-h-screen text-[#f4f4f6] font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-      <Header viewMode="live" onToggleView={() => {}} />
+    <div className="admin-shell">
+      <Header viewMode="admin" onToggleView={() => {}} />
       <Notification notification={notification} />
 
-      <main className="w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* Breadcrumb */}
+      <main className="admin-content-wrap space-y-6">
+        {/* Breadcrumb & Navigation */}
         <div className="flex items-center justify-between">
           <Link
-            to="/123456789/GCL-0321/admin"
-            className="flex items-center gap-2 text-sm text-[#a1a1aa] hover:text-[var(--accent-red)] transition-colors font-mono"
+            to="/123456789/GCL-0321/admin?tab=certificates"
+            className="flex items-center gap-2 text-xs text-[#8e8e9a] hover:text-[#ff4d5a] transition-colors font-mono uppercase tracking-wider font-bold"
           >
-            <ChevronLeft size={16} /> Back to Admin Panel
+            <ChevronLeft size={16} /> Back to Certificate Hub
           </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-[#8e8e9a] uppercase font-bold">Target Edition:</span>
+            <select
+              value={selectedEditionId}
+              onChange={(e) => setSelectedEditionId(e.target.value)}
+              className="gcl-input text-xs font-mono py-1 px-3 w-auto"
+            >
+              {editions.map((ed) => (
+                <option key={ed.id} value={ed.id}>
+                  {ed.name} ({ed.year})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-red)]/15 border border-[var(--accent-red)]/40 flex items-center justify-center text-[var(--accent-red)] shadow-[0_0_15px_rgba(232,33,46,0.2)]">
-              <Layers size={22} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white uppercase tracking-wider font-['Rajdhani',sans-serif]">Bulk Certificate Generator</h1>
-              <p className="text-xs text-[#a1a1aa] font-mono">
-                Upload CSV → Validate → Issue all at once
-              </p>
-            </div>
+        {/* Hero Card */}
+        <div className="admin-hero-card">
+          <div className="admin-hero-pill">
+            <span className="admin-hero-dot" />
+            <span>ACCREDITATION GATEWAY</span>
           </div>
-
-          <select
-            value={selectedEditionId}
-            onChange={(e) => setSelectedEditionId(e.target.value)}
-            className="gcl-input text-xs font-mono py-2"
-          >
-            {editions.map((ed) => (
-              <option key={ed.id} value={ed.id}>
-                {ed.name} ({ed.year})
-              </option>
-            ))}
-          </select>
+          <h1 className="admin-hero-title">Bulk Certificate Generator</h1>
+          <p className="admin-hero-desc">
+            Upload CSV data or import registered team rosters, validate credential schemas, and issue cryptographically verifiable certificates in one automated batch.
+          </p>
         </div>
 
         {/* CSV Input Section */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-            <UploadCloud size={16} className="text-cyan-400" />
-            Upload or Paste CSV Data
-          </h3>
+        <div className="admin-card space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[#24242c]">
+            <h3 className="admin-card-title mb-0">
+              <UploadCloud size={20} className="text-[#ff4d5a]" />
+              Upload or Paste Participant CSV
+            </h3>
+            <span className="text-xs font-mono text-[#8e8e9a]">
+              Required columns: <code className="text-[#ff9da6] bg-[#0a0a0c] px-2 py-0.5 rounded border border-[#24242c]">name,team,certificate_type</code>
+            </span>
+          </div>
 
-          <p className="text-xs text-slate-400 mb-3">
-            CSV format: <code className="text-cyan-400 bg-slate-950 px-1.5 py-0.5 rounded text-[10px]">name,team,certificate_type</code>. 
-            Valid types: {ALL_CERTIFICATE_TYPES.join(', ')}.
+          <p className="text-xs text-[#8e8e9a]">
+            Accepted certificate types: <span className="font-mono text-[#e8e8ed]">{ALL_CERTIFICATE_TYPES.join(', ')}</span>.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <label className="flex-1 cursor-pointer">
-              <div className="px-4 py-8 rounded-xl border-2 border-dashed border-slate-700 hover:border-cyan-500/50 bg-slate-950/40 text-center transition-colors">
-                <UploadCloud size={28} className="mx-auto mb-2 text-slate-500" />
-                <p className="text-xs font-semibold text-slate-400">
-                  {csvFileName || 'Drop CSV file or click to upload'}
+              <div className="px-4 py-8 rounded-xl border-2 border-dashed border-[#282834] hover:border-[#ff2a3d]/60 bg-[#0a0a0c] text-center transition-all">
+                <UploadCloud size={30} className="mx-auto mb-2 text-[#8e8e9a]" />
+                <p className="text-xs font-bold text-[#e8e8ed]">
+                  {csvFileName || 'Drop CSV file or click to browse'}
                 </p>
+                <p className="text-[10px] text-[#8e8e9a] font-mono mt-1">.csv or .txt file</p>
               </div>
               <input
                 type="file"
@@ -497,88 +502,93 @@ Priya Sharma,,volunteer`;
               />
             </label>
 
-            <div className="flex flex-col gap-2 self-end">
+            <div className="flex flex-col gap-2.5 self-center sm:self-end">
               <button
                 type="button"
                 onClick={handleImportRegisteredTeamMembers}
-                className="px-4 py-2 rounded-lg bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="admin-btn-secondary"
                 title="Populate CSV rows directly from teams and members registered in Event Configuration"
               >
-                <Users size={14} className="text-cyan-400" /> Import Registered Team Members
+                <Users size={15} /> Import Registered Roster
               </button>
               <button
                 type="button"
                 onClick={handleLoadSampleCsv}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="admin-btn-neutral"
               >
-                <FileText size={14} /> Load Sample CSV
+                <FileText size={15} /> Load Sample Template
               </button>
             </div>
           </div>
 
-          <textarea
-            value={rawCsv}
-            onChange={(e) => {
-              setRawCsv(e.target.value);
-              setResults(null);
-            }}
-            placeholder={`name,team,certificate_type\nJohn Doe,Team Alpha,participation\nJane Smith,Team Beta,winner`}
-            rows={8}
-            className="gcl-input w-full font-mono text-xs resize-y"
-          />
+          <div>
+            <label className="text-xs text-[#8e8e9a] font-mono uppercase font-bold block mb-1">
+              CSV Content Editor
+            </label>
+            <textarea
+              value={rawCsv}
+              onChange={(e) => {
+                setRawCsv(e.target.value);
+                setResults(null);
+              }}
+              placeholder={`name,team,certificate_type\nAryan Sharma,Team Alpha,winner\nJane Smith,Team Beta,participation`}
+              rows={8}
+              className="gcl-input w-full font-mono text-xs resize-y"
+            />
+          </div>
         </div>
 
         {/* Validation Preview */}
         {parsedRows.length > 0 && (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <CheckCircle2 size={16} className={totalErrors > 0 ? 'text-amber-400' : 'text-emerald-400'} />
-                Validation Preview
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 border border-slate-700">
+          <div className="admin-card space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#24242c] flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={20} className={totalErrors > 0 ? 'text-[#f59e0b]' : 'text-[#2fd16f]'} />
+                <h3 className="admin-card-title mb-0">Validation Preview</h3>
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[#14141a] text-[#e8e8ed] border border-[#24242c]">
                   {parsedRows.length} rows
                 </span>
                 {totalErrors > 0 && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-900/50">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-red-950/80 text-[#ff4d5a] border border-red-800/60 font-bold">
                     {totalErrors} errors
                   </span>
                 )}
-              </h3>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className="admin-table-container max-h-[360px] overflow-y-auto">
+              <table className="admin-table">
                 <thead>
-                  <tr className="border-b border-slate-800 text-left">
-                    <th className="pb-2 px-2 text-slate-400 font-mono">#</th>
-                    <th className="pb-2 px-2 text-slate-400 font-mono">Name</th>
-                    <th className="pb-2 px-2 text-slate-400 font-mono">Team</th>
-                    <th className="pb-2 px-2 text-slate-400 font-mono">Type</th>
-                    <th className="pb-2 px-2 text-slate-400 font-mono">Status</th>
+                  <tr>
+                    <th className="w-12 text-center">#</th>
+                    <th>Recipient Name</th>
+                    <th>Team</th>
+                    <th>Certificate Type</th>
+                    <th>Validation Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {parsedRows.map((row) => (
                     <tr
                       key={row.index}
-                      className={`border-b border-slate-900 ${row.errors.length > 0 ? 'bg-red-950/10' : ''}`}
+                      className={row.errors.length > 0 ? 'bg-red-950/20' : ''}
                     >
-                      <td className="py-2 px-2 text-slate-500 font-mono">{row.index}</td>
-                      <td className="py-2 px-2 font-semibold text-white">{row.name || '—'}</td>
-                      <td className="py-2 px-2 text-slate-300">{row.team || '—'}</td>
-                      <td className="py-2 px-2 capitalize text-cyan-400">
+                      <td className="text-center font-mono text-[#8e8e9a]">{row.index}</td>
+                      <td className="font-bold text-white">{row.name || '—'}</td>
+                      <td className="text-[#8e8e9a]">{row.team || '—'}</td>
+                      <td className="capitalize font-mono text-[#ff9da6]">
                         {row.certificate_type || '—'}
                       </td>
-                      <td className="py-2 px-2">
+                      <td>
                         {row.errors.length === 0 ? (
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <Check size={12} /> Valid
+                          <span className="text-[#2fd16f] font-mono text-xs flex items-center gap-1 font-bold">
+                            <Check size={14} /> Ready
                           </span>
                         ) : (
-                          <div className="text-red-400">
+                          <div className="text-[#ff4d5a] text-xs">
                             {row.errors.map((err, idx) => (
                               <div key={idx} className="flex items-start gap-1">
-                                <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                                <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                                 <span>{err}</span>
                               </div>
                             ))}
@@ -591,16 +601,16 @@ Priya Sharma,,volunteer`;
               </table>
             </div>
 
-            {/* Generate Button */}
-            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+            {/* Generate Action Button */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#24242c]">
               <button
                 onClick={handleGenerateAll}
                 disabled={isGenerating || totalErrors > 0 || parsedRows.length === 0}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm shadow-glow-cyan disabled:opacity-50 transition-all flex items-center gap-2"
+                className="admin-btn-primary admin-btn-large"
               >
                 <Award size={18} />
                 {isGenerating
-                  ? `Generating ${progressIndex}/${totalToGenerate}...`
+                  ? `Issuing ${progressIndex} / ${totalToGenerate}...`
                   : `Issue All ${parsedRows.length} Certificates`}
               </button>
             </div>
@@ -609,16 +619,16 @@ Priya Sharma,,volunteer`;
 
         {/* Generation Progress */}
         {isGenerating && (
-          <div className="bg-slate-900/60 border border-cyan-500/30 rounded-2xl p-6 backdrop-blur-md">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-bold text-white">
-                Generating certificate {progressIndex} of {totalToGenerate}...
+          <div className="admin-card space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-[#ff2a3d] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-bold text-white font-mono">
+                Issuing certificate {progressIndex} of {totalToGenerate}...
               </span>
             </div>
-            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-[#14141a] rounded-full overflow-hidden border border-[#24242c]">
               <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all"
+                className="h-full bg-gradient-to-r from-[#ff3b4d] to-[#c4101f] rounded-full transition-all"
                 style={{ width: `${(progressIndex / totalToGenerate) * 100}%` }}
               />
             </div>
@@ -627,28 +637,28 @@ Priya Sharma,,volunteer`;
 
         {/* Results Section */}
         {results && !isGenerating && (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <ShieldCheck size={16} className="text-emerald-400" />
-                Generation Results
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900/50">
-                  {results.filter((r) => r.status === 'success').length} ✓
+          <div className="admin-card space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#24242c] flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={20} className="text-[#2fd16f]" />
+                <h3 className="admin-card-title mb-0">Generation Results</h3>
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-[#14141a] text-[#2fd16f] border border-[#2fd16f]/40 font-bold">
+                  {results.filter((r) => r.status === 'success').length} Issued
                 </span>
                 {results.some((r) => r.status === 'failed') && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-900/50">
-                    {results.filter((r) => r.status === 'failed').length} ✗
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-red-950 text-[#ff4d5a] border border-red-800 font-bold">
+                    {results.filter((r) => r.status === 'failed').length} Failed
                   </span>
                 )}
-              </h3>
+              </div>
 
               <button
                 onClick={handleDownloadZip}
                 disabled={isZipping || !results.some((r) => r.status === 'success' && r.pdfBlob)}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center gap-2 disabled:opacity-50"
+                className="admin-btn-primary"
               >
-                <Download size={14} />
-                {isZipping ? 'Zipping...' : 'Download All as ZIP'}
+                <Download size={15} />
+                {isZipping ? 'Bundling ZIP...' : 'Download All as ZIP'}
               </button>
             </div>
 
@@ -656,28 +666,31 @@ Priya Sharma,,volunteer`;
               {results.map((item, idx) => (
                 <div
                   key={idx}
-                  className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${
+                  className={`flex items-center justify-between gap-3 p-3.5 rounded-xl border ${
                     item.status === 'success'
-                      ? 'bg-slate-950/60 border-slate-800/80'
-                      : 'bg-red-950/20 border-red-900/40'
+                      ? 'bg-[#14141a] border-[#24242c]'
+                      : 'bg-red-950/20 border-red-900/50'
                   }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       {item.status === 'success' ? (
-                        <Check size={14} className="text-emerald-400 shrink-0" />
+                        <Check size={16} className="text-[#2fd16f] shrink-0" />
                       ) : (
-                        <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                        <AlertTriangle size={16} className="text-[#ff4d5a] shrink-0" />
                       )}
                       <span className="text-sm font-bold text-white truncate">
                         {item.recipient_name}
                       </span>
+                      {item.team_name && (
+                        <span className="text-xs text-[#8e8e9a]">({item.team_name})</span>
+                      )}
                     </div>
-                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                    <div className="text-[11px] font-mono mt-0.5">
                       {item.status === 'success' ? (
-                        <span className="text-amber-400 font-bold">{item.certificate_id}</span>
+                        <span className="text-[#f5b73b] font-bold">{item.certificate_id}</span>
                       ) : (
-                        <span className="text-red-400">{item.error}</span>
+                        <span className="text-[#ff4d5a]">{item.error}</span>
                       )}
                     </div>
                   </div>

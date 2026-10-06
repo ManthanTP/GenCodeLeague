@@ -61,6 +61,7 @@ import TeamRemoveModal from '../components/TeamRemoveModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, MIN_INCREMENT, getRoundBasePrice } from '../data/roundsData';
 import type { Team, PastRoundSnapshot, TransactionEntry, TeamItem, EventState, LeaderboardRevealEntry, TeamMember, Announcement } from '../types/database';
+import '../admin.css';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -2690,7 +2691,7 @@ export default function AdminPanel() {
   );
 
   return (
-    <div className="gcl-live-page min-h-screen text-[#f4f4f6] pb-16 relative flex flex-col font-['Rajdhani',sans-serif] selection:bg-[var(--accent-red)] selection:text-white" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+    <div className="admin-shell">
       <Header
         totalSpent={totalSpent}
         totalAvailable={totalAvailable}
@@ -2764,142 +2765,200 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Cyber Admin Command Bar */}
-      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2 relative z-30">
-        <div className="p-2.5 rounded-2xl bg-[#131316] border border-[#26262b] backdrop-blur-xl shadow-2xl flex items-center justify-between flex-wrap gap-3">
-          {/* Main 4 Module Tabs */}
-          <div className="flex items-center gap-2 flex-wrap">
+      {/* Shared Admin Content Wrap & Two-Pane Rail Layout */}
+      <div className="admin-content-wrap">
+        <div className="admin-layout-rail">
+          {/* Left Rail 240px Navigation (Rule 2) */}
+          <aside className="admin-rail">
             <button
               type="button"
               onClick={() => handleTabChange('auction')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
-                adminActiveTab === 'auction'
-                  ? 'bg-[var(--accent-red)] text-white shadow-[0_2px_12px_rgba(224,38,63,0.3)] border border-[var(--accent-red)]'
-                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
-              }`}
+              className={`admin-rail-item ${adminActiveTab === 'auction' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'auction' ? 'page' : undefined}
             >
-              <Hammer size={16} className={adminActiveTab === 'auction' ? 'text-white' : 'text-[#71717a]'} />
-              <span>LIVE AUCTION CONSOLE</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'auction' ? 'bg-[#0a0a0c]/60 text-white border border-white/20' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
-                LIVE
-              </span>
+              <div className="admin-rail-icon">
+                <Hammer size={16} />
+              </div>
+              <span className="admin-rail-label">Auction Console</span>
+              <span className="admin-rail-badge">LIVE</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
 
             <button
               type="button"
               onClick={() => handleTabChange('teams')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
-                adminActiveTab === 'teams'
-                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)] shadow-[0_0_12px_rgba(232,33,46,0.25)]'
-                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
-              }`}
+              className={`admin-rail-item ${adminActiveTab === 'teams' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'teams' ? 'page' : undefined}
             >
-              <Users size={16} className={adminActiveTab === 'teams' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
-              <span>TEAM MANAGEMENT</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'teams' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
-                {teams.length} TEAMS
-              </span>
+              <div className="admin-rail-icon">
+                <Users size={16} />
+              </div>
+              <span className="admin-rail-label">Team Roster</span>
+              <span className="admin-rail-badge">{teams.length}</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
 
             <button
               type="button"
               onClick={() => handleTabChange('updates')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
-                adminActiveTab === 'updates'
-                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)] shadow-[0_0_12px_rgba(232,33,46,0.25)]'
-                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
-              }`}
+              className={`admin-rail-item ${adminActiveTab === 'updates' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'updates' ? 'page' : undefined}
             >
-              <Radio size={16} className={adminActiveTab === 'updates' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
-              <span>UPDATES & BROADCASTS</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'updates' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
-                {adminAnnouncements.length} POSTS
-              </span>
+              <div className="admin-rail-icon">
+                <Radio size={16} />
+              </div>
+              <span className="admin-rail-label">Updates & Alerts</span>
+              <span className="admin-rail-badge">{adminAnnouncements.length}</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
 
             <button
               type="button"
               onClick={() => handleTabChange('certificates')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
-                adminActiveTab === 'certificates'
-                  ? 'bg-[#18181c] text-white border border-[var(--accent-red)]'
-                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
-              }`}
+              className={`admin-rail-item ${adminActiveTab === 'certificates' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'certificates' ? 'page' : undefined}
             >
-              <Award size={16} className={adminActiveTab === 'certificates' ? 'text-[var(--accent-red)]' : 'text-[#71717a]'} />
-              <span>CERTIFICATE HUB</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'certificates' ? 'bg-[#0a0a0c] text-[var(--accent-red)] border border-[var(--accent-red)]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
-                MODULE
-              </span>
+              <div className="admin-rail-icon">
+                <Award size={16} />
+              </div>
+              <span className="admin-rail-label">Certificate Hub</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
 
             <button
               type="button"
               onClick={() => handleTabChange('archive')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black font-mono tracking-wider flex items-center gap-2.5 transition-all cursor-pointer ${
-                adminActiveTab === 'archive'
-                  ? 'bg-[#18181c] text-white border border-[#d4af37]/60 shadow-[0_0_12px_rgba(212,175,55,0.1)]'
-                  : 'text-[#71717a] hover:text-white hover:bg-[#18181c] border border-transparent'
-              }`}
+              className={`admin-rail-item ${adminActiveTab === 'archive' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'archive' ? 'page' : undefined}
             >
-              <Archive size={16} className={adminActiveTab === 'archive' ? 'text-[#d4af37]' : 'text-[#71717a]'} />
-              <span>ARCHIVE & HERITAGE</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${adminActiveTab === 'archive' ? 'bg-[#0a0a0c] text-[#d4af37] border border-[#d4af37]/30' : 'bg-[#0a0a0c] text-[#71717a]'}`}>
-                HERITAGE
-              </span>
+              <div className="admin-rail-icon">
+                <Archive size={16} />
+              </div>
+              <span className="admin-rail-label">Archive & History</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
-          </div>
 
-          {/* Quick Context & Public Portal Links */}
-          <div className="hidden lg:flex items-center gap-2">
-            {profile?.email && (
-              <span className="text-xs font-mono text-[#e1e1e6] px-2.5 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024] flex items-center gap-1.5" title={`Logged in as ${profile.email}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)] animate-pulse"></span>
-                <span className="max-w-[150px] truncate">{profile.email}</span>
-              </span>
-            )}
+            <div className="admin-rail-divider" />
+
             <button
               type="button"
               onClick={() => setIsChangePasswordOpen(true)}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#a1a1aa] hover:text-white bg-[#0a0a0c] hover:bg-[#18181c] border border-[#202024] transition-all flex items-center gap-1.5 cursor-pointer"
+              className="admin-rail-item"
               title="Set / Change Admin Password"
             >
-              <KeyRound size={13} className="text-[#e1e1e6]" />
-              <span>Password</span>
+              <div className="admin-rail-icon">
+                <KeyRound size={14} />
+              </div>
+              <span className="admin-rail-label">Admin Password</span>
             </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('teams')}
-              className={`text-xs font-mono px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
-                adminActiveTab === 'teams'
-                  ? 'bg-[#222228] text-white border border-[var(--accent-red)]'
-                  : 'text-white bg-[#18181c] hover:bg-[#222228] border border-[#2e2e36] hover:border-[var(--accent-red)]'
-              }`}
-              title="Add or Manage Team Members at any time"
-            >
-              <Users size={14} className="text-[var(--accent-red)]" />
-              <span>Team Roster ({teams.length})</span>
-            </button>
-            <span className="text-xs font-mono text-[#71717a] px-3 py-1.5 rounded-lg bg-[#0a0a0c] border border-[#202024]">
-              Edition: <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
-            </span>
+
             <button
               type="button"
               onClick={() => navigate('/hall-of-fame')}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#71717a] hover:text-[#d4af37] hover:bg-[#d4af37]/10 border border-transparent hover:border-[#d4af37]/30 transition-all flex items-center gap-1"
+              className="admin-rail-item"
+              title="View Hall of Fame"
             >
-              ★ Hall of Fame
+              <div className="admin-rail-icon">
+                <Trophy size={14} />
+              </div>
+              <span className="admin-rail-label">Hall of Fame</span>
             </button>
+
             <button
               type="button"
               onClick={() => navigate('/my-certificates')}
-              className="text-xs font-mono px-2.5 py-1.5 rounded-lg text-[#71717a] hover:text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10 border border-transparent hover:border-[var(--accent-red)]/30 transition-all flex items-center gap-1"
+              className="admin-rail-item"
+              title="View Certificate Verification"
             >
-              ◈ Certificates
+              <div className="admin-rail-icon">
+                <Award size={14} />
+              </div>
+              <span className="admin-rail-label">Public Certificates</span>
             </button>
-          </div>
-        </div>
-      </div>
+
+            <div className="admin-rail-divider" />
+
+            <div className="admin-rail-meta space-y-1">
+              <div className="flex items-center justify-between text-[10px]">
+                <span>EDITION:</span>
+                <strong className="text-white">{edition?.name || 'GCL 2026'}</strong>
+              </div>
+              {profile?.email && (
+                <div className="flex items-center gap-1.5 pt-1 text-[10px] text-[#8e8e9a] truncate" title={`Logged in as ${profile.email}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff2a3d] shrink-0 animate-pulse" />
+                  <span className="truncate">{profile.email}</span>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <main className="admin-main-area">
+            {/* Tab Hero Card according to active tab */}
+            {adminActiveTab === 'auction' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>LIVE TOURNAMENT OPERATIONS</span>
+                </div>
+                <h1 className="admin-hero-title">Live Auction & Bidding Console</h1>
+                <p className="admin-hero-desc">
+                  Real-time arena controls for round timers, bidding evaluations, live questions, and automated scoreboard sync.
+                </p>
+              </div>
+            )}
+
+            {adminActiveTab === 'teams' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>PARTICIPANT ROSTER</span>
+                </div>
+                <h1 className="admin-hero-title">Team Roster & Management</h1>
+                <p className="admin-hero-desc">
+                  Register teams, manage player rosters, calibrate budgets & auto-sync participants with live certificates.
+                </p>
+              </div>
+            )}
+
+            {adminActiveTab === 'updates' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>BROADCAST DISPATCH</span>
+                </div>
+                <h1 className="admin-hero-title">Updates & Broadcast Console</h1>
+                <p className="admin-hero-desc">
+                  Publish official bulletins, real-time round announcements, score alerts & rule updates to the public feed.
+                </p>
+              </div>
+            )}
+
+            {adminActiveTab === 'certificates' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>ACCREDITATION STUDIO</span>
+                </div>
+                <h1 className="admin-hero-title">Certificate Hub & Issuance</h1>
+                <p className="admin-hero-desc">
+                  Generate, design templates, preview, and cryptographically issue official tournament certificates.
+                </p>
+              </div>
+            )}
+
+            {adminActiveTab === 'archive' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>HERITAGE REPOSITORY</span>
+                </div>
+                <h1 className="admin-hero-title">Archive & Heritage Management</h1>
+                <p className="admin-hero-desc">
+                  Manage tournament editions, podium champions, gallery photo captures, and official FAQ documentation.
+                </p>
+              </div>
+            )}
 
       {/* TEAM MANAGEMENT TAB */}
       {adminActiveTab === 'teams' && (
@@ -5687,6 +5746,10 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+          </main>
+        </div>
+      </div>
 
       {/* 3. Confirm Full Reset (DANGER) Modal */}
       {isConfirmingReset && (

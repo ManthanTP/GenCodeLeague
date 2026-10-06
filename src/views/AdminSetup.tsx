@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Settings, Plus, Minus, Play } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Edition, Team, EventState } from '../types/database';
+import '../admin.css';
 
 interface AdminSetupProps {
   edition: Edition;
@@ -79,78 +81,87 @@ export default function AdminSetup({ edition, eventState, teams }: AdminSetupPro
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '2rem auto' }}>
-      <div className="card">
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span>⚙️</span> Event Configuration
-        </h2>
+    <div className="admin-shell" style={{ maxWidth: '680px', margin: '2rem auto', minWidth: 'auto' }}>
+      <div className="admin-card space-y-6">
+        <div className="flex items-center gap-3 pb-3 border-b border-[#24242c]">
+          <div className="w-10 h-10 rounded-xl bg-[#261014] border border-[#ff2a3d]/40 flex items-center justify-center text-[#ff4d5a]">
+            <Settings size={22} />
+          </div>
+          <div>
+            <h2 className="admin-card-title mb-0">Event Configuration</h2>
+            <p className="text-xs text-[#8e8e9a]">Setup starting team budgets & rosters before going live</p>
+          </div>
+        </div>
         
-        <div className="mt-4">
-          <label style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Starting Budget</label>
-          <div className="flex gap-4 mt-2">
+        <div>
+          <label className="text-xs font-mono uppercase font-bold text-[#8e8e9a] block mb-1">Starting Budget</label>
+          <div className="flex gap-3 items-center">
             <input 
               type="number" 
               value={budgetInput}
               onChange={(e) => setBudgetInput(e.target.value)}
-              style={{ flex: 1 }}
+              className="gcl-input flex-1 font-mono"
             />
-            <button className="primary" onClick={handleUpdateBudget} disabled={loading}>Update</button>
+            <button className="admin-btn-secondary" onClick={handleUpdateBudget} disabled={loading}>
+              Update
+            </button>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            Current: ₹{(parseInt(budgetInput) || 0).toLocaleString()} (Will be applied to new teams)
+          <div className="text-xs font-mono text-[#8e8e9a] mt-2">
+            Current: <strong className="text-white">₹{(parseInt(budgetInput) || 0).toLocaleString()}</strong> (Applied to new teams)
           </div>
         </div>
 
-        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-          <div className="flex justify-between items-center mb-4">
-            <label style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Teams ({teams.length})</label>
+        <div className="pt-4 border-t border-[#24242c] space-y-4">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-mono uppercase font-bold text-[#8e8e9a]">Teams ({teams.length})</label>
           </div>
 
-          <div className="flex-col gap-2 mb-4" style={{ display: 'flex' }}>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
             {teams.map((team, idx) => (
-              <div key={team.id} className="flex justify-between items-center" style={{ backgroundColor: 'var(--bg-main)', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                <span>{idx + 1}. {team.name}</span>
+              <div key={team.id} className="flex justify-between items-center p-3 rounded-xl bg-[#14141a] border border-[#24242c]">
+                <span className="font-mono text-sm text-white font-bold">{idx + 1}. {team.name}</span>
                 <button 
-                  className="danger" 
-                  style={{ padding: '0.2rem 0.6rem', borderRadius: '50%' }}
+                  className="w-7 h-7 rounded-full bg-red-950/80 border border-red-800 text-[#ff4d5a] flex items-center justify-center hover:bg-red-900 transition-colors"
                   onClick={() => handleRemoveTeam(team.id)}
                   disabled={loading}
+                  title="Remove Team"
                 >
-                  −
+                  <Minus size={14} />
                 </button>
               </div>
             ))}
           </div>
 
-          <form onSubmit={handleAddTeam} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <form onSubmit={handleAddTeam} className="space-y-2 pt-2">
             <div className="flex gap-2">
               <input 
                 type="text" 
                 placeholder="New Team Name *" 
                 value={newTeamName}
                 onChange={(e) => setNewTeamName(e.target.value)}
-                style={{ flex: 1 }}
+                className="gcl-input flex-1"
               />
-              <button type="submit" className="primary" disabled={loading || !newTeamName.trim()}>+ Add Team</button>
+              <button type="submit" className="admin-btn-primary" disabled={loading || !newTeamName.trim()}>
+                <Plus size={16} /> Add Team
+              </button>
             </div>
             <input 
               type="text" 
               placeholder="Member Names (Optional, comma-separated e.g. Alice, Bob)" 
               value={newTeamMembers}
               onChange={(e) => setNewTeamMembers(e.target.value)}
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+              className="gcl-input text-xs"
             />
           </form>
         </div>
 
-        <div className="mt-6 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+        <div className="pt-4 border-t border-[#24242c]">
           <button 
-            className="primary" 
-            style={{ width: '100%', padding: '1rem', fontSize: '1rem', letterSpacing: '1px' }}
+            className="admin-btn-primary admin-btn-large w-full"
             onClick={handleStartEvent}
             disabled={loading || teams.length === 0}
           >
-            ▶ Start Live Auction
+            <Play size={18} fill="currentColor" /> Start Live Auction
           </button>
         </div>
       </div>

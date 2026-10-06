@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Notification, { type NotificationState } from '../components/Notification';
 
+import '../admin.css';
+
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,23 +77,25 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="gcl-live-page min-h-screen text-white font-sans">
+    <div className="admin-shell">
       <Header viewMode="admin" onToggleView={() => navigate('/')} />
       <Notification notification={notification} />
 
-      <div className="auth-centered-wrapper">
-        <div className="panel max-w-md w-full">
-          <div className="auth-icon-badge">
-            <Lock size={36} className="text-red-400" />
+      <div className="admin-content-wrap flex items-center justify-center min-h-[calc(100vh-140px)]">
+        <div className="admin-card max-w-md w-full mx-auto">
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#261014] border border-[#ff2a3d]/40 flex items-center justify-center text-[#ff4d5a] mx-auto mb-3 shadow-[0_0_20px_rgba(255,42,61,0.25)]">
+              <Lock size={28} />
+            </div>
+            <h1 className="admin-hero-title text-2xl mb-1">Administrator Portal</h1>
+            <p className="admin-hero-desc text-xs text-[#8e8e9a]">
+              Enter your admin credentials to access the auction console.
+            </p>
           </div>
-          <h1 className="auth-title">Administrator Portal</h1>
-          <p className="auth-subtitle">
-            Enter your admin credentials to access the auction console.
-          </p>
 
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+              <label className="text-xs text-[#8e8e9a] uppercase font-bold mb-1.5 block font-mono">
                 Admin Email
               </label>
               <input
@@ -109,7 +113,7 @@ export default function AdminLogin() {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 uppercase font-bold mb-1 block">
+              <label className="text-xs text-[#8e8e9a] uppercase font-bold mb-1.5 block font-mono">
                 Password
               </label>
               <input
@@ -120,18 +124,18 @@ export default function AdminLogin() {
                   setError('');
                 }}
                 placeholder="Enter your password"
-                className={`gcl-input w-full ${error ? 'border-red-500' : ''}`}
+                className={`gcl-input w-full ${error ? 'border-[#ff2a3d]' : ''}`}
                 required
               />
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs leading-relaxed">
+              <div className="p-3 rounded-xl bg-red-950/60 border border-red-800 text-red-300 text-xs leading-relaxed font-sans">
                 {error}
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="btn-login-submit w-full mt-2">
+            <button type="submit" disabled={loading} className="admin-btn-primary w-full mt-2">
               <ShieldCheck size={18} /> {loading ? 'Signing in...' : 'Sign In as Admin'}
             </button>
           </form>
