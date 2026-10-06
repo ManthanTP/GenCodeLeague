@@ -632,7 +632,6 @@ export default function LiveView() {
             <h1 className="grand-title">
               GEN <span className="brand-heading-accent">CODE</span> LEAGUE
             </h1>
-            <div className="divider-red"></div>
             <AnimatedText
               text="Auction Starting Soon"
               gradientColors="linear-gradient(90deg, #6b6b6b, #ffffff, #6b6b6b)"
