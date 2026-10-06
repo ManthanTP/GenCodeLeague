@@ -35,7 +35,7 @@ import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
-import { ShimmerText } from '../components/ui/shimmer-text';
+import { AnimatedText } from '../components/ui/animated-shiny-text';
 import { useFitText } from '../hooks/useFitText';
 import './LiveScreens.css';
 
@@ -628,24 +628,19 @@ export default function LiveView() {
       {/* 2. WAITING START STATE */}
       {gameState === 'waiting_start' && (
         <div className="live-waiting-start-screen">
-          <div className="text-center space-y-4 max-w-4xl z-10 px-4">
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 10, maxWidth: '56rem', width: '100%', padding: '0 16px', boxSizing: 'border-box' as const }}>
             <h1 className="grand-title">
               GEN <span className="brand-heading-accent">CODE</span> LEAGUE
             </h1>
             <div className="divider-red"></div>
-            <div style={{ margin: '8px 0' }}>
-              <ShimmerText
-                className="gcl-display"
-                style={{
-                  fontSize: 'clamp(24px, 4.5vw, 52px)',
-                  fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.12em',
-                }}
-              >
-                Auction Starting Soon
-              </ShimmerText>
-            </div>
+            <AnimatedText
+              text="Auction Starting Soon"
+              gradientColors="linear-gradient(90deg, #6b6b6b, #ffffff, #6b6b6b)"
+              gradientAnimationDuration={2}
+              hoverEffect
+              textClassName="gcl-display"
+              style={{ padding: '4px 0' }}
+            />
 
             {/* Team Selector on Waiting Screen */}
             <div className="team-selector-card">
