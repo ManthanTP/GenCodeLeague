@@ -46,7 +46,7 @@ export default function TeamLogin() {
 
   return (
     <div className="min-h-screen text-white font-sans">
-      <Header viewMode="team" onToggleView={() => navigate('/')} />
+      <Header viewMode="team" onToggleView={() => navigate('/live')} />
       
       <div className="auth-centered-wrapper">
         <div className="auth-card">

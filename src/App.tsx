@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LiveView from './views/LiveView';
+import LandingPage from './views/LandingPage';
 import AdminPanel from './views/AdminPanel';
 import AdminLogin from './views/AdminLogin';
 import TeamConsole from './views/TeamConsole';
@@ -18,7 +19,7 @@ import FaqView from './views/FaqView';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LiveView />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/live" element={<LiveView />} />
       <Route path="/verify/:certificateId" element={<VerifyCertificate />} />
       <Route path="/my-certificates" element={<StudentCertificateLookup />} />

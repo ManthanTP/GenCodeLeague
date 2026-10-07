@@ -1,0 +1,105 @@
+/* ====================================================================
+   LandingPage.css — Editorial broadcast aesthetics for Gen Code League
+   ==================================================================== */
+
+.gcl-landing-root {
+  background-color: #0a0a0c;
+  color: #f4f4f6;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Hairline borders */
+.hairline-b {
+  border-bottom: 1px solid #26262b;
+}
+
+.hairline-t {
+  border-top: 1px solid #26262b;
+}
+
+.hairline-r {
+  border-right: 1px solid #26262b;
+}
+
+.hairline-l {
+  border-left: 1px solid #26262b;
+}
+
+/* Section Container */
+.landing-shell {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(20px, 4vw, 48px);
+  padding-right: clamp(20px, 4vw, 48px);
+}
+
+/* Format Row Hover Transition */
+.format-row {
+  position: relative;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.format-row::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 1px;
+  background-color: #ff2a3d;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.format-row:hover::after {
+  width: 100%;
+}
+
+.format-row:hover {
+  transform: translateX(12px);
+}
+
+/* SVG circle draw animation for People cards */
+.svg-ring-circle {
+  stroke-dasharray: 690;
+  stroke-dashoffset: 690;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
+
+.svg-ring-circle.drawn {
+  stroke-dashoffset: 0;
+}
+
+.person-card:hover .svg-ring-circle {
+  stroke: #ff2a3d;
+  filter: drop-shadow(0 0 6px rgba(255, 42, 61, 0.5));
+}
+
+.person-card:hover .person-photo-wrap {
+  transform: translateY(-6px);
+}
+
+.person-photo-wrap {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .format-row,
+  .format-row:hover {
+    transform: none !important;
+  }
+  .format-row::after {
+    transition: none !important;
+  }
+  .svg-ring-circle {
+    stroke-dashoffset: 0 !important;
+    transition: none !important;
+  }
+  .person-photo-wrap {
+    transform: none !important;
+    transition: none !important;
+  }
+}

@@ -78,7 +78,7 @@ export default function AdminLogin() {
 
   return (
     <div className="admin-shell">
-      <Header viewMode="admin" onToggleView={() => navigate('/')} />
+      <Header viewMode="admin" onToggleView={() => navigate('/live')} />
       <Notification notification={notification} />
 
       <div className="admin-content-wrap flex items-center justify-center min-h-[calc(100vh-140px)]">

@@ -1,0 +1,753 @@
+<USER_REQUEST>
+TASK: Add admin-managed content for a new landing page and a redesigned gallery page: hero photo, gallery photos with titles, people with photos, and champion team photos. Photos and values must be changeable from the admin pages.
+
+0) RULES (highest priority)
+- Backend and database changes are allowed ONLY as ADDITIVE changes for this new content: new tables/collections/fields, new endpoints. Do NOT modify or remove any existing table, field, endpoint, query or logic. Existing behavior (live auction, bidding, timers, reveal, certificates, auth, hall of fame, announcements, FAQ) must work exactly as before.
+- If a Gallery table or admin screen already exists, EXTEND it with new NULLABLE fields instead of creating a second gallery. Existing photos must keep working (fall back to existing caption/title and a default accent).
+- First inspect how the project stores data, uploads files and guards admin routes (ORM, Supabase, storage bucket, auth middleware), and reuse exactly those patterns. Do not introduce a new database, storage service or auth method.
+- New admin screens must match the existing admin look (same components, cards, buttons, forms). Admin is desktop-only; no mobile layouts needed.
+- Do NOT touch the public header/footer, the live pages, or any other public page in this prompt.
+
+1) DATA TO ADD
+- gallery_items (extend the existing gallery or create): id, image_url, title (may contain a line break, shown as two headline lines), credit (short text, e.g. "BY GCL MEDIA TEAM."), meta (up to 3 short strings), accent (hex colour, default #8a8a8a), tag (category label), edition (link to an existing edition if one exists), is_featured (bool, shown on the landing page, max 9), sort_order (int), is_published (bool, default true), created_at.
+- landing_settings (single row): hero_image_url, edition_label (default "GCL 2025").
+- people: id, role_label (text), name, photo_url, sort_order, is_published. Seed 4 rows with role labels "H.O.D", "Faculty coordinator", "Event coordinator", "Developer". Names: "Dr. Maheshkumar Patil" for H.O.D and "Prof. Amrutha Naveen" for Faculty coordinator (from the certificate); leave the other two names empty. Public pages hide a person whose name AND photo are both empty.
+- champion photos: for each edition, three optional photos (champion, runner-up, third place) stored next to the existing podium/edition data (a new nullable field or a small linked table). Do NOT copy team names, lots or amounts: those keep coming from the existing Hall of Fame data.
+- Do NOT store or duplicate live values (round, question, bid, timer, teams count, budget, rounds, questions per round). The landing page reads those from the existing live state and settings.
+
+2) UPLOADS
+- Use the existing upload/storage mechanism. Accept jpg, png, webp, max 5 MB, validate type and size on the server, show clear errors. Keep the original URL; render with object-fit: cover. Replacing a photo uploads the new file and updates the URL; removing clears it (and deletes the old file if the existing code does that elsewhere).
+- Every upload field shows a preview (circular preview for people photos, 4:5 for gallery, 21:9 for the hero) and a Replace and Remove button.
+
+3) ADMIN SCREENS (add one "Landing and gallery" area to the existing admin navigation, behind the existing admin auth guard)
+- Hero: photo upload plus the edition label field. Save button.
+- People: 4 rows with role label (read-only), name input, photo upload with circular preview, show/hide toggle, move up/down. Save.
+- Champions photos: edition selector (existing editions), three photo uploads labelled Champion / Runner-up / Third place, with the team names shown read-only from the existing data. Save.
+- Gallery manager: grid of thumbnails with upload (multiple files at once), and for each photo an edit panel: title, credit, meta (3 inputs), accent colour (colour picker with hex input and a small preview strip), tag (free text with suggestions from existing tags), edition, featured toggle (block more than 9 with a clear message), published toggle, sort order (drag to reorder or up/down), and a delete with the existing confirm pattern. Bulk actions: publish/unpublish and delete selected.
+- Use the existing toast/feedback pattern; disable buttons while saving; show validation errors inline.
+
+4) PUBLIC READ ENDPOINTS (or the project's equivalent data access)
+- GET landing content: settings, published people, featured gallery items (max 9, by sort_order), and the latest edition's champion photos.
+- GET gallery: all published items by sort_order, with optional filter by tag or edition, and simple pagination if the list can be long.
+- Public reads return published items only. All writes require the existing admin auth. If the project uses Supabase or a similar client-side database, add row-level security that allows public read of published rows and admin-only writes.
+
+5) CHECKS
+- Existing gallery photos still show on the existing gallery page; nothing public changed yet.
+- Non-admin users cannot write. Unpublished items are never returned publicly.
+- Upload, replace, remove, reorder and publish toggles all persist after a page refresh.
+
+DELIVERABLES
+- Make the changes DIRECTLY in the project files and run any needed migration. Do NOT paste code, file contents or diffs into the chat.
+- Reply with ONLY a short summary of at most 8 lines: the files changed, the new tables/fields, and a confirmation that no existing logic or endpoint was changed.
+TASK: Build a new public landing page at the route "/" (https://gcl20.vercel.app/). Today "/" shows the live view; the live view also works at "/live". After this task: "/" shows the landing page and "/live" stays exactly as it is.
+
+0) RULES (highest priority)
+- Do NOT change any live-view component, hook, subscription, timer, bidding or reveal logic. Do NOT change the backend, existing endpoints, or any other page. The only existing routing change: "/" renders the new landing page (keep "/live" untouched and verify it still works).
+- Do NOT touch the header/nav or footer components (they already exist and stay as they are). The landing page content sits between them. Update links ONLY where specified below.
+- Content comes from the admin-managed data created in the previous task and from the existing live state and settings. No hard-coded fake values, no placeholder data in production code.
+- Match the existing design system (fonts Barlow Semi Condensed for headings and Inter for body, the site's colour tokens, buttons, radius). No new fonts or colours. Do not use emoji. Use the site's existing icon set.
+
+1) VISUAL DIRECTION
+Editorial and restrained, like a sports/event broadcast site: big uppercase condensed headlines, small monospace labels, thin hairline dividers, generous spacing, content width max 1280px with side padding clamp(20px, 4vw, 48px). Red (#ff2a3d or the site's accent) is used only for one highlighted word per headline, the primary buttons, small dots and hairlines. No glow effects on text, no gradient text, no floating badges, no grids of identical rounded cards. Section labels look like "01 / The format" (monospace, uppercase, letter-spaced, the number in red).
+
+2) SECTIONS, in this order
+A. HERO: monospace eyebrow "Technical auction event / <edition_label>". Headline in two lines, uppercase, huge (clamp(54px, 10.5vw, 170px), line-height .86): "Where code" / "meets the hammer." with only "hammer." in red; each line slides up from behind its own mask on load (0.9s, staggered 120ms). Below it a wide hero photo (aspect-ratio 21/9, min-height 300px, object-fit cover) from landing_settings. Bottom-left on the photo: primary button "Watch live" (links to /live) and an outlined button "Gallery" (links to /gallery). Bottom-right on the photo: a compact translucent "live card" (see 3).
+B. STATS STRIP (full-width, hairlines above and below, 4 columns separated by hairlines): Teams, Budget per team, Rounds + final, Questions per round. Big numbers (clamp(44px, 5.4vw, 84px)) with a mono label under each. Numbers count up once when first scrolled into view. Values come from existing data (see 3).
+C. THE FORMAT (label "01 / The format"): headline "Four moves. One champion." ("One champion." in red). Four numbered text rows separated by hairlines (NO images): 01 Bid live: "A question goes on the block." 02 Win the question: "Highest bid answers it." 03 Spend with strategy: "Every crore is a choice." 04 Reach the podium: "Revealed from the bottom up." On hover: a red hairline draws under the row, the number turns red, the row shifts 12px, the arrow slides.
+D. GALLERY ("02 / Gallery", headline "The arena, in frames."): a right-aligned outlined button "View all photos" (links to /gallery). Under it the full-width filmstrip carousel (spec in the third prompt; use the same HeroCarousel component) filled with the FEATURED gallery items (max 9), autoplay 4.5s, pausing on hover and focus, height min(88vh, 860px), min 540px. If there are no featured items, hide this whole section.
+E. HALL OF FAME ("03 / Hall of fame", headline "<edition label> champions."): three team photos from the latest edition's champion photos, arranged 2nd, 1st, 3rd, with the champion taller. Each shows a dark gradient overlay at the bottom with: rank label in mono (gold for 01, silver for 02, bronze for 03), team name in the heading font, and "N lots · amount" in mono. Names, lots and amounts come from the existing Hall of Fame data. If a photo is missing, show a neutral dark placeholder with the same overlay. Cards reveal with a fade-up when scrolled into view.
+F. THE PEOPLE ("04 / The people", headline "Behind the hammer."): 4 circular portraits in a row (220px max), each with a thin red ring drawn around it (SVG circle, draws in as it scrolls into view, completes on hover) and the photo lifting 6px on hover. Under each: name in the heading font (uppercase) and the role label in mono. Hide a person with no name and no photo; if a photo is missing show a neutral circle with a user icon. Data from the people table, ordered by sort_order.
+G. CERTIFICATES ("05 / Certificates", headline "Your name. Your proof."): a pill-shaped field that reads "Enter your full name to unlock" with a red "Unlock" button; the whole field and the button link to the existing certificates page.
+H. FINAL CALL: centered big headline "Be in the room." ("room." in red) and a primary "Watch the live auction" button (links to /live).
+
+3) LIVE DATA (read-only, from existing sources)
+- The hero live card and the stats strip read the SAME live state and settings the live page uses (reuse the same hooks/subscription or store; do NOT create new realtime channels, polling loops or endpoints). Fields: current round, current question number, auction status, current bid, bid timer, teams count, starting budget per team, number of rounds, questions per round.
+- Live card content by state:
+  - Live: "Round N · QX" on the left and a pulsing red dot with "Live" on the right, then the current bid (big, red, heading font) and the timer (mono). Both update in real time.
+  - Not started: a shiny/shimmer animated line "Auction starting soon" (CSS-only shimmer; static under reduced motion).
+  - Intermission: "Round N intermission". Results pending: "Results will be announced soon". Completed: "<edition label> complete" with a link to the Hall of Fame.
+- Show only real values. While loading show a subtle skeleton; if the data fails to load, hide the live card instead of showing zeros or fake numbers. In the stats strip, show "—" for any single value that is unavailable.
+
+4) LINKS
+- Header logo → "/". The "Live" nav item and every "Watch live" button → "/live". Do not otherwise change the header.
+- Check where "/" is linked from anywhere else in the app (QR codes, redirects after admin actions, "Back to Live Event" buttons on verify and team pages) and point those that mean "the live view" to "/live". List what you changed.
+
+5) PERFORMANCE, SEO, ACCESSIBILITY
+- Images: explicit aspect-ratio or width/height to prevent layout shift; the hero image loads eagerly with high priority; everything below the fold uses lazy loading; alt text from title/name.
+- Page title "Gen Code League | Technical Auction Event", meta description (one sentence), Open Graph image = the hero photo.
+- Motion uses framer-motion (or CSS where it is simpler). Respect prefers-reduced-motion: no mask slides, count-ups, parallax or autoplay, just instant states. Visible 2px focus rings, keyboard-reachable carousel, text contrast at least 4.5:1.
+- Responsive: under 960px the hero card stacks under the photo, the stats become 2 columns, the champions stack with the champion first, people become 2 columns. No horizontal page scroll at any width.
+
+DELIVERABLES
+- Make the changes DIRECTLY in the project files. Do NOT paste code, file contents or diffs into the chat.
+- Reply with ONLY a short summary of at most 8 lines: the files changed, the links you re-pointed to "/live", any value you could not read from existing data, and a confirmation that no live-view logic, header/footer or backend was modified.
+TASK: Redesign the public Gallery page (keep its existing route, normally "/gallery") around the filmstrip carousel component, and use the same component for the landing page gallery section. Data comes from the admin-managed gallery items.
+
+0) RULES (highest priority)
+- Do NOT change the backend, other pages, the header/footer or any logic outside the gallery. Read data through the gallery access created in the earlier task (published items only).
+- Match the existing design system (Barlow Semi Condensed headings, Inter body, site tokens). No emoji.
+- THE COMPONENT SOURCE (HeroCarousel, hero-carousel.tsx) IS PASTED BELOW THIS PROMPT. Put it in components/ui/hero-carousel.tsx. IMPORTANT: when pasted as text, the string escapes may be broken across lines. Make sure every newline in a string is the escape sequence \n (for example title.split("\n") and the aria-label .replace(/\n/g, " ")), not a real line break, or the file will not compile.
+- Dependencies: install framer-motion. The component uses a cn() helper from "@/lib/utils" and Tailwind classes. If the project does not have these, do NOT set up Tailwind or shadcn only for this: create the cn helper (clsx + tailwind-merge or a simple join) and port the component's classes to the project's existing styling approach (scoped CSS module), keeping the geometry, the motion and the behavior identical.
+
+1) CAROUSEL USAGE
+- Map each published gallery item to { id, title, image: image_url, credit, meta, accent } and pass them as items. Title line breaks (\n) become separate headline lines. If accent is empty use #8a8a8a. Cards use object-fit cover; the focused card is full height, neighbours half height with a shared top edge; the background re-grades to the focused photo's accent colour; drag, wheel (with hand-off to the page at both ends), arrow keys, Home/End and click all work; autoplay is on only for the landing page.
+- Do not pass onBack or onMenu (no top bar controls). The site header is the only navigation.
+- Size: on the Gallery page the carousel height is calc(100vh - header height) with min-height 540px. On the landing page it is min(88vh, 860px). Make the stage use these heights through the className prop. The headline font size may be raised on large screens with a clamp so titles stay large and uppercase, matching the site (uppercase, Barlow Semi Condensed, tight line-height).
+- 1 or 2 items still render sensibly (no empty strip crash). 0 items: show an empty state "No photos yet" instead of the carousel.
+- Preload only the focused image and its two neighbours; the rest lazy-load.
+
+2) GALLERY PAGE LAYOUT, top to bottom
+A. The carousel at full width (no side padding), using all published items.
+B. "The full archive" section (content width max 1280px, same side padding as the landing page): monospace label "All photos / N photos" (N updates with the filter), headline "The full archive." (only "archive." in red), and on the right filter chips built from the existing tags/editions plus "All" (pill buttons, active chip has a red border and red text).
+C. Masonry grid under it: CSS columns (4 on wide screens, 3, 2, then 1 under 520px, 16px gap). Each photo keeps its natural aspect ratio (set width/height or aspect-ratio from the image data to avoid layout shift), lazy-loaded, thin border, red border on hover, and a caption row in mono under it with the title (line break turned into a space) on the left and the tag on the right.
+D. LIGHTBOX: clicking a photo opens a full-screen overlay (dark with blur) showing the image large with the title, credit and meta below it; previous/next buttons and Left/Right arrow keys; Esc and a close button close it; focus is trapped inside and restored on close; the page behind does not scroll while open.
+- Pagination: if there are many photos load more with a "Load more" outlined button (or the project's existing pattern), not an endless unbounded list.
+
+3) MOTION AND ACCESSIBILITY
+- Grid items fade up when they enter the viewport (staggered a little). Filter changes crossfade the grid.
+- Respect prefers-reduced-motion: the carousel component already supports it; also disable fade-up and autoplay.
+- Alt text from the title; carousel has role group, aria-roledescription "carousel" and a clear label; all controls keyboard accessible; contrast at least 4.5:1.
+- Responsive: under 960px the carousel keeps working with touch drag; the archive columns reduce as above. No horizontal page scroll.
+
+4) CHECKS
+- Landing gallery section and the Gallery page show the same items style; featured items only on the landing page, all published items on the Gallery page.
+- No console errors; the pasted component compiles without line-break errors in strings.
+- An unpublished photo never appears.
+
+DELIVERABLES
+- Make the changes DIRECTLY in the project files. Do NOT paste code, file contents or diffs into the chat.
+- Reply with ONLY a short summary of at most 6 lines: the files changed, and a confirmation that no backend, header/footer or unrelated logic was modified.
+
+[You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+hero-carousel.tsx
+"use client"
+
+// A full-bleed editorial hero driven by a filmstrip.
+//
+// Every card shares one top edge. The focused card unfurls to full height while
+// its neighbours stay clipped to half, so the strip reads as a row of cropped
+// heads with one complete portrait standing in the middle of it. Changing the
+// focus re-grades the whole background to that image.
+//
+// Geometry is measured, never hard-coded: one ResizeObserver reads the stage and
+// every size below is a ratio of it, so the same component is pixel-identical in
+// a 600px preview box and on a 4K display.
+import * as React from "react"
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "framer-motion"
+
+import { cn } from "@/lib/utils"
+
+export interface HeroCarouselItem {
+  /** Stable key; falls back to the index. @default undefined */
+  id?: string | number
+  /** Headline for the active slide. Newlines become separate reveal lines. */
+  title: string
+  /** Image URL, used both in the card and as the graded background. */
+  image: string
+  /** Byline printed beside the headline, e.g. "BY AURELIA STUDIO." @default undefined */
+  credit?: string
+  /** Right-aligned facts, e.g. ["SAT NOV 15", "5-10 PM", "MIAMI"]. @default undefined */
+  meta?: string[]
+  /**
+   * CSS colour the background is graded to. The photo keeps its luminance and
+   * takes this hue, which is what makes the backdrop swing on every change.
+   * @default "#8a8a8a"
+   */
+  accent?: string
+}
+
+export interface HeroCarouselProps {
+  /** Slides, in strip order. */
+  items: HeroCarouselItem[]
+  /** Focused slide when controlled. Leave unset for internal state. @default undefined */
+  index?: number
+  /** Focused slide on mount when uncontrolled. @default 0 */
+  defaultIndex?: number
+  /** Fires on every focus change, from any input. @default undefined */
+  onIndexChange?: (index: number) => void
+  /** Wordmark in the middle of the top bar. @default undefined */
+  brand?: React.ReactNode
+  /** Renders the "Back" control when provided. @default undefined */
+  onBack?: () => void
+  /** Renders the "Menu" control when provided. @default undefined */
+  onMenu?: () => void
+  /** Advance on a timer. Pauses on hover, drag and focus. @default false */
+  autoplay?: boolean
+  /** Milliseconds between autoplay steps. @default 4000 */
+  autoplayDelay?: number
+  /** Extra classes for the stage. @default undefined */
+  className?: string
+}
+
+/* Ratios lifted from the reference layout, all relative to the stage box. */
+const CARD_H = 0.264 // active card height ÷ stage height
+const CARD_AR = 0.75 // active card is 3:4
+const GAP = 0.038 // gap ÷ card width
+const STRIP_TOP = 0.5 // strip's shared top edge, down the stage
+const TITLE = 0.067 // headline cap size ÷ stage height
+const LABEL = 0.0103 // small mono label ÷ stage height
+const PAD = 0.017 // page gutter ÷ stage width
+const RAIL = 0.2 // progress rail width ÷ stage width
+
+/** Wheel distance that commits to a step, and the lockout after one. */
+const WHEEL_THRESHOLD = 60
+const WHEEL_COOLDOWN = 420
+
+/* Film grain, as a self-contained SVG so the component carries no assets. */
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"
+
+const clamp = (n: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, n))
+
+export function HeroCarousel({
+  items,
+  index: controlled,
+  defaultIndex = 0,
+  onIndexChange,
+  brand,
+  onBack,
+  onMenu,
+  autoplay = false,
+  autoplayDelay = 4000,
+  className,
+}: HeroCarouselProps) {
+  const stageRef = React.useRef<HTMLDivElement>(null)
+  const [box, setBox] = React.useState({ w: 0, h: 0 })
+  const [uncontrolled, setUncontrolled] = React.useState(defaultIndex)
+  const [dragging, setDragging] = React.useState(false)
+  const [paused, setPaused] = React.useState(false)
+  const reduced = useReducedMotion()
+
+  const last = items.length - 1
+  const index = clamp(controlled ?? uncontrolled, 0, Math.max(0, last))
+
+  const go = React.useCallback(
+    (next: number) => {
+      const clamped = clamp(next, 0, Math.max(0, last))
+      if (controlled === undefined) setUncontrolled(clamped)
+      if (clamped !== index) onIndexChange?.(clamped)
+    },
+    [controlled, index, last, onIndexChange]
+  )
+
+  // One observer feeds every measurement below.
+  React.useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const read = () =>
+      setBox({ w: stage.clientWidth, h: stage.clientHeight })
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(stage)
+    return () => ro.disconnect()
+  }, [])
+
+  const fullH = clamp(box.h * CARD_H, 96, 360)
+  const halfH = fullH / 2
+  const cardW = fullH * CARD_AR
+  const gap = Math.max(4, Math.round(cardW * GAP))
+  const step = cardW + gap
+  const pad = Math.max(16, Math.round(box.w * PAD))
+  const label = Math.max(9, Math.round(box.h * LABEL))
+
+  // Centre the focused card: the track slides, the card never moves itself.
+  const xFor = React.useCallback(
+    (i: number) => box.w / 2 - (i * step + cardW / 2),
+    [box.w, step, cardW]
+  )
+  const x = useMotionValue(0)
+  const target = xFor(index)
+
+  const swing = reduced
+    ? { duration: 0 }
+    : { duration: 0.7, ease: "easeOut" as const }
+  const spring = reduced
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 260, damping: 34, mass: 0.9 }
+
+  // The track is driven by a motion value rather than an `animate` prop so a
+  // drag that starts mid-spring reads the real position, not where the spring
+  // was headed - otherwise the release snaps a card off.
+  React.useEffect(() => {
+    if (dragging) return
+    const run = animate(x, target, spring)
+    return () => run.stop()
+    // `spring` is a literal, so `reduced` (all it derives from) stands in for it.
+  }, [target, dragging, reduced, x]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Wheel and trackpad. Both axes step the strip.
+  React.useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    let acc = 0
+    let until = 0
+
+    const onWheel = (e: WheelEvent) => {
+      // Trackpads report the dominant axis; take whichever is stronger.
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      // Scroll chaining: once the strip is against an end, hand the gesture
+      // back to the page. Without this a full-height carousel is a scroll trap
+      // with no way past it.
+      const stuck = (delta > 0 && index === last) || (delta < 0 && index === 0)
+      if (stuck) {
+        acc = 0
+        return
+      }
+      e.preventDefault()
+      const now = e.timeStamp
+      if (now < until) return
+      acc += delta
+      if (Math.abs(acc) < WHEEL_THRESHOLD) return
+      go(index + Math.sign(acc))
+      acc = 0
+      until = now + WHEEL_COOLDOWN
+    }
+
+    stage.addEventListener("wheel", onWheel, { passive: false })
+    return () => stage.removeEventListener("wheel", onWheel)
+  }, [go, index])
+
+  React.useEffect(() => {
+    if (!autoplay || paused || dragging || items.length < 2) return
+    const id = window.setTimeout(
+      () => go(index === last ? 0 : index + 1),
+      autoplayDelay
+    )
+    return () => window.clearTimeout(id)
+  }, [autoplay, autoplayDelay, dragging, go, index, items.length, last, paused])
+
+  const active = items[index]
+  if (!active) return null
+
+  const lines = active.title.split("
+")
+  const accent = active.accent ?? "#8a8a8a"
+
+  return (
+    <div
+      ref={stageRef}
+      tabIndex={0}
+      role="group"
+      aria-roledescription="carousel"
+      aria-label="Featured looks"
+      onKeyDown={(e) => {
+        const keys: Record<string, number> = {
+          ArrowLeft: index - 1,
+          ArrowRight: index + 1,
+          Home: 0,
+          End: last,
+        }
+        if (!(e.key in keys)) return
+        e.preventDefault()
+        go(keys[e.key]!)
+      }}
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className={cn(
+        "relative h-full min-h-[24rem] w-full overflow-hidden bg-black text-white select-none",
+        "outline-none focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:ring-inset",
+        className
+      )}
+    >
+      {/* ── Background: the focused photo, blown up and re-hued to its accent ── */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={index}
+          className="absolute inset-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={swing}
+        >
+          <motion.img
+            src={active.image}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            initial={{ scale: reduced ? 1.28 : 1.42 }}
+            animate={{ scale: 1.28 }}
+            transition={reduced ? { duration: 0 } : { duration: 6, ease: "linear" }}
+          />
+          {/* Keep the photo's luminance, take the accent's hue. */}
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: accent, mixBlendMode: "color" }}
+          />
+          <div
+            className="absolute inset-0 opacity-55"
+            style={{ backgroundColor: accent, mixBlendMode: "multiply" }}
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Legibility wash + grain, above the swap so they never flicker. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/45" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.22] mix-blend-overlay"
+        style={{ backgroundImage: GRAIN, backgroundSize: "180px 180px" }}
+      />
+
+      {/* ── Top bar: a centred cluster, not edge-to-edge ── */}
+      <div
+        className="absolute inset-x-0 flex items-center justify-center"
+        style={{ top: Math.max(16, box.h * 0.029), gap: `${Math.max(20, box.w * 0.06)}px` }}
+      >
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="opacity-90 transition-opacity hover:opacity-100"
+            style={{ fontSize: label * 1.15 }}
+          >
+            <span aria-hidden>↖</span> Back
+          </button>
+        ) : null}
+        {brand ? (
+          <div
+            className="font-semibold tracking-[0.06em]"
+            style={{ fontSize: label * 1.35 }}
+          >
+            {brand}
+          </div>
+        ) : null}
+        {onMenu ? (
+          <button
+            type="button"
+            onClick={onMenu}
+            className="opacity-90 transition-opacity hover:opacity-100"
+            style={{ fontSize: label * 1.15 }}
+          >
+            Menu <span aria-hidden>☰</span>
+          </button>
+        ) : null}
+      </div>
+
+      {/* ── Headline block, sitting just above the strip's top edge ── */}
+      <div
+        className="absolute inset-x-0 top-0 flex flex-col justify-end"
+        style={{
+          height: `${STRIP_TOP * 100}%`,
+          paddingLeft: pad,
+          paddingRight: pad,
+          paddingBottom: Math.round(box.h * 0.028),
+        }}
+      >
+        <div className="flex w-full flex-wrap items-end gap-x-[6vw] gap-y-2">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.h2
+              key={index}
+              className="font-semibold leading-[0.88] tracking-[-0.03em]"
+              style={{ fontSize: Math.max(24, Math.round(box.h * TITLE)) }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.18 } }}
+            >
+              {lines.map((line, i) => (
+                // Each line wipes up from behind its own edge.
+                <span key={i} className="block overflow-hidden">
+                  <motion.span
+                    className="block"
+                    initial={{ y: "110%" }}
+                    animate={{ y: 0 }}
+                    transition={
+                      reduced
+                        ? { duration: 0 }
+                        : { duration: 0.62, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }
+                    }
+                  >
+                    {line}
+                  </motion.span>
+                </span>
+              ))}
+            </motion.h2>
+          </AnimatePresence>
+
+          {active.credit ? (
+            <motion.p
+              key={`credit-${index}`}
+              className="font-mono uppercase tracking-[0.14em] opacity-80"
+              style={{ fontSize: label }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.8 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              {active.credit}
+            </motion.p>
+          ) : null}
+
+          {active.meta?.length ? (
+            <div
+              className="ml-auto flex items-end"
+              style={{ gap: `${Math.max(16, box.w * 0.055)}px` }}
+            >
+              {active.meta.map((fact, i) => (
+                <motion.span
+                  key={`${index}-${fact}`}
+                  className="font-mono whitespace-nowrap uppercase tracking-[0.14em] opacity-80"
+                  style={{ fontSize: label }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 0.8, y: 0 }}
+                  transition={
+                    reduced ? { duration: 0 } : { duration: 0.45, delay: 0.12 + i * 0.06 }
+                  }
+                >
+                  {fact}
+                </motion.span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── The strip: one shared top edge, the focused card twice as tall ── */}
+      <div
+        className="absolute inset-x-0"
+        style={{ top: `${STRIP_TOP * 100}%`, height: fullH }}
+      >
+        <motion.div
+          className="flex items-start"
+          style={{ gap, x, cursor: dragging ? "grabbing" : "grab" }}
+          drag="x"
+          dragMomentum={false}
+          dragElastic={0.08}
+          dragConstraints={{ left: xFor(last), right: xFor(0) }}
+          onDragStart={() => setDragging(true)}
+          onDragEnd={(_, info) => {
+            setDragging(false)
+            // Land on whatever card the release sits nearest, nudged by throw
+            // velocity so a flick clears more than one card.
+            const thrown = x.get() + info.velocity.x * 0.12
+            go(Math.round((box.w / 2 - thrown - cardW / 2) / step))
+          }}
+        >
+          {items.map((item, i) => (
+            <motion.button
+              key={item.id ?? i}
+              type="button"
+              aria-label={item.title.replace(/
+/g, " ")}
+              aria-current={i === index}
+              onClick={() => go(i)}
+              className="relative shrink-0 overflow-hidden rounded-none bg-white/5"
+              style={{ width: cardW }}
+              animate={{ height: i === index ? fullH : halfH }}
+              transition={spring}
+            >
+              {/* The focused card is exactly 3:4, so object-position does
+                  nothing to it - it only picks which band of the portrait the
+                  half-height neighbours keep. Anchored just above centre so a
+                  clipped card still shows a face, not a forehead. */}
+              <img
+                src={item.image}
+                alt=""
+                draggable={false}
+                className="h-full w-full object-cover"
+                style={{ objectPosition: "50% 26%" }}
+              />
+              {/* Unfocused cards sit back a touch without going grey. */}
+              <motion.span
+                aria-hidden
+                className="absolute inset-0 bg-black"
+                animate={{ opacity: i === index ? 0 : 0.12 }}
+                transition={spring}
+              />
+            </motion.button>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* ── Position rail ── */}
+      <div
+        className="absolute"
+        style={{ left: pad, bottom: Math.max(14, box.h * 0.022), width: box.w * RAIL }}
+      >
+        <div
+          className="flex justify-between font-mono tabular-nums opacity-80"
+          style={{ fontSize: label }}
+        >
+          <span>{String(index + 1).padStart(2, "0")}</span>
+          <span>{String(items.length).padStart(2, "0")}</span>
+        </div>
+        <div className="relative mt-2 h-px w-full bg-white/25">
+          <motion.div
+            className="absolute inset-y-0 bg-white"
+            style={{ width: `${100 / items.length}%` }}
+            animate={{ left: `${(index / items.length) * 100}%` }}
+            transition={spring}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+demo.tsx
+// This is a file with a demo for your component
+// That's what users will see in the preview
+// Create new files in this directory to add more demos
+"use client"
+
+import {   
+  HeroCarousel,
+  type HeroCarouselItem,
+  } from "@/components/ui/hero-carousel";
+
+// Placeholder art served straight off the crafterui CDN so the demo works the
+// moment it is installed - no assets to copy into your public/. Swap the names
+// for your own art direction; each item's `accent` is the hue the whole
+// backdrop grades to when that card takes focus.
+const ART = (name: string) =>
+  `https://pub-45c4a3d9611041d08fe82d52599b72b0.r2.dev/primary-showcase-assets/${name}.jpg`
+
+const LOOKS: HeroCarouselItem[] = [
+  {
+    title: "Prismatic
+Rift",
+    image: ART("prismatic-rift-anime"),
+    credit: "BY AURELIA STUDIO.",
+    meta: ["SAT NOV 15", "5-10 PM", "MIAMI"],
+    accent: "#7b61ff",
+  },
+  {
+    title: "Ember
+Clouds",
+    image: ART("black-hole-ember-clouds"),
+    credit: "BY MAISON DELACROIX.",
+    meta: ["SUN NOV 16", "2-6 PM", "PARIS"],
+    accent: "#ff4114",
+  },
+  {
+    title: "Neon
+Portal",
+    image: ART("neon-cave-portal-silhouette"),
+    credit: "BY STUDIO VANTA.",
+    meta: ["THU NOV 20", "8-11 PM", "BERLIN"],
+    accent: "#00c8ff",
+  },
+  {
+    title: "Red
+Ribbon",
+    image: ART("red-ribbon-typography"),
+    credit: "BY CASA SOLARA.",
+    meta: ["FRI NOV 21", "6-9 PM", "LISBON"],
+    accent: "#e5231b",
+  },
+  {
+    title: "Celestial
+Light",
+    image: ART("celestial-light-figure"),
+    credit: "BY AURELIA STUDIO.",
+    meta: ["SAT NOV 22", "5-10 PM", "MIAMI"],
+    accent: "#2f7bff",
+  },
+  {
+    title: "Neon
+Uplight",
+    image: ART("neon-portrait-uplight"),
+    credit: "BY ATELIER SUD.",
+    meta: ["SUN NOV 23", "4-8 PM", "MARRAKECH"],
+    accent: "#ff2f9c",
+  },
+  {
+    title: "Indigo
+Marble",
+    image: ART("indigo-liquid-marble"),
+    credit: "BY OCHRE COLLECTIVE.",
+    meta: ["WED NOV 26", "7-11 PM", "LAGOS"],
+    accent: "#4356c8",
+  },
+  {
+    title: "Launch
+Window",
+    image: ART("rocket-launch-gradient"),
+    credit: "BY STUDIO NORTE.",
+    meta: ["FRI NOV 28", "9 PM-2 AM", "SÃO PAULO"],
+    accent: "#14307a",
+  },
+  {
+    title: "Cosmic
+Wave",
+    image: ART("astronaut-cosmic-wave"),
+    credit: "BY NOIR ET CIE.",
+    meta: ["SAT NOV 29", "10 PM-4 AM", "TOKYO"],
+    accent: "#ff3b6b",
+  },
+]
+
+// ONLY DEFAULT EXPORT WILL BE TREATED AS A DEMO
+export default function DemoOne() {
+  return (
+    <HeroCarousel
+      items={LOOKS}
+      defaultIndex={4}
+      brand="MONTRA"
+      onBack={() => {}}
+      onMenu={() => {}}
+    />
+  )
+}
+
+```
+
+Install NPM dependencies:
+```bash
+framer-motion
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them]
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-07T19:39:58+05:30.
+
+The user's current state is as follows:
+Active Document: d:\GenCodeLeague\GenCodeLeague\src\components\ui\shimmer-text.tsx (LANGUAGE_TSX)
+Cursor is on line: 1
+Other open documents:
+- d:\GenCodeLeague\GenCodeLeague\src\views\LiveView.tsx (LANGUAGE_TSX)
+- d:\GenCodeLeague\GenCodeLeague\src\views\GalleryView.tsx (LANGUAGE_TSX)
+- d:\GenCodeLeague\GenCodeLeague\src\views\AdminPanel.tsx (LANGUAGE_TSX)
+- d:\GenCodeLeague\GenCodeLeague\src\components\AdminLandingGalleryManager.tsx (LANGUAGE_TSX)
+- d:\GenCodeLeague\GenCodeLeague\src\services\contentService.ts (LANGUAGE_TYPESCRIPT)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Claude Opus 4.6 (Thinking). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

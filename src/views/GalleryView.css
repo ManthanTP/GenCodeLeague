@@ -1,0 +1,114 @@
+/* ====================================================================
+   GalleryView.css — Filmstrip carousel & masonry archive styles
+   ==================================================================== */
+
+.gcl-gallery-root {
+  background-color: #0a0a0c;
+  color: #f4f4f6;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Archive Container */
+.gallery-shell {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(20px, 4vw, 48px);
+  padding-right: clamp(20px, 4vw, 48px);
+}
+
+/* Filter Chip Pill Buttons */
+.gallery-filter-chip {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #131316;
+  color: #8e8e99;
+  border: 1px solid #26262b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gallery-filter-chip:hover {
+  border-color: #ff2a3d;
+  color: #f4f4f6;
+}
+
+.gallery-filter-chip.active {
+  border-color: #ff2a3d;
+  color: #ff2a3d;
+  background-color: rgba(255, 42, 61, 0.08);
+  font-weight: 700;
+}
+
+/* CSS Columns Masonry Grid */
+.gallery-masonry-grid {
+  columns: 4;
+  column-gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .gallery-masonry-grid {
+    columns: 3;
+    column-gap: 16px;
+  }
+}
+
+@media (max-width: 840px) {
+  .gallery-masonry-grid {
+    columns: 2;
+    column-gap: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .gallery-masonry-grid {
+    columns: 1;
+    column-gap: 0;
+  }
+}
+
+.gallery-masonry-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  display: block;
+}
+
+/* Card hover and borders */
+.gallery-card-inner {
+  background-color: #131316;
+  border: 1px solid #26262b;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.gallery-card-inner:hover {
+  border-color: #ff2a3d;
+  transform: translateY(-2px);
+}
+
+/* Lightbox Modal */
+.gallery-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card-inner:hover {
+    transform: none !important;
+  }
+}

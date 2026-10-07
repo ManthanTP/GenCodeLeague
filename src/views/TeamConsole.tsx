@@ -39,7 +39,7 @@ export default function TeamConsole() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/');
+    navigate('/live');
   };
 
   if (authLoading || stateLoading) {
@@ -62,7 +62,7 @@ export default function TeamConsole() {
             Your account is not linked to any active team in this edition. Please contact event administrators.
           </p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/live')}
             className="btn-modal-cancel w-full"
           >
             Return to Live View
@@ -79,7 +79,7 @@ export default function TeamConsole() {
     <div className="min-h-screen text-white font-sans">
       <Header
         viewMode="team"
-        onToggleView={() => navigate('/')}
+        onToggleView={() => navigate('/live')}
         isAdminAuthenticated={false}
         onLogout={handleLogout}
       />

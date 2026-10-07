@@ -270,7 +270,7 @@ export default function VerifyCertificate() {
         {/* A. TOP BAR */}
         <div className="flex items-center justify-between gap-4 mb-4">
           <Link
-            to="/"
+            to="/live"
             className="gcl-btn-outline-red px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all h-[40px]"
           >
             <ChevronLeft size={15} /> Back to Live Event

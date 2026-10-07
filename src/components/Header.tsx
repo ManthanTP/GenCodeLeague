@@ -154,7 +154,7 @@ export default function Header({
 
   // Nav links: Teams removed per specification
   const navLinks = [
-    { label: 'Live', path: '/', altPath: '/live', icon: Radio },
+    { label: 'Live', path: '/live', altPath: '/live', icon: Radio },
     { label: 'Hall of Fame', path: '/hall-of-fame', icon: Star },
     { label: 'Certificates', path: '/my-certificates', icon: Award },
     { label: 'Gallery', path: '/gallery', icon: ImageIcon },
@@ -167,7 +167,7 @@ export default function Header({
     const current = location.pathname;
     switch (label) {
       case 'Live':
-        return current === '/' || current === '/live';
+        return current === '/live';
       case 'Hall of Fame':
         return current === '/hall-of-fame' || current.startsWith('/hall-of-fame/') || current.startsWith('/editions/');
       case 'Certificates':

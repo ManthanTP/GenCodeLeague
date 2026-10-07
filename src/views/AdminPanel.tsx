@@ -2699,7 +2699,7 @@ export default function AdminPanel() {
         totalAvailable={totalAvailable}
         teamCount={teams.length}
         viewMode="admin"
-        onToggleView={() => navigate('/')}
+        onToggleView={() => navigate('/live')}
         isAdminAuthenticated={true}
         onLogout={handleLogout}
       />
