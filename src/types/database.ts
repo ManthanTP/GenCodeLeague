@@ -40,6 +40,9 @@ export interface Edition {
   runner_up_team_id?: string | null;
   third_place_team_id?: string | null;
   show_sponsors_on_certificates?: boolean;
+  champion_photo_url?: string | null;
+  runner_up_photo_url?: string | null;
+  third_place_photo_url?: string | null;
 }
 
 export interface BidPreview {
@@ -144,12 +147,40 @@ export interface TeamMember {
 
 export interface GalleryPhoto {
   id: string;
-  edition_id: string;
-  segment: string;
+  edition_id?: string | null;
+  segment?: string | null;
   image_url: string;
-  caption: string | null;
+  caption?: string | null;
   uploaded_at: string;
   edition?: Edition;
+  title?: string | null;
+  credit?: string | null;
+  meta?: string[] | null;
+  accent?: string | null;
+  tag?: string | null;
+  is_featured?: boolean;
+  sort_order?: number;
+  is_published?: boolean;
+  created_at?: string;
+}
+
+export type GalleryItem = GalleryPhoto;
+
+export interface LandingSettings {
+  id: string;
+  hero_image_url: string | null;
+  edition_label: string;
+  updated_at?: string;
+}
+
+export interface Person {
+  id: string;
+  role_label: string;
+  name: string;
+  photo_url: string;
+  sort_order: number;
+  is_published: boolean;
+  created_at?: string;
 }
 
 export interface Announcement {

@@ -35,7 +35,7 @@ import LiveTeamStatus from '../components/LiveTeamStatus';
 import { formatCurrency, renderMultiLineText } from '../utils/formatters';
 import { DEFAULT_ROUNDS_DATA, getRoundBasePrice } from '../data/roundsData';
 import type { PastRoundSnapshot, LeaderboardRevealEntry, TeamMember, Team } from '../types/database';
-import { AnimatedText } from '../components/ui/animated-shiny-text';
+import { ShimmerText } from '../components/ui/shimmer-text';
 import { useFitText } from '../hooks/useFitText';
 import './LiveScreens.css';
 
@@ -632,14 +632,14 @@ export default function LiveView() {
             <h1 className="grand-title">
               GEN <span className="brand-heading-accent">CODE</span> LEAGUE
             </h1>
-            <AnimatedText
-              text="Auction Starting Soon"
-              gradientColors="linear-gradient(90deg, #6b6b6b, #ffffff, #6b6b6b)"
-              gradientAnimationDuration={2}
-              hoverEffect
-              textClassName="gcl-display"
-              style={{ padding: '4px 0' }}
-            />
+            <div style={{ margin: '14px 0 18px', display: 'flex', justifyContent: 'center' }}>
+              <ShimmerText
+                className="gcl-display text-2xl sm:text-3xl md:text-4xl font-extrabold uppercase tracking-widest"
+                duration={2.2}
+              >
+                Auction Starting Soon
+              </ShimmerText>
+            </div>
 
             {/* Team Selector on Waiting Screen */}
             <div className="team-selector-card">

@@ -76,7 +76,7 @@ export default function GalleryView() {
         selectedEditionId === 'all' || p.edition_id === selectedEditionId;
       const matchesSegment =
         selectedSegment === 'All Segments' ||
-        p.segment.toLowerCase() === selectedSegment.toLowerCase();
+        (p.segment ? p.segment.toLowerCase() === selectedSegment.toLowerCase() : false);
       return matchesEdition && matchesSegment;
     });
   }, [photos, selectedEditionId, selectedSegment]);

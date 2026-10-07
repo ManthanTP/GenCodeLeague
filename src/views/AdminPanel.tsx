@@ -44,9 +44,11 @@ import {
   Pin,
   Megaphone,
   Bell,
+  Layout,
 } from 'lucide-react';
 import AdminCertificateManager from '../components/AdminCertificateManager';
 import AdminArchiveManager from '../components/AdminArchiveManager';
+import AdminLandingGalleryManager from '../components/AdminLandingGalleryManager';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEventState, broadcastStateChange } from '../hooks/useEventState';
@@ -89,20 +91,20 @@ export default function AdminPanel() {
   // UI States & URL Tab Sync
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const validTab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive' =
-    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates'
+  const validTab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive' | 'landing_gallery' =
+    urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates' || urlTab === 'landing_gallery'
       ? urlTab
       : 'auction';
 
-  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'teams' | 'updates' | 'certificates' | 'archive'>(validTab);
+  const [adminActiveTab, setAdminActiveTab] = useState<'auction' | 'teams' | 'updates' | 'certificates' | 'archive' | 'landing_gallery'>(validTab);
 
   useEffect(() => {
-    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates')) {
+    if (urlTab && (urlTab === 'certificates' || urlTab === 'archive' || urlTab === 'auction' || urlTab === 'teams' || urlTab === 'updates' || urlTab === 'landing_gallery')) {
       setAdminActiveTab(urlTab);
     }
   }, [urlTab]);
 
-  const handleTabChange = (tab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive') => {
+  const handleTabChange = (tab: 'auction' | 'teams' | 'updates' | 'certificates' | 'archive' | 'landing_gallery') => {
     setAdminActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -2838,6 +2840,19 @@ export default function AdminPanel() {
               <ChevronRight size={14} className="admin-rail-chevron" />
             </button>
 
+            <button
+              type="button"
+              onClick={() => handleTabChange('landing_gallery')}
+              className={`admin-rail-item ${adminActiveTab === 'landing_gallery' ? 'active' : ''}`}
+              aria-current={adminActiveTab === 'landing_gallery' ? 'page' : undefined}
+            >
+              <div className="admin-rail-icon">
+                <Layout size={16} />
+              </div>
+              <span className="admin-rail-label">Landing & Gallery</span>
+              <ChevronRight size={14} className="admin-rail-chevron" />
+            </button>
+
             <div className="admin-rail-divider" />
 
             <button
@@ -2956,6 +2971,19 @@ export default function AdminPanel() {
                 <h1 className="admin-hero-title">Archive & Heritage Management</h1>
                 <p className="admin-hero-desc">
                   Manage tournament editions, podium champions, gallery photo captures, and official FAQ documentation.
+                </p>
+              </div>
+            )}
+
+            {adminActiveTab === 'landing_gallery' && (
+              <div className="admin-hero-card">
+                <div className="admin-hero-pill">
+                  <span className="admin-hero-dot" />
+                  <span>PUBLIC EXPERIENCE CMS</span>
+                </div>
+                <h1 className="admin-hero-title">Landing & Gallery Management</h1>
+                <p className="admin-hero-desc">
+                  Curate the public landing page hero, organizers and coordinators, podium champions, and the official filmstrip media gallery.
                 </p>
               </div>
             )}
@@ -3814,6 +3842,15 @@ export default function AdminPanel() {
                 if (tm) setTeams(tm);
               }
             }}
+          />
+        </div>
+      )}
+
+      {/* LANDING & GALLERY TAB */}
+      {adminActiveTab === 'landing_gallery' && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <AdminLandingGalleryManager
+            onShowToast={(msg, type) => showNotification(msg, type === 'error' ? 'error' : 'success')}
           />
         </div>
       )}

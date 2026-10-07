@@ -582,3 +582,121 @@ CREATE POLICY "Public gallery update" ON storage.objects
 CREATE POLICY "Public gallery delete" ON storage.objects
   FOR DELETE USING (bucket_id = 'gallery');
 
+-- ====================================================
+-- PHASE 4: Landing Page & Redesigned Gallery Content
+-- ====================================================
+
+-- 1. Extend gallery_photos table
+ALTER TABLE gallery_photos 
+  ADD COLUMN IF NOT EXISTS title TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS credit TEXT DEFAULT 'BY GCL MEDIA TEAM.',
+  ADD COLUMN IF NOT EXISTS meta JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS accent TEXT DEFAULT '#8a8a8a',
+  ADD COLUMN IF NOT EXISTS tag TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+
+ALTER TABLE gallery_photos ALTER COLUMN edition_id DROP NOT NULL;
+ALTER TABLE gallery_photos ALTER COLUMN segment DROP NOT NULL;
+ALTER TABLE gallery_photos ALTER COLUMN segment SET DEFAULT 'General';
+
+-- 2. Add champion photo URLs to editions table
+ALTER TABLE editions
+  ADD COLUMN IF NOT EXISTS champion_photo_url TEXT,
+  ADD COLUMN IF NOT EXISTS runner_up_photo_url TEXT,
+  ADD COLUMN IF NOT EXISTS third_place_photo_url TEXT;
+
+-- 3. Create landing_settings table
+CREATE TABLE IF NOT EXISTS landing_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hero_image_url TEXT,
+  edition_label TEXT NOT NULL DEFAULT 'GCL 2025',
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO landing_settings (edition_label)
+SELECT 'GCL 2025'
+WHERE NOT EXISTS (SELECT 1 FROM landing_settings);
+
+-- 4. Create people table
+CREATE TABLE IF NOT EXISTS people (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_label TEXT NOT NULL,
+  name TEXT DEFAULT '',
+  photo_url TEXT DEFAULT '',
+  sort_order INT DEFAULT 0,
+  is_published BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO people (role_label, name, photo_url, sort_order, is_published)
+SELECT 'H.O.D', 'Dr. Maheshkumar Patil', '', 1, true
+WHERE NOT EXISTS (SELECT 1 FROM people WHERE role_label = 'H.O.D');
+
+INSERT INTO people (role_label, name, photo_url, sort_order, is_published)
+SELECT 'Faculty coordinator', 'Prof. Amrutha Naveen', '', 2, true
+WHERE NOT EXISTS (SELECT 1 FROM people WHERE role_label = 'Faculty coordinator');
+
+INSERT INTO people (role_label, name, photo_url, sort_order, is_published)
+SELECT 'Event coordinator', '', '', 3, true
+WHERE NOT EXISTS (SELECT 1 FROM people WHERE role_label = 'Event coordinator');
+
+INSERT INTO people (role_label, name, photo_url, sort_order, is_published)
+SELECT 'Developer', '', '', 4, true
+WHERE NOT EXISTS (SELECT 1 FROM people WHERE role_label = 'Developer');
+
+-- 5. Create gallery_items view
+CREATE OR REPLACE VIEW gallery_items AS
+SELECT
+  id,
+  image_url,
+  COALESCE(title, caption) AS title,
+  caption,
+  COALESCE(credit, 'BY GCL MEDIA TEAM.') AS credit,
+  COALESCE(meta, '[]'::jsonb) AS meta,
+  COALESCE(accent, '#8a8a8a') AS accent,
+  COALESCE(tag, segment, 'General') AS tag,
+  segment,
+  edition_id,
+  COALESCE(is_featured, false) AS is_featured,
+  COALESCE(sort_order, 0) AS sort_order,
+  COALESCE(is_published, true) AS is_published,
+  COALESCE(created_at, uploaded_at, now()) AS created_at,
+  uploaded_at
+FROM gallery_photos;
+
+-- 6. Enable RLS
+ALTER TABLE landing_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE people ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery_photos ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'landing_settings' AND policyname = 'Public read landing_settings'
+  ) THEN
+    CREATE POLICY "Public read landing_settings" ON landing_settings FOR SELECT USING (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'landing_settings' AND policyname = 'Admin all landing_settings'
+  ) THEN
+    CREATE POLICY "Admin all landing_settings" ON landing_settings FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'people' AND policyname = 'Public read people'
+  ) THEN
+    CREATE POLICY "Public read people" ON people FOR SELECT USING (is_published = true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'people' AND policyname = 'Admin all people'
+  ) THEN
+    CREATE POLICY "Admin all people" ON people FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+
