@@ -3,12 +3,12 @@
 // GCL gallery hero: a full-bleed editorial filmstrip.
 //
 // Every card shares one top edge. The focused card unfurls to full height while
-// its neighbours stay clipped to half. Changing the focus re-grades the whole
-// backdrop to that photo and that item's accent colour.
+// its neighbours stay clipped to half. Changing the focus crossfades the whole
+// backdrop to that photo, in its natural colours.
 //
-// The backdrop is built from a plain <img>, a CSS grayscale filter and a flat
-// accent overlay. It deliberately uses NO mix-blend-mode, so it renders the same
-// on every GPU, browser zoom level and compositor.
+// The backdrop is a plain <img> with a CSS brightness filter and a dark gradient
+// wash. It deliberately uses NO mix-blend-mode and NO colour tint, so it renders
+// the same on every GPU, browser zoom level and compositor.
 import * as React from "react"
 import {
   AnimatePresence,
@@ -31,7 +31,7 @@ export interface HeroCarouselItem {
   credit?: string
   /** Right-aligned facts, e.g. ["GENERAL"]. */
   meta?: string[]
-  /** CSS colour the backdrop is tinted with. @default "#e8743b" */
+  /** Only used for the placeholder shown when a photo is missing or broken. @default "#e8743b" */
   accent?: string
 }
 
@@ -234,7 +234,6 @@ export function HeroCarousel({
     ? `Frame ${String(index + 1).padStart(2, "0")}`
     : active.title
   const lines = title.split("\n")
-  const accent = active.accent ?? DEFAULT_ACCENT
   const labelStyle: React.CSSProperties = {
     fontFamily: MONO_FONT,
     fontSize: LABEL,
@@ -271,7 +270,7 @@ export function HeroCarousel({
       )}
       style={{ touchAction: "pan-y" }}
     >
-      {/* Backdrop: the focused photo, desaturated, then tinted with the accent. */}
+      {/* Backdrop: the focused photo in its natural colours, darkened for legibility. */}
       <AnimatePresence initial={false}>
         <motion.div
           key={index}
@@ -288,20 +287,16 @@ export function HeroCarousel({
             draggable={false}
             onError={() => markFailed(index)}
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ filter: "grayscale(1) contrast(1.15) brightness(0.88)" }}
+            style={{ filter: "brightness(0.58) saturate(1.05)" }}
             initial={{ scale: reduced ? 1.2 : 1.32 }}
             animate={{ scale: 1.2 }}
             transition={reduced ? { duration: 0 } : { duration: 6, ease: "linear" }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: accent, opacity: 0.66 }}
           />
         </motion.div>
       </AnimatePresence>
 
       {/* Legibility wash and a light grain, above the swap so they never flicker. */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/5 to-black/55" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/55" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -432,7 +427,7 @@ export function HeroCarousel({
               aria-label={(looksLikeFileName(item.title) ? `Frame ${i + 1}` : item.title).replace(/\n/g, " ")}
               aria-current={i === index}
               onClick={() => go(i)}
-              className="relative shrink-0 overflow-hidden rounded-none bg-white/5"
+              className="relative shrink-0 overflow-hidden rounded-none bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
               style={{ width: cardW }}
               animate={{ height: i === index ? fullH : halfH }}
               transition={spring}

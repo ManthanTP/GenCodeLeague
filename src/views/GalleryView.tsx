@@ -122,11 +122,6 @@ export default function GalleryView() {
 
         if (data && data.length > 0) {
           const mapped: (HeroCarouselItem & { tag?: string })[] = data.map((p, i) => {
-            const rawAccent = (p.accent as string)?.trim();
-            // Pass accent as undefined when the item has none; do not invent a colour in the page.
-            const accent =
-              !rawAccent || rawAccent.toLowerCase() === '#8a8a8a' ? undefined : rawAccent;
-
             const title = (p.title as string) || (p.caption as string) || '';
             const image = ((p.photo_url as string) || (p.image_url as string) || '').trim();
             const meta =
@@ -142,7 +137,7 @@ export default function GalleryView() {
               image,
               credit,
               meta,
-              accent,
+              accent: undefined,
               tag,
             };
           });

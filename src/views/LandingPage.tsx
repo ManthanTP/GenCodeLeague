@@ -136,17 +136,13 @@ export default function LandingPage() {
   const carouselItems: HeroCarouselItem[] = useMemo(() => {
     if (!content?.featuredGallery || content.featuredGallery.length === 0) return [];
     return content.featuredGallery.map((g) => {
-      const rawAccent = g.accent?.trim();
-      const accent =
-        !rawAccent || rawAccent.toLowerCase() === '#8a8a8a' ? undefined : rawAccent;
-
       return {
         id: g.id,
         title: g.title || '',
         image: g.image_url,
         credit: g.credit || 'BY GCL MEDIA TEAM.',
         meta: Array.isArray(g.meta) && g.meta.length > 0 ? g.meta : [g.tag || 'GCL MOMENTS'],
-        accent,
+        accent: undefined,
       };
     });
   }, [content?.featuredGallery]);
@@ -479,7 +475,7 @@ export default function LandingPage() {
             </div>
 
             {/* Full Bleed Filmstrip Stage */}
-            <div className="w-full h-[clamp(540px,88vh,860px)]">
+            <div className="w-full" style={{ height: 'min(88vh, 860px)', minHeight: '540px' }}>
               <HeroCarousel
                 items={carouselItems}
                 autoplay={true}

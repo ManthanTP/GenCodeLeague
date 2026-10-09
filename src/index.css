@@ -4893,6 +4893,30 @@ select.gcl-input option {
   }
 }
 
+/* ====================================================================
+   Hero Carousel Utilities & Overrides
+   ==================================================================== */
+.ml-auto {
+  margin-left: auto !important;
+}
 
+.gap-x-\[5vw\] {
+  column-gap: 5vw !important;
+}
 
+/* Ensure no red or colored outline on carousel cards */
+[role="group"][aria-roledescription="carousel"] button,
+[role="group"][aria-roledescription="carousel"] button:focus,
+[role="group"][aria-roledescription="carousel"] button:active {
+  outline: none !important;
+}
 
+[role="group"][aria-roledescription="carousel"] button:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px #ffffff !important;
+}
+
+[role="group"][aria-roledescription="carousel"]:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4) !important;
+}

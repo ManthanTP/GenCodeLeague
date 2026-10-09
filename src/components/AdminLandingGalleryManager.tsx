@@ -1147,12 +1147,6 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                         />
                       </div>
 
-                      {/* Accent strip */}
-                      <div
-                        className="h-1 w-full"
-                        style={{ backgroundColor: photo.accent || '#8a8a8a' }}
-                      />
-
                       {/* Info footer */}
                       <div className="p-2 bg-[#0d0d10] text-[11px] font-mono">
                         <p className="text-white truncate font-medium">
@@ -1206,35 +1200,6 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                     alt={editingPhoto.title || ''}
                     className="w-full h-full object-cover"
                   />
-                  <div
-                    className="absolute bottom-0 inset-x-0 h-2"
-                    style={{ backgroundColor: editingPhoto.accent || '#e8743b' }}
-                  />
-                </div>
-
-                {/* Accent Color Picker */}
-                <div>
-                  <label className="text-xs font-mono uppercase text-[#a1a1aa] block mb-1">
-                    Backdrop Hue Accent
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={editingPhoto.accent || '#e8743b'}
-                      onChange={(e) =>
-                        setEditingPhoto((prev) => (prev ? { ...prev, accent: e.target.value } : null))
-                      }
-                      className="w-10 h-10 rounded border border-[#26262b] cursor-pointer bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={editingPhoto.accent || '#e8743b'}
-                      onChange={(e) =>
-                        setEditingPhoto((prev) => (prev ? { ...prev, accent: e.target.value } : null))
-                      }
-                      className="px-3 py-2 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white font-mono text-xs flex-1"
-                    />
-                  </div>
                 </div>
               </div>
 
