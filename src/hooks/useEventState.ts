@@ -4,8 +4,26 @@ import type { EventState, Edition } from '../types/database';
 
 const CACHE_KEY_EVENT_STATE = 'gcl_cached_event_state';
 
+type BroadcastListener = (updates: Partial<EventState>) => void;
+const broadcastListeners = new Set<BroadcastListener>();
+
 // Dedicated realtime broadcast channel for cross-tab instant synchronization
 export const syncChannel = supabase.channel('auction-broadcast-sync');
+
+// Subscribe once at module level so callbacks are never registered after subscribe()
+syncChannel
+  .on('broadcast', { event: 'STATE_CHANGED' }, (payload) => {
+    if (payload?.payload) {
+      broadcastListeners.forEach((fn) => {
+        try {
+          fn(payload.payload);
+        } catch (err) {
+          console.warn('Error in broadcast listener:', err);
+        }
+      });
+    }
+  })
+  .subscribe();
 
 export function broadcastStateChange(updates: Partial<EventState>) {
   try {
@@ -39,6 +57,19 @@ export function useEventState() {
     let isCancelled = false;
     let postgresChannel: ReturnType<typeof supabase.channel> | null = null;
     let editionsChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    // Register broadcast listener
+    const handleBroadcast: BroadcastListener = (updates) => {
+      if (isCancelled) return;
+      setEventState((prev) => {
+        const next = prev ? { ...prev, ...updates } : (updates as EventState);
+        try {
+          localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    };
+    broadcastListeners.add(handleBroadcast);
 
     async function setupSubscriptions() {
       try {
@@ -79,9 +110,11 @@ export function useEventState() {
 
         if (isCancelled) return;
 
-        // 3. Subscribe to postgres_changes
+        // 3. Subscribe to postgres_changes with unique channel instance
+        const subId = Math.random().toString(36).slice(2, 7);
+        const stateChannelName = `event-state-changes-${edData.id}-${subId}`;
         postgresChannel = supabase
-          .channel(`event-state-changes-${edData.id}`)
+          .channel(stateChannelName)
           .on(
             'postgres_changes',
             {
@@ -91,7 +124,7 @@ export function useEventState() {
               filter: `edition_id=eq.${edData.id}`,
             },
             (payload) => {
-              if (payload.new) {
+              if (payload.new && !isCancelled) {
                 setEventState(payload.new as EventState);
                 try {
                   localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(payload.new));
@@ -101,24 +134,10 @@ export function useEventState() {
           )
           .subscribe();
 
-        // 4. Subscribe to broadcast sync (instant across tabs with zero RLS restrictions)
-        syncChannel
-          .on('broadcast', { event: 'STATE_CHANGED' }, (payload) => {
-            if (payload?.payload) {
-              setEventState((prev) => {
-                const next = prev ? { ...prev, ...payload.payload } : (payload.payload as EventState);
-                try {
-                  localStorage.setItem(CACHE_KEY_EVENT_STATE, JSON.stringify(next));
-                } catch {}
-                return next;
-              });
-            }
-          })
-          .subscribe();
-
-        // 5. Subscribe to editions table changes
+        // 4. Subscribe to editions table changes with unique channel instance
+        const edChannelName = `editions-changes-${edData.id}-${subId}`;
         editionsChannel = supabase
-          .channel(`editions-changes-${edData.id}`)
+          .channel(edChannelName)
           .on(
             'postgres_changes',
             {
@@ -128,7 +147,7 @@ export function useEventState() {
               filter: `id=eq.${edData.id}`,
             },
             (payload) => {
-              if (payload.new) {
+              if (payload.new && !isCancelled) {
                 setEdition(payload.new as Edition);
               }
             }
@@ -163,6 +182,7 @@ export function useEventState() {
       isCancelled = true;
       clearTimeout(safetyTimer);
       window.removeEventListener('storage', handleStorage);
+      broadcastListeners.delete(handleBroadcast);
       if (postgresChannel) supabase.removeChannel(postgresChannel);
       if (editionsChannel) supabase.removeChannel(editionsChannel);
     };
