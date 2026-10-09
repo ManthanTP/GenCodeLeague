@@ -10,6 +10,7 @@ import { useTimer } from '../hooks/useTimer';
 import { formatCurrency } from '../utils/formatters';
 import { getRoundBasePrice } from '../data/roundsData';
 import { formatCredit, splitFacts } from '../lib/gallery-text';
+import { supabase } from '../lib/supabase';
 import './LandingPage.css';
 
 const DEFAULT_HERO_IMAGE =
@@ -314,72 +315,107 @@ export default function LandingPage() {
   // { id: r.id, title: r.title ?? "", image: r.photo_url || r.image_url,
   //   credit: formatCredit(r.credit),
   //   meta: splitFacts(r.description).length ? splitFacts(r.description) : (Array.isArray(r.meta) ? r.meta : splitFacts(r.meta)) }
-  const carouselItems: HeroCarouselItem[] = useMemo(() => {
-    const list = content?.featuredGallery || [];
-    if (list.length === 0) {
-      // Default initial filmstrip frames from reference
-      return [
-        {
-          id: 'def-1',
-          title: 'Opening\nRound',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
-        },
-        {
-          id: 'def-2',
-          title: 'Bidding\nFloor',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
-        },
-        {
-          id: 'def-3',
-          title: 'The Hammer\nDrops',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
-        },
-        {
-          id: 'def-4',
-          title: 'Team\nHuddle',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
-        },
-        {
-          id: 'def-5',
-          title: 'Podium\nReveal',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'FINAL', 'PODIUM'],
-        },
-        {
-          id: 'def-6',
-          title: 'Certificate\nHandover',
-          image: '',
-          credit: 'BY GCL MEDIA TEAM.',
-          meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
-        },
-      ];
+  const [galleryItems, setGalleryItems] = useState<HeroCarouselItem[]>([]);
+
+  useEffect(() => {
+    async function fetchCarousel() {
+      try {
+        let rows: any[] | null = null;
+        const resItems = await supabase
+          .from('gallery_items')
+          .select('*')
+          .eq('is_published', true)
+          .order('sort_order', { ascending: true })
+          .limit(12);
+
+        if (!resItems.error && resItems.data && resItems.data.length > 0) {
+          rows = resItems.data;
+        } else {
+          const resPhotos = await supabase
+            .from('gallery_photos')
+            .select('*')
+            .eq('is_published', true)
+            .order('sort_order', { ascending: true })
+            .limit(12);
+          if (!resPhotos.error && resPhotos.data) {
+            rows = resPhotos.data;
+          }
+        }
+
+        if (rows && rows.length > 0) {
+          const mapped: HeroCarouselItem[] = rows.map((r, i) => {
+            const descFacts = splitFacts(r.description);
+            const metaFacts = descFacts.length
+              ? descFacts
+              : Array.isArray(r.meta)
+              ? r.meta
+              : splitFacts(r.meta as any);
+            return {
+              id: r.id ?? `photo-${i}`,
+              title: r.title ?? '',
+              image: r.photo_url || r.image_url || '',
+              credit: formatCredit(r.credit),
+              meta: metaFacts,
+              accent: r.accent || undefined,
+            };
+          });
+          setGalleryItems(mapped);
+        }
+      } catch (e) {
+        console.warn('Error loading gallery items for landing:', e);
+      }
     }
-    return list.map((r) => {
-      const descFacts = splitFacts(r.description);
-      const metaFacts = descFacts.length
-        ? descFacts
-        : Array.isArray(r.meta)
-        ? r.meta
-        : splitFacts(r.meta as any);
-      return {
-        id: r.id,
-        title: r.title ?? '',
-        image: r.photo_url || r.image_url,
-        credit: formatCredit(r.credit),
-        meta: metaFacts,
-        accent: r.accent || undefined,
-      };
-    });
-  }, [content?.featuredGallery]);
+    fetchCarousel();
+  }, []);
+
+  const carouselItems: HeroCarouselItem[] = useMemo(() => {
+    if (galleryItems.length > 0) return galleryItems;
+    // Default initial filmstrip frames from reference
+    return [
+      {
+        id: 'def-1',
+        title: 'Opening\nRound',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
+      },
+      {
+        id: 'def-2',
+        title: 'Bidding\nFloor',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
+      },
+      {
+        id: 'def-3',
+        title: 'The Hammer\nDrops',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
+      },
+      {
+        id: 'def-4',
+        title: 'Team\nHuddle',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
+      },
+      {
+        id: 'def-5',
+        title: 'Podium\nReveal',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'FINAL', 'PODIUM'],
+      },
+      {
+        id: 'def-6',
+        title: 'Certificate\nHandover',
+        image: '',
+        credit: 'BY GCL MEDIA TEAM.',
+        meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
+      },
+    ];
+  }, [galleryItems]);
 
   // Live state values
   const roundNum = (eventState?.current_round_index || 0) + 1;
