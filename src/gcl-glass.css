@@ -99,7 +99,7 @@
 }
 
 /* Strip container for geometric overlays */
-.strip {
+.gcl-live-page .strip {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -125,7 +125,7 @@
 }
 
 /* Red chip badge (.chip) */
-.chip, .gcl-you-badge {
+.gcl-live-page .chip, .gcl-you-badge {
   background: #e8212e;
   color: #fff;
   font-weight: 700;
@@ -722,7 +722,7 @@
     margin-top: 2px !important;
   }
 
-  .strip {
+  .gcl-live-page .strip {
     display: none !important;
   }
 }
