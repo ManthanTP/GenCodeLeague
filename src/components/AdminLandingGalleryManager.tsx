@@ -247,6 +247,40 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     setPeople(copy);
   };
 
+  const handleMoveTopTierPerson = (personId: string, targetIndex: number) => {
+    const isBottomLead = (p: Person) => {
+      const r = (p.role_label || '').toLowerCase();
+      return r.includes('student') || r.includes('developer') || r.includes('dev');
+    };
+
+    const topTier = people
+      .filter((p) => (!p.category || p.category === 'leadership') && !isBottomLead(p))
+      .slice()
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+    const currentIndex = topTier.findIndex((p) => p.id === personId);
+    if (currentIndex === -1 || targetIndex < 0 || targetIndex >= topTier.length) return;
+    if (currentIndex === targetIndex) return;
+
+    const [moved] = topTier.splice(currentIndex, 1);
+    topTier.splice(targetIndex, 0, moved);
+
+    const orderMap = new Map<string, number>();
+    topTier.forEach((p, idx) => {
+      orderMap.set(p.id, idx + 1);
+    });
+
+    setPeople((prev) =>
+      prev.map((p) => {
+        if (orderMap.has(p.id)) {
+          return { ...p, sort_order: orderMap.get(p.id)! };
+        }
+        return p;
+      })
+    );
+    onShowToast(`Arranged to position ${targetIndex + 1}`, 'info');
+  };
+
   const handleSavePeople = async () => {
     setSaving(true);
     try {
@@ -701,9 +735,204 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
               </button>
             </div>
 
+            {/* Sub-section A: Top Row (3 in line - Faculty & Department Leadership) */}
             <div className="space-y-3">
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-mono uppercase font-bold text-[#ff2a3d] tracking-wider flex items-center gap-1.5">
+                  <span>★ Top Row (3 in one line) — Arranged Position</span>
+                </span>
+                <span className="text-[11px] font-mono text-[#8e8e9a]">
+                  Position 1 = Left · Position 2 = Center · Position 3 = Right
+                </span>
+              </div>
+
               {people
-                .filter((p) => !p.category || p.category === 'leadership')
+                .filter((p) => {
+                  const r = (p.role_label || '').toLowerCase();
+                  return (
+                    (!p.category || p.category === 'leadership') &&
+                    !r.includes('student') &&
+                    !r.includes('developer') &&
+                    !r.includes('dev')
+                  );
+                })
+                .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                .map((person, index, arr) => {
+                  const posName = index === 0 ? 'Left' : index === 1 ? 'Center' : 'Right';
+                  return (
+                    <div
+                      key={person.id}
+                      className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] hover:border-[#2f2f38] flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Position indicator */}
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMoveTopTierPerson(person.id, index - 1)}
+                            className={`p-1 rounded bg-[#18181c] border border-[#2a2a30] transition-colors ${
+                              index === 0
+                                ? 'opacity-30 cursor-not-allowed text-[#71717a]'
+                                : 'hover:bg-[#25252c] hover:border-[#ff2a3d] text-white cursor-pointer'
+                            }`}
+                            title="Move Left / Earlier"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <span className="text-[10px] font-mono font-bold text-[#ff8791]">
+                            #{index + 1}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={index === arr.length - 1}
+                            onClick={() => handleMoveTopTierPerson(person.id, index + 1)}
+                            className={`p-1 rounded bg-[#18181c] border border-[#2a2a30] transition-colors ${
+                              index === arr.length - 1
+                                ? 'opacity-30 cursor-not-allowed text-[#71717a]'
+                                : 'hover:bg-[#25252c] hover:border-[#ff2a3d] text-white cursor-pointer'
+                            }`}
+                            title="Move Right / Later"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                        </div>
+
+                        <div className="relative group shrink-0">
+                          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#26262b] group-hover:border-[#ff2a3d] bg-[#131316] flex items-center justify-center transition-colors">
+                            {person.photo_url ? (
+                              <img
+                                src={person.photo_url}
+                                alt={person.name || person.role_label}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Users size={20} className="text-[#71717a]" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#2a0c12] border border-[#ff2a3d] text-[#ff8791] font-bold">
+                              Position {index + 1} ({posName})
+                            </span>
+                            <select
+                              value={index}
+                              onChange={(e) => handleMoveTopTierPerson(person.id, Number(e.target.value))}
+                              className="px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ccc] font-mono text-[10px] focus:border-[#ff2a3d] outline-none cursor-pointer"
+                              title="Set position directly"
+                            >
+                              {arr.map((_, pIdx) => (
+                                <option key={pIdx} value={pIdx}>
+                                  Position {pIdx + 1} ({pIdx === 0 ? 'Left' : pIdx === 1 ? 'Center' : 'Right'})
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={person.role_label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
+                                );
+                              }}
+                              placeholder="Role (e.g. H.O.D, Faculty coordinator)"
+                              className="px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-white font-mono text-[10px] font-bold uppercase focus:border-[#ff2a3d] outline-none"
+                            />
+                          </div>
+                          <div className="mt-1.5">
+                            <input
+                              type="text"
+                              value={person.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, name: val } : p))
+                                );
+                              }}
+                              placeholder="Enter full name"
+                              className="px-3 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none min-w-[260px]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 bg-[#18181c] hover:bg-[#222228] border border-[#2a2a30] text-xs font-mono text-white rounded-lg cursor-pointer flex items-center gap-1.5">
+                          <Upload size={12} />
+                          <span>{person.photo_url ? 'Replace' : 'Upload'}</span>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            className="hidden"
+                            onChange={(e) => handlePersonPhotoUpload(person.id, e)}
+                          />
+                        </label>
+
+                        {person.photo_url ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPeople((prev) =>
+                                prev.map((p) => (p.id === person.id ? { ...p, photo_url: '' } : p))
+                              );
+                            }}
+                            className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
+                            title="Remove photo"
+                          >
+                            <Trash2 size={12} />
+                            <span>Remove photo</span>
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPeople((prev) =>
+                              prev.map((p) =>
+                                p.id === person.id ? { ...p, is_published: !p.is_published } : p
+                              )
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                            person.is_published
+                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                              : 'bg-[#18181c] border-[#2a2a30] text-[#71717a]'
+                          }`}
+                        >
+                          {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePerson(person.id)}
+                          className="p-1.5 text-[#71717a] hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-colors cursor-pointer"
+                          title="Delete member"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Sub-section B: Bottom Row (2 down - Student & Tech Leads) */}
+            <div className="space-y-3 pt-3 border-t border-[#202024]">
+              <span className="text-xs font-mono uppercase font-bold text-[#8e8e9a] tracking-wider block">
+                ▼ Bottom Row (2 down) — Student Coordinator Lead & Developer Lead
+              </span>
+
+              {people
+                .filter((p) => {
+                  const r = (p.role_label || '').toLowerCase();
+                  return (
+                    (!p.category || p.category === 'leadership') &&
+                    (r.includes('student') || r.includes('developer') || r.includes('dev'))
+                  );
+                })
                 .map((person) => (
                   <div
                     key={person.id}
@@ -725,18 +954,9 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       </div>
 
                       <div>
-                        <input
-                          type="text"
-                          value={person.role_label}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setPeople((prev) =>
-                              prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
-                            );
-                          }}
-                          placeholder="Role (e.g. Faculty coordinator)"
-                          className="px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-mono text-[10px] font-bold uppercase focus:border-[#ff2a3d] outline-none"
-                        />
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
+                          {person.role_label} · Lead
+                        </span>
                         <div className="mt-1.5">
                           <input
                             type="text"
@@ -799,14 +1019,6 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       >
                         {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
                         <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePerson(person.id)}
-                        className="p-1.5 text-[#71717a] hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-colors cursor-pointer"
-                        title="Delete member"
-                      >
-                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>

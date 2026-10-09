@@ -515,53 +515,47 @@ export default function LandingPage() {
   // ── Leadership Tier Split (3 in top line, 2 in bottom line) ──
   const peopleDb = content?.people || [];
 
-  const hodPerson = peopleDb.find((p) =>
-    ['h.o.d', 'hod'].some((r) => p.role_label.toLowerCase() === r)
-  );
+  // Exclude Student Coordinator and Developer from the top tier
+  const isBottomLead = (p: typeof peopleDb[0]) => {
+    const r = (p.role_label || '').toLowerCase();
+    return r.includes('student') || r.includes('developer') || r.includes('dev');
+  };
 
-  const facultyPeople = peopleDb.filter((p) =>
-    ['faculty coordinator', 'faculty'].some((r) => p.role_label.toLowerCase().includes(r))
-  );
+  // Top 3 faculty/department leadership members sorted strictly by sort_order
+  const topTierDb = peopleDb
+    .filter((p) => (!p.category || p.category === 'leadership') && !isBottomLead(p))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-  const additionalFaculty = facultyPeople[1] || peopleDb.find((p) =>
-    p.category === 'leadership' &&
-    p.id !== hodPerson?.id &&
-    p.id !== facultyPeople[0]?.id &&
-    !p.role_label.toLowerCase().includes('student') &&
-    !p.role_label.toLowerCase().includes('developer')
-  );
-
-  const studentPerson = peopleDb.find((p) =>
-    ['student coordinator', 'event coordinator', 'event lead'].some((r) => p.role_label.toLowerCase() === r)
-  );
-  const devPerson = peopleDb.find((p) =>
-    ['developer', 'dev', 'technical lead', 'tech lead'].some((r) => p.role_label.toLowerCase() === r)
-  );
-
-  // Top row: 3 faculty / department anchors in one line
-  const facultyPeopleList = [
-    {
-      k: 'hod',
-      r: 'H.O.D',
-      n: hodPerson?.name || 'Dr. Maheshkumar Patil',
-      photo_url: hodPerson?.photo_url || null,
-      l: false,
-    },
-    {
-      k: 'faculty_1',
-      r: 'Faculty coordinator',
-      n: facultyPeople[0]?.name || 'Prof. Amrutha Naveen',
-      photo_url: facultyPeople[0]?.photo_url || null,
-      l: false,
-    },
-    {
-      k: 'faculty_2',
-      r: additionalFaculty?.role_label || 'Faculty coordinator',
-      n: additionalFaculty?.name || 'Faculty coordinator',
-      photo_url: additionalFaculty?.photo_url || null,
-      l: false,
-    },
+  // Default fallback if fewer than 3 are present in DB
+  const defaultTopTier = [
+    { name: 'Dr. Maheshkumar Patil', role: 'H.O.D', photo_url: null },
+    { name: 'Prof. Amrutha Naveen', role: 'Faculty coordinator', photo_url: null },
+    { name: 'Faculty coordinator', role: 'Faculty coordinator', photo_url: null },
   ];
+
+  // Top row: strictly in the arranged position order (Position 1, Position 2, Position 3)
+  const facultyPeopleList = [0, 1, 2].map((idx) => {
+    const dbPerson = topTierDb[idx];
+    const fallback = defaultTopTier[idx] || defaultTopTier[0];
+    return {
+      k: dbPerson?.id || `faculty_${idx}`,
+      r: dbPerson?.role_label || fallback.role,
+      n: dbPerson?.name || fallback.name,
+      photo_url: dbPerson?.photo_url || fallback.photo_url,
+      l: false,
+    };
+  });
+
+  // Bottom 2 leads: Student Coordinator and Developer
+  const studentPerson = peopleDb.find((p) => {
+    const r = (p.role_label || '').toLowerCase();
+    return r.includes('student');
+  });
+
+  const devPerson = peopleDb.find((p) => {
+    const r = (p.role_label || '').toLowerCase();
+    return r.includes('developer') || r.includes('dev');
+  });
 
   // Bottom row: 2 student / developer leads down
   const leadPeopleList = [
