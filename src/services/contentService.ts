@@ -79,21 +79,32 @@ export async function getLandingContent(): Promise<LandingContent> {
     (p) => (p.name && p.name.trim()) || (p.photo_url && p.photo_url.trim())
   );
 
-  // 3. Featured Gallery Photos (max 9, published only)
-  const { data: galleryData } = await supabase
-    .from('gallery_photos')
-    .select(`
-      *,
-      edition:editions(id, name, year)
-    `)
+  // 3. Featured Gallery Photos: Both landing carousel and /gallery read gallery_items
+  let galleryData: any[] | null = null;
+  const resItems = await supabase
+    .from('gallery_items')
+    .select('*')
     .eq('is_published', true)
-    .eq('is_featured', true)
     .order('sort_order', { ascending: true })
-    .order('uploaded_at', { ascending: false })
-    .limit(9);
+    .limit(12);
+
+  if (!resItems.error && resItems.data && resItems.data.length > 0) {
+    galleryData = resItems.data;
+  } else {
+    const resPhotos = await supabase
+      .from('gallery_photos')
+      .select('*')
+      .eq('is_published', true)
+      .order('sort_order', { ascending: true })
+      .limit(12);
+    if (!resPhotos.error && resPhotos.data) {
+      galleryData = resPhotos.data;
+    }
+  }
 
   const featuredGallery: GalleryPhoto[] = (galleryData || []).map((item) => ({
     ...item,
+    photo_url: item.photo_url || item.image_url || '',
     title: item.title ?? item.caption ?? '',
     accent: item.accent || '#e8743b',
     credit: item.credit ?? '',
