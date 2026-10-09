@@ -182,6 +182,8 @@ export interface Person {
   photo_url: string;
   sort_order: number;
   is_published: boolean;
+  category?: 'leadership' | 'event' | 'tech';
+  group_name?: string;
   created_at?: string;
 }
 

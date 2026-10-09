@@ -35,7 +35,7 @@
 }
 
 .gcl-landing .c {
-  max-width: 1240px;
+  max-width: min(1380px, 94vw);
   margin: auto;
   padding-inline: clamp(20px, 4vw, 44px);
 }
@@ -325,8 +325,8 @@
 }
 
 .gcl-landing .rg text {
-  font: 600 11.5px var(--mono);
-  letter-spacing: .2em;
+  font: 600 8.6px var(--mono);
+  letter-spacing: .115em;
   fill: var(--tx);
   text-transform: uppercase;
 }

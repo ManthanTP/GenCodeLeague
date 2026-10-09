@@ -341,24 +341,52 @@ export async function saveLandingSettings(settings: Partial<LandingSettings>) {
 }
 
 export async function savePerson(person: Partial<Person>) {
-  if (person.id) {
-    const { error } = await supabase
+  const payload: any = {
+    role_label: person.role_label ?? '',
+    name: person.name ?? '',
+    photo_url: person.photo_url ? person.photo_url : null,
+    sort_order: person.sort_order ?? 0,
+    is_published: person.is_published ?? true,
+    category: person.category || 'leadership',
+    group_name: person.group_name || '',
+  };
+
+  if (person.id && !person.id.startsWith('temp-')) {
+    const { data, error } = await supabase
       .from('people')
-      .update({
-        name: person.name ?? '',
-        photo_url: person.photo_url ? person.photo_url : null,
-        sort_order: person.sort_order ?? 0,
-        is_published: person.is_published ?? true,
-      })
-      .eq('id', person.id);
+      .update(payload)
+      .eq('id', person.id)
+      .select()
+      .maybeSingle();
     if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from('people')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 }
 
+export async function deletePerson(id: string) {
+  if (id.startsWith('temp-')) return;
+  const { error } = await supabase
+    .from('people')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function savePeopleBatch(peopleList: Person[]) {
+  const results: Person[] = [];
   for (const p of peopleList) {
-    await savePerson(p);
+    const saved = await savePerson(p);
+    results.push(saved || p);
   }
+  return results;
 }
 
 export async function saveEditionChampionPhotos(

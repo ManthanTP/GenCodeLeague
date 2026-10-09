@@ -295,7 +295,17 @@ export default function GalleryView() {
               GC<b>L</b>
             </div>
             Gen Code League · Technical auction event
-            <br />© GCL 2025
+            <br />
+            Developed by{' '}
+            <a
+              href="https://manthantp-portfolio.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#ff2a3d', textDecoration: 'none' }}
+              className="hover:underline font-semibold"
+            >
+              @Manthan Patel
+            </a>
           </div>
           <div>
             <h5>Watch</h5>

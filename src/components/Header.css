@@ -68,15 +68,23 @@
   stroke: #ff5a6a !important;
 }
 
-/* Tight fit between 1024px and 1279px */
-@media (min-width: 1024px) and (max-width: 1279px) {
+/* Tight fit between 1024px and 1360px (including 100%, 110%, 125% zoom) */
+@media (min-width: 1024px) and (max-width: 1360px) {
   .gcl-nav-pill {
-    padding: 8px 12px !important;
-    font-size: 14px;
-    gap: 6px;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    gap: 5px !important;
   }
 
   .gcl-header-budget-label {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .gcl-header-teams-chip {
     display: none !important;
   }
 }

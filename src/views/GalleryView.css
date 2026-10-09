@@ -35,7 +35,7 @@
 }
 
 .gcl-gallery .c {
-  max-width: 1240px;
+  max-width: min(1380px, 94vw);
   margin: auto;
   padding-inline: clamp(20px, 4vw, 44px);
 }

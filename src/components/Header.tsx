@@ -264,26 +264,26 @@ export default function Header({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'clamp(4px, 1vw, 0.65rem)',
+            gap: 'clamp(4px, 0.8vw, 0.5rem)',
             cursor: 'pointer',
             userSelect: 'none',
             flexShrink: 0,
           }}
           onClick={() => navigate('/')}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-2px', fontWeight: 700, fontSize: 'clamp(28px, 4vw, 72px)', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', letterSpacing: '-1.5px', fontWeight: 700, fontSize: 'clamp(26px, 2.4vw, 42px)', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif" }}>
             <span style={{ color: '#fff' }}>GC</span>
             <span style={{ color: '#e8212e' }}>L</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: 'clamp(6px, 1vw, 0.75rem)', marginLeft: 'clamp(2px, 0.5vw, 0.2rem)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #35353b', paddingLeft: 'clamp(5px, 0.8vw, 0.6rem)', marginLeft: 'clamp(2px, 0.4vw, 0.2rem)' }}>
             <span
               className="gcl-header-brand-subline"
-              style={{ fontSize: 'clamp(12px, 1.5vw, 22px)', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}
+              style={{ fontSize: 'clamp(11px, 1vw, 15px)', fontWeight: 600, letterSpacing: '0.3px', color: '#f4f4f6', textTransform: 'uppercase', lineHeight: 1.15, fontFamily: "'Rajdhani', sans-serif" }}
             >
               GEN CODE LEAGUE
             </span>
-            <span style={{ fontSize: 'clamp(9px, 1vw, 14px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
-              <span className="dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+            <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+              <span className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
               LIVE AUCTION
             </span>
           </div>
@@ -291,10 +291,10 @@ export default function Header({
 
         {/* Center: Desktop Navigation Pills (Visible on >= 1024px) */}
         {!isFullscreen && (
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5 flex-shrink">
             {viewMode === 'admin' && (
               <div className="header-role-badge header-role-admin">
-                <Shield size={18} />
+                <Shield size={16} />
                 <span>ADMIN</span>
               </div>
             )}
@@ -313,7 +313,7 @@ export default function Header({
                       className={`gcl-nav-pill ${active ? 'active' : ''}`}
                       aria-current={active ? 'page' : undefined}
                     >
-                      <IconComponent size={18} />
+                      <IconComponent size={16} />
                       <span>{link.label}</span>
                     </button>
                   );
@@ -337,7 +337,7 @@ export default function Header({
         )}
 
         {/* Right Stats & Mobile Controls Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 0.75rem)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1vw, 0.65rem)', flexShrink: 0 }}>
           {/* Mobile/Tablet Compact Budget Pill (Shown < 1024px) */}
           <div className="gcl-header-budget-mobile flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
             <Wallet size={14} className="text-[#ff4350] shrink-0" />
@@ -347,28 +347,28 @@ export default function Header({
           </div>
 
           {/* Desktop Stat Cards (Shown >= 1024px) */}
-          <div className="hidden lg:flex items-center gap-2.5">
+          <div className="hidden lg:flex items-center gap-2">
             {/* Remaining Budget glass card */}
-            <div className="panel red gcl-header-budget-desktop" style={{ minWidth: '150px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <Wallet size={30} style={{ strokeWidth: 2.2, color: '#f4f4f6', flexShrink: 0 }} />
+            <div className="panel red gcl-header-budget-desktop" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Wallet size={20} style={{ strokeWidth: 2.2, color: '#ff4350', flexShrink: 0 }} />
               <div style={{ whiteSpace: 'nowrap' }}>
-                <p className="gcl-header-budget-label" style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                <p className="gcl-header-budget-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                   Remaining Budget
                 </p>
-                <p style={{ fontSize: '24px', fontWeight: 700, color: '#ff4350', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '18px', fontWeight: 700, color: '#ff4350', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {displayBudget}
                 </p>
               </div>
             </div>
 
             {/* Total Teams glass card */}
-            <div className="panel gcl-header-teams-chip" style={{ minWidth: '130px', width: 'auto', height: '64px', borderRadius: '10px', padding: '0 14px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <Users size={28} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+            <div className="panel gcl-header-teams-chip" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Users size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
               <div style={{ whiteSpace: 'nowrap' }}>
-                <p style={{ fontSize: '13px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1.1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                <p className="gcl-header-teams-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                   Total Teams
                 </p>
-                <p style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f6', margin: '0.15rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {displayTeams}
                 </p>
               </div>

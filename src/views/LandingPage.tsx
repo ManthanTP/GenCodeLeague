@@ -42,11 +42,70 @@ const CHEVRON_DOWN_SVG = (
   </svg>
 );
 
-const FORMAT_STEPS = [
-  { n: '01', title: 'Bid live', sub: 'A question goes on the block.' },
-  { n: '02', title: 'Win the question', sub: 'Highest bid answers it.' },
-  { n: '03', title: 'Spend with strategy', sub: 'Every crore is a choice.' },
-  { n: '04', title: 'Reach the podium', sub: 'Revealed from the bottom up.' },
+const CLOSE_SVG = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18 }}>
+    <path d="M18 6L6 18M6 6l12 12" />
+  </svg>
+);
+
+interface FormatStepDef {
+  n: string;
+  title: string;
+  sub: string;
+  tagline: string;
+  desc: string;
+  highlights: string[];
+}
+
+const FORMAT_STEPS: FormatStepDef[] = [
+  {
+    n: '01',
+    title: 'Bid live',
+    sub: 'A question goes on the block.',
+    tagline: 'High-stakes real-time bidding',
+    desc: 'Each technical challenge is presented on the live tournament floor with an opening base price. Teams place real-time bids under an aggressive countdown clock. Every bid raises the stakes for the right to answer and score.',
+    highlights: [
+      'Base price begins at ₹20 Lakhs per question',
+      'Rapid-fire 15-second bidding intervals',
+      'Dynamic bidding ladder with instant team validation',
+    ],
+  },
+  {
+    n: '02',
+    title: 'Win the question',
+    sub: 'Highest bid answers it.',
+    tagline: 'Exclusive solve & score rights',
+    desc: 'When the auction hammer falls, the highest bidding team wins exclusive ownership of the problem. They take the hot seat to solve the algorithm or system design question within the allotted time to secure championship points.',
+    highlights: [
+      'Only the winning team gets to attempt the solution',
+      'Full point award for verified correct solutions',
+      'Unsolved challenges forfeit bidding capital without points',
+    ],
+  },
+  {
+    n: '03',
+    title: 'Spend with strategy',
+    sub: 'Every crore is a choice.',
+    tagline: 'Mastering the tournament purse',
+    desc: 'Every team begins with a strictly capped purse of ₹5 Crore. Every rupee spent is gone forever, while unspent funds carry into subsequent rounds. Balancing question acquisition with budget preservation separates contenders from champions.',
+    highlights: [
+      'Fixed ₹5.00 Cr starting purse for all 15 teams',
+      'Live budget depletion visible across the arena board',
+      'Strategic bankroll management for decisive late-round questions',
+    ],
+  },
+  {
+    n: '04',
+    title: 'Reach the podium',
+    sub: 'Revealed from the bottom up.',
+    tagline: 'Championship glory and recognition',
+    desc: 'After 3 demanding rounds, scores and lots are audited. The Grand Reveal counts down in dramatic sequence from third place to the crowned Grand Champions of Gen Code League, followed by official digital certificate issuance.',
+    highlights: [
+      'Top 3 teams secure the podium trophies',
+      'Tamper-proof verifiable digital certificates issued to all finalists',
+      'Permanent induction into the official GCL Hall of Fame',
+    ],
+  },
 ];
 
 const TICKER_ITEMS = [
@@ -82,10 +141,12 @@ export default function LandingPage() {
   const { teams } = useTeams(edition?.id);
   const { formatted: timerFormatted } = useTimer(eventState);
 
+  // Format step interactive pop-up
+  const [activeFormatStep, setActiveFormatStep] = useState<FormatStepDef | null>(null);
+
   // Teams accordion & more toggles
   const [openTeam, setOpenTeam] = useState<'event' | 'tech' | null>(null);
   const [switchingTeam, setSwitchingTeam] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const [notchLeft, setNotchLeft] = useState<number>(200);
 
@@ -486,100 +547,171 @@ export default function LandingPage() {
     },
   ];
 
-  // ── Teams Definition (port from reference) ──
+  // ── Teams Definition: Dynamic from database with graceful reference fallback ──
   const nm = (prefix: string, count: number) =>
     Array.from({ length: count }, (_, i) => `${prefix} ${i + 1}`);
 
   const teamsData: Record<'event' | 'tech', { title: string; groups: TeamGroupDef[] }> = useMemo(() => {
+    const allDbPeople = content?.people || [];
+    const dbEventPeople = allDbPeople.filter((p) => p.category === 'event');
+    const dbTechPeople = allDbPeople.filter((p) => p.category === 'tech');
+
+    // 1. Build Event Team Groups
+    let eventGroups: TeamGroupDef[] = [];
+    if (dbEventPeople.length > 0) {
+      const groupMap = new Map<string, typeof dbEventPeople>();
+      dbEventPeople.forEach((p) => {
+        const gName = p.group_name?.trim() || p.role_label?.trim() || 'Event coordinators';
+        if (!groupMap.has(gName)) groupMap.set(gName, []);
+        groupMap.get(gName)!.push(p);
+      });
+
+      eventGroups = Array.from(groupMap.entries()).map(([gName, members], gIdx) => {
+        const isLead =
+          gName.toLowerCase().includes('lead') ||
+          gName.toLowerCase().includes('main') ||
+          members.some((m) => m.role_label?.toLowerCase().includes('main'));
+        const size: 'lg' | 'md' | 'sm' = isLead
+          ? 'lg'
+          : gName.toLowerCase().includes('coord')
+          ? 'sm'
+          : 'md';
+
+        return {
+          header: gName,
+          key: `event_grp_${gIdx}`,
+          role: members[0]?.role_label || 'Event coordinator',
+          size,
+          isLead,
+          members: members.map((m, mIdx) => ({
+            key: m.id || `event_mem_${gIdx}_${mIdx}`,
+            name: m.name || `Coordinator ${mIdx + 1}`,
+            role: m.role_label || 'Event coordinator',
+            photo_url: m.photo_url || null,
+            isLead,
+          })),
+        };
+      });
+    } else {
+      // Default fallback
+      eventGroups = [
+        {
+          header: 'Main event coordinators',
+          key: 'event_lead',
+          role: 'Main event coordinator',
+          size: 'lg',
+          isLead: true,
+          members: [
+            {
+              key: 'event_lead_1',
+              name: 'Main coordinator 1',
+              role: 'Main event coordinator',
+              photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+              isLead: true,
+            },
+            {
+              key: 'event_lead_2',
+              name: 'Main coordinator 2',
+              role: 'Main event coordinator',
+              photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+              isLead: true,
+            },
+          ],
+        },
+        {
+          header: 'Speakers',
+          key: 'speaker',
+          role: 'Speaker',
+          size: 'md',
+          members: nm('Speaker', 4).map((name, i) => ({
+            key: `speaker_${i + 1}`,
+            name,
+            role: 'Speaker',
+            photo_url: `https://images.unsplash.com/photo-${1500000000000 + i * 10000}?auto=format&fit=crop&w=300&q=80`,
+          })),
+        },
+        {
+          header: 'Camera team',
+          key: 'camera',
+          role: 'Camera team',
+          size: 'md',
+          members: nm('Camera member', 4).map((name, i) => ({
+            key: `camera_${i + 1}`,
+            name,
+            role: 'Camera team',
+            photo_url: null,
+          })),
+        },
+        {
+          header: 'Event coordinators',
+          key: 'event_coord',
+          role: 'Event coordinator',
+          size: 'sm',
+          members: nm('Event coordinator', 13).map((name, i) => ({
+            key: `event_coord_${i + 1}`,
+            name,
+            role: 'Event coordinator',
+            photo_url:
+              i < 4
+                ? `https://images.unsplash.com/photo-${1510000000000 + i * 10000}?auto=format&fit=crop&w=200&q=80`
+                : null,
+          })),
+        },
+      ];
+    }
+
+    // 2. Build Technical Team Groups
+    let techGroups: TeamGroupDef[] = [];
+    if (dbTechPeople.length > 0) {
+      const groupMap = new Map<string, typeof dbTechPeople>();
+      dbTechPeople.forEach((p) => {
+        const gName = p.group_name?.trim() || p.role_label?.trim() || 'Technical members';
+        if (!groupMap.has(gName)) groupMap.set(gName, []);
+        groupMap.get(gName)!.push(p);
+      });
+
+      techGroups = Array.from(groupMap.entries()).map(([gName, members], gIdx) => {
+        return {
+          header: gName,
+          key: `tech_grp_${gIdx}`,
+          role: members[0]?.role_label || 'Technical team',
+          size: 'md',
+          members: members.map((m, mIdx) => ({
+            key: m.id || `tech_mem_${gIdx}_${mIdx}`,
+            name: m.name || `Technical member ${mIdx + 1}`,
+            role: m.role_label || 'Technical team',
+            photo_url: m.photo_url || null,
+          })),
+        };
+      });
+    } else {
+      techGroups = [
+        {
+          header: 'Technical members',
+          key: 'tech',
+          role: 'Technical team',
+          size: 'md',
+          members: nm('Technical member', 10).map((name, i) => ({
+            key: `tech_${i + 1}`,
+            name,
+            role: 'Technical team',
+            photo_url: null,
+          })),
+        },
+      ];
+    }
+
     return {
       event: {
         title: 'Event team',
-        groups: [
-          {
-            header: 'Main event coordinators',
-            key: 'event_lead',
-            role: 'Main event coordinator',
-            size: 'lg',
-            isLead: true,
-            members: [
-              {
-                key: 'event_lead_1',
-                name: 'Main coordinator 1',
-                role: 'Main event coordinator',
-                photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-                isLead: true,
-              },
-              {
-                key: 'event_lead_2',
-                name: 'Main coordinator 2',
-                role: 'Main event coordinator',
-                photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-                isLead: true,
-              },
-            ],
-          },
-          {
-            header: 'Speakers',
-            key: 'speaker',
-            role: 'Speaker',
-            size: 'md',
-            members: nm('Speaker', 4).map((name, i) => ({
-              key: `speaker_${i + 1}`,
-              name,
-              role: 'Speaker',
-              photo_url: `https://images.unsplash.com/photo-${1500000000000 + i * 10000}?auto=format&fit=crop&w=300&q=80`,
-            })),
-          },
-          {
-            header: 'Camera team',
-            key: 'camera',
-            role: 'Camera team',
-            size: 'md',
-            members: nm('Camera member', 4).map((name, i) => ({
-              key: `camera_${i + 1}`,
-              name,
-              role: 'Camera team',
-              photo_url: null, // Camera team with no photos shows name tiles only
-            })),
-          },
-          {
-            header: 'Event coordinators',
-            key: 'event_coord',
-            role: 'Event coordinator',
-            size: 'sm',
-            max: 8,
-            members: nm('Event coordinator', 13).map((name, i) => ({
-              key: `event_coord_${i + 1}`,
-              name,
-              role: 'Event coordinator',
-              photo_url:
-                i < 4
-                  ? `https://images.unsplash.com/photo-${1510000000000 + i * 10000}?auto=format&fit=crop&w=200&q=80`
-                  : null,
-            })),
-          },
-        ],
+        groups: eventGroups,
       },
       tech: {
         title: 'Technical team',
-        groups: [
-          {
-            header: 'Technical members',
-            key: 'tech',
-            role: 'Technical team',
-            size: 'md',
-            max: 8,
-            members: nm('Technical member', 10).map((name, i) => ({
-              key: `tech_${i + 1}`,
-              name,
-              role: 'Technical team',
-              photo_url: null, // Technical team with no photos shows name tiles only
-            })),
-          },
-        ],
+        groups: techGroups,
       },
     };
-  }, []);
+  }, [content?.people]);
 
   const handleImageFail = (key: string) => {
     setFailedImages((prev) => ({ ...prev, [key]: true }));
@@ -641,7 +773,7 @@ export default function LandingPage() {
                 <path id="cp" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
               </defs>
               <text>
-                <textPath href="#cp">{editionLabel} · TECHNICAL AUCTION ·</textPath>
+                <textPath href="#cp">GCL · TECHNICAL AUCTION · GEN CODE LEAGUE ·</textPath>
               </text>
             </svg>
             <div className="rgi">GCL</div>
@@ -713,7 +845,20 @@ export default function LandingPage() {
           </h2>
           <div className="fm" id="fm">
             {FORMAT_STEPS.map((f) => (
-              <div key={f.n} className="fr rv">
+              <div
+                key={f.n}
+                className="fr rv"
+                role="button"
+                tabIndex={0}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setActiveFormatStep(f)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveFormatStep(f);
+                  }
+                }}
+              >
                 <span className="n">{f.n}</span>
                 <h3>
                   {f.title}
@@ -723,6 +868,84 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Interactive Pop-up Explaining the Format Step on Click */}
+          {activeFormatStep && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+              onClick={() => setActiveFormatStep(null)}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="format-popup-title"
+            >
+              <div
+                className="relative max-w-lg w-full p-6 sm:p-8 rounded-2xl bg-[#0c0c11] border border-[#ff2a3d]/40 shadow-[0_0_60px_rgba(255,42,61,0.3)] text-left"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between pb-4 border-b border-[#24242c]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded bg-[#2a0c12] border border-[#ff2a3d] text-[#ff8791] font-mono text-xs font-bold">
+                      MOVE {activeFormatStep.n}
+                    </span>
+                    <span className="text-xs font-mono uppercase tracking-wider text-[#8e8e9a]">
+                      Tournament Rules
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFormatStep(null)}
+                    className="text-[#8e8e9a] hover:text-white p-1 rounded-lg hover:bg-[#18181c] transition-colors cursor-pointer"
+                    aria-label="Close explanation"
+                  >
+                    {CLOSE_SVG}
+                  </button>
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <h3
+                      id="format-popup-title"
+                      className="text-2xl sm:text-3xl font-bold uppercase tracking-tight text-white font-['Barlow_Semi_Condensed',sans-serif]"
+                    >
+                      {activeFormatStep.title}
+                    </h3>
+                    <p className="text-[#ff4350] text-sm font-semibold mt-1">
+                      {activeFormatStep.tagline}
+                    </p>
+                  </div>
+
+                  <p className="text-[#c9c9d2] text-sm sm:text-base leading-relaxed">
+                    {activeFormatStep.desc}
+                  </p>
+
+                  <div className="p-4 rounded-xl bg-[#14141a] border border-[#24242c] space-y-2 mt-2">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-[#8e8e9a] block font-bold">
+                      Key Highlights & Mechanics
+                    </span>
+                    <ul className="space-y-1.5 text-xs text-[#e4e4e9] font-mono">
+                      {activeFormatStep.highlights.map((h, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-[#ff2a3d] font-bold">›</span>
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#24242c] flex items-center justify-between">
+                  <span className="text-xs text-[#71717a] font-mono">Click anywhere outside to close</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFormatStep(null)}
+                    className="btn b-red px-5 py-2 text-xs font-mono uppercase tracking-wider rounded-lg cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -920,12 +1143,8 @@ export default function LandingPage() {
                     </div>
 
                     {teamsData[openTeam].groups.map((group) => {
-                      const isExpanded = Boolean(expandedGroups[group.key]);
-                      // Apply max limit of 8 if defined and not expanded
-                      const displayedMembers =
-                        group.max && !isExpanded
-                          ? group.members.slice(0, group.max)
-                          : group.members;
+                      // Display all members immediately - no hidden cutoff
+                      const displayedMembers = group.members;
 
                       // Split into members with valid loaded photos vs without photos
                       const withPhoto = displayedMembers.filter(
@@ -936,8 +1155,6 @@ export default function LandingPage() {
                       );
 
                       const totalCount = group.members.length;
-                      const hasMore = Boolean(group.max && totalCount > group.max);
-                      const moreCount = totalCount - (group.max || 8);
 
                       return (
                         <div key={group.key} className="grp">
@@ -996,28 +1213,6 @@ export default function LandingPage() {
                               ))}
                             </div>
                           )}
-
-                          {/* See more +N button */}
-                          {hasMore && (
-                            <button
-                              className="more"
-                              aria-expanded={isExpanded}
-                              onClick={() =>
-                                setExpandedGroups((prev) => ({
-                                  ...prev,
-                                  [group.key]: !prev[group.key],
-                                }))
-                              }
-                            >
-                              {isExpanded ? (
-                                'See less'
-                              ) : (
-                                <>
-                                  See more <span>+{moreCount}</span>
-                                </>
-                              )}
-                            </button>
-                          )}
                         </div>
                       );
                     })}
@@ -1043,12 +1238,16 @@ export default function LandingPage() {
                 </h2>
               </div>
               <div className="rv">
-                <div className="fld">
+                <Link
+                  to="/my-certificates"
+                  className="fld cursor-pointer hover:border-[#ff2a3d] transition-colors"
+                  style={{ textDecoration: 'none' }}
+                >
                   <span>Enter your full name to unlock</span>
-                  <Link className="btn b-red" to="/my-certificates">
+                  <span className="btn b-red">
                     Unlock
-                  </Link>
-                </div>
+                  </span>
+                </Link>
               </div>
             </div>
           </div>
@@ -1075,7 +1274,17 @@ export default function LandingPage() {
               GC<b>L</b>
             </div>
             Gen Code League · Technical auction event
-            <br />© GCL 2025
+            <br />
+            Developed by{' '}
+            <a
+              href="https://manthantp-portfolio.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#ff2a3d', textDecoration: 'none' }}
+              className="hover:underline font-semibold"
+            >
+              @Manthan Patel
+            </a>
           </div>
           <div>
             <h5>Watch</h5>

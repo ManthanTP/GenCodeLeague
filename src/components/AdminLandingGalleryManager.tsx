@@ -25,6 +25,8 @@ import {
   getAdminLandingContent,
   saveLandingSettings,
   savePeopleBatch,
+  savePerson,
+  deletePerson,
   saveEditionChampionPhotos,
   saveGalleryPhoto,
   deleteGalleryPhoto,
@@ -175,18 +177,16 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
   };
 
   // ── People Handlers ──
-  const handlePersonPhotoUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePersonPhotoUpload = async (personId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSaving(true);
     try {
       const url = await uploadMediaFile(file, 'people');
-      setPeople((prev) => {
-        const copy = [...prev];
-        copy[index] = { ...copy[index], photo_url: url };
-        return copy;
-      });
-      onShowToast('Person photo updated', 'success');
+      setPeople((prev) =>
+        prev.map((p) => (p.id === personId ? { ...p, photo_url: url } : p))
+      );
+      onShowToast('Member photo updated', 'success');
     } catch (err: any) {
       onShowToast(err?.message || 'Photo upload failed', 'error');
     } finally {
@@ -195,7 +195,40 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     }
   };
 
-  const handleMovePerson = (index: number, direction: 'up' | 'down') => {
+  const handleAddPerson = (category: 'event' | 'tech') => {
+    const isEvent = category === 'event';
+    const newPerson: Person = {
+      id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      role_label: isEvent ? 'Event coordinator' : 'Technical team',
+      name: '',
+      photo_url: '',
+      sort_order: people.length + 1,
+      is_published: true,
+      category,
+      group_name: isEvent ? 'Event coordinators' : 'Technical members',
+    };
+    setPeople((prev) => [...prev, newPerson]);
+    onShowToast(`Added new ${isEvent ? 'event' : 'technical'} team member`, 'info');
+  };
+
+  const handleDeletePerson = async (id: string) => {
+    setSaving(true);
+    try {
+      if (!id.startsWith('temp-')) {
+        await deletePerson(id);
+      }
+      setPeople((prev) => prev.filter((p) => p.id !== id));
+      onShowToast('Member removed', 'success');
+    } catch (err: any) {
+      onShowToast(err?.message || 'Failed to remove member', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMovePerson = (personId: string, direction: 'up' | 'down') => {
+    const index = people.findIndex((p) => p.id === personId);
+    if (index === -1) return;
     if (
       (direction === 'up' && index === 0) ||
       (direction === 'down' && index === people.length - 1)
@@ -216,8 +249,9 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
   const handleSavePeople = async () => {
     setSaving(true);
     try {
-      await savePeopleBatch(people);
-      onShowToast('People list saved successfully', 'success');
+      const savedList = await savePeopleBatch(people);
+      setPeople(savedList);
+      onShowToast('All organizers & team members saved successfully', 'success');
     } catch (err: any) {
       onShowToast(err?.message || 'Failed to save people', 'error');
     } finally {
@@ -619,151 +653,543 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
         </div>
       )}
 
-      {/* ── TAB 2: THE PEOPLE ── */}
+      {/* ── TAB 2: THE PEOPLE (LEADERSHIP, EVENT TEAM, TECHNICAL TEAM) ── */}
       {subTab === 'people' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Top Global Save Bar */}
+          <div className="flex items-center justify-between p-4 bg-[#0e0e13] border border-[#202024] rounded-xl">
+            <div>
+              <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-white">
+                Team & Organizer Management
+              </h3>
+              <p className="text-xs text-[#8e8e9a] mt-0.5">
+                Manage the Core Leadership, Event Team, and Technical Team. All changes become live immediately upon saving.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleSavePeople}
+              className="px-5 py-2 bg-[#ff2a3d] hover:bg-[#e02030] text-white font-mono text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-[0_0_12px_rgba(255,42,61,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              <span>Save All People</span>
+            </button>
+          </div>
+
+          {/* Section 1: Leadership (Top 4) */}
           <div className="admin-card space-y-4">
-            <div className="flex items-center justify-between border-b border-[#202024] pb-3">
-              <div>
-                <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-white">
-                  Event Leadership & Coordinators (4 Rows)
-                </h3>
-                <p className="text-xs text-[#8e8e9a] mt-0.5">
-                  Public pages automatically hide any person whose name AND photo are both empty.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={handleSavePeople}
-                className="px-5 py-2 bg-[#ff2a3d] hover:bg-[#e02030] text-white font-mono text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-[0_0_12px_rgba(255,42,61,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                <span>Save All People</span>
-              </button>
+            <div className="border-b border-[#202024] pb-3">
+              <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#ff2a3d]" />
+                <span>1. Core Leadership (HOD, Faculty, Student Lead, Developer)</span>
+              </h4>
+              <p className="text-xs text-[#8e8e9a] mt-0.5">
+                These 4 primary anchors appear directly in the top row under "Behind the hammer".
+              </p>
             </div>
 
             <div className="space-y-3">
-              {people.map((person, idx) => (
-                <div
-                  key={person.id || idx}
-                  className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  {/* Left: Avatar & Role */}
-                  <div className="flex items-center gap-4">
-                    {/* Circular Photo Preview */}
-                    <div className="relative group shrink-0">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#26262b] group-hover:border-[#ff2a3d] bg-[#131316] flex items-center justify-center transition-colors">
-                        {person.photo_url ? (
-                          <img
-                            src={person.photo_url}
-                            alt={person.name || person.role_label}
-                            className="w-full h-full object-cover"
+              {people
+                .filter((p) => !p.category || p.category === 'leadership')
+                .map((person) => (
+                  <div
+                    key={person.id}
+                    className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative group shrink-0">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#26262b] group-hover:border-[#ff2a3d] bg-[#131316] flex items-center justify-center transition-colors">
+                          {person.photo_url ? (
+                            <img
+                              src={person.photo_url}
+                              alt={person.name || person.role_label}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Users size={20} className="text-[#71717a]" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
+                          {person.role_label}
+                        </span>
+                        <div className="mt-1.5">
+                          <input
+                            type="text"
+                            value={person.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPeople((prev) =>
+                                prev.map((p) => (p.id === person.id ? { ...p, name: val } : p))
+                              );
+                            }}
+                            placeholder="Enter full name"
+                            className="px-3 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none min-w-[260px]"
                           />
-                        ) : (
-                          <Users size={22} className="text-[#71717a]" />
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
-                        {person.role_label}
-                      </span>
-                      <div className="mt-1.5">
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1.5 bg-[#18181c] hover:bg-[#222228] border border-[#2a2a30] text-xs font-mono text-white rounded-lg cursor-pointer flex items-center gap-1.5">
+                        <Upload size={12} />
+                        <span>{person.photo_url ? 'Replace' : 'Upload'}</span>
                         <input
-                          type="text"
-                          value={person.name}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setPeople((prev) => {
-                              const copy = [...prev];
-                              copy[idx] = { ...copy[idx], name: val };
-                              return copy;
-                            });
-                          }}
-                          placeholder="Enter full name"
-                          className="px-3 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none min-w-[240px]"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp"
+                          className="hidden"
+                          onChange={(e) => handlePersonPhotoUpload(person.id, e)}
                         />
-                      </div>
-                    </div>
-                  </div>
+                      </label>
 
-                  {/* Middle: Upload / Replace / Remove Photo */}
-                  <div className="flex items-center gap-2">
-                    <label className="px-3 py-1.5 bg-[#18181c] hover:bg-[#222228] border border-[#2a2a30] text-xs font-mono text-white rounded-lg cursor-pointer flex items-center gap-1.5">
-                      <Upload size={12} />
-                      <span>{person.photo_url ? 'Replace' : 'Upload'}</span>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp"
-                        className="hidden"
-                        onChange={(e) => handlePersonPhotoUpload(idx, e)}
-                      />
-                    </label>
+                      {person.photo_url ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPeople((prev) =>
+                              prev.map((p) => (p.id === person.id ? { ...p, photo_url: '' } : p))
+                            );
+                          }}
+                          className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
+                          title="Remove photo"
+                        >
+                          <Trash2 size={12} />
+                          <span>Remove photo</span>
+                        </button>
+                      ) : null}
 
-                    {person.photo_url ? (
                       <button
                         type="button"
                         onClick={() => {
-                          setPeople((prev) => {
-                            const copy = [...prev];
-                            copy[idx] = { ...copy[idx], photo_url: '' };
-                            return copy;
-                          });
+                          setPeople((prev) =>
+                            prev.map((p) =>
+                              p.id === person.id ? { ...p, is_published: !p.is_published } : p
+                            )
+                          );
                         }}
-                        className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
-                        title="Remove photo"
+                        className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                          person.is_published
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                            : 'bg-[#18181c] border-[#2a2a30] text-[#71717a]'
+                        }`}
                       >
-                        <Trash2 size={12} />
-                        <span>Remove photo</span>
+                        {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
+                        <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
                       </button>
-                    ) : null}
+                    </div>
                   </div>
-
-                  {/* Right: Visibility & Sort Controls */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPeople((prev) => {
-                          const copy = [...prev];
-                          copy[idx] = { ...copy[idx], is_published: !copy[idx].is_published };
-                          return copy;
-                        });
-                      }}
-                      className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 cursor-pointer border transition-colors ${
-                        person.is_published
-                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
-                          : 'bg-[#18181c] border-[#2a2a30] text-[#71717a]'
-                      }`}
-                    >
-                      {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
-                      <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => handleMovePerson(idx, 'up')}
-                      className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg disabled:opacity-30 cursor-pointer"
-                      title="Move Up"
-                    >
-                      <ArrowUp size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === people.length - 1}
-                      onClick={() => handleMovePerson(idx, 'down')}
-                      className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg disabled:opacity-30 cursor-pointer"
-                      title="Move Down"
-                    >
-                      <ArrowDown size={13} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
+          </div>
+
+          {/* Section 2: Event Team */}
+          <div className="admin-card space-y-4">
+            <div className="flex items-center justify-between border-b border-[#202024] pb-3">
+              <div>
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#f5b73b]" />
+                  <span>2. Event Team</span>
+                </h4>
+                <p className="text-xs text-[#8e8e9a] mt-0.5">
+                  Coordinators, stage managers, speakers, and camera crew. No "Show More" limit is applied—all active members are displayed in the interactive panel.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleAddPerson('event')}
+                className="px-4 py-2 bg-[#18181c] hover:bg-[#25252c] text-white border border-[#2f2f38] hover:border-[#f5b73b] font-mono text-xs font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={14} className="text-[#f5b73b]" />
+                <span>Add Event Member</span>
+              </button>
+            </div>
+
+            {people.filter((p) => p.category === 'event').length === 0 ? (
+              <div className="p-6 rounded-xl bg-[#0a0a0c] border border-dashed border-[#26262b] text-center">
+                <Users size={28} className="mx-auto text-[#71717a] mb-2" />
+                <p className="text-xs font-mono text-[#8e8e9a]">
+                  No custom event team members added yet. The public page is displaying the standard default reference roster.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleAddPerson('event')}
+                  className="mt-3 px-4 py-1.5 bg-[#ff2a3d] text-white rounded-lg text-xs font-mono uppercase cursor-pointer"
+                >
+                  + Add First Member
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {people
+                  .filter((p) => p.category === 'event')
+                  .map((person) => (
+                    <div
+                      key={person.id}
+                      className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="relative group shrink-0">
+                          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#26262b] group-hover:border-[#f5b73b] bg-[#131316] flex items-center justify-center transition-colors">
+                            {person.photo_url ? (
+                              <img
+                                src={person.photo_url}
+                                alt={person.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Users size={20} className="text-[#71717a]" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={person.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, name: val } : p))
+                                );
+                              }}
+                              placeholder="Full name"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#f5b73b] outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Role Label
+                            </label>
+                            <input
+                              type="text"
+                              value={person.role_label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
+                                );
+                              }}
+                              placeholder="e.g. Event coordinator, Speaker"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#f5b73b] outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Group / Section
+                            </label>
+                            <input
+                              type="text"
+                              value={person.group_name || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, group_name: val } : p))
+                                );
+                              }}
+                              placeholder="e.g. Main event coordinators, Camera team"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#f5b73b] outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 bg-[#18181c] hover:bg-[#222228] border border-[#2a2a30] text-xs font-mono text-white rounded-lg cursor-pointer flex items-center gap-1.5">
+                          <Upload size={12} />
+                          <span>{person.photo_url ? 'Replace' : 'Upload'}</span>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            className="hidden"
+                            onChange={(e) => handlePersonPhotoUpload(person.id, e)}
+                          />
+                        </label>
+
+                        {person.photo_url ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPeople((prev) =>
+                                prev.map((p) => (p.id === person.id ? { ...p, photo_url: '' } : p))
+                              );
+                            }}
+                            className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
+                            title="Remove photo"
+                          >
+                            <Trash2 size={12} />
+                            <span>Remove photo</span>
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPeople((prev) =>
+                              prev.map((p) =>
+                                p.id === person.id ? { ...p, is_published: !p.is_published } : p
+                              )
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                            person.is_published
+                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                              : 'bg-[#18181c] border-[#2a2a30] text-[#71717a]'
+                          }`}
+                        >
+                          {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleMovePerson(person.id, 'up')}
+                          className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg cursor-pointer"
+                          title="Move Up"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMovePerson(person.id, 'down')}
+                          className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg cursor-pointer"
+                          title="Move Down"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePerson(person.id)}
+                          className="p-1.5 bg-[#18181c] hover:bg-red-950 text-red-400 border border-red-500/30 rounded-lg cursor-pointer transition-colors"
+                          title="Delete member"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Technical Team */}
+          <div className="admin-card space-y-4">
+            <div className="flex items-center justify-between border-b border-[#202024] pb-3">
+              <div>
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#00e5ff]" />
+                  <span>3. Technical Team</span>
+                </h4>
+                <p className="text-xs text-[#8e8e9a] mt-0.5">
+                  Platform engineers, auction software builders, and network infrastructure crew.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleAddPerson('tech')}
+                className="px-4 py-2 bg-[#18181c] hover:bg-[#25252c] text-white border border-[#2f2f38] hover:border-[#00e5ff] font-mono text-xs font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={14} className="text-[#00e5ff]" />
+                <span>Add Technical Member</span>
+              </button>
+            </div>
+
+            {people.filter((p) => p.category === 'tech').length === 0 ? (
+              <div className="p-6 rounded-xl bg-[#0a0a0c] border border-dashed border-[#26262b] text-center">
+                <Users size={28} className="mx-auto text-[#71717a] mb-2" />
+                <p className="text-xs font-mono text-[#8e8e9a]">
+                  No custom technical team members added yet. The public page is displaying the standard default reference roster.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleAddPerson('tech')}
+                  className="mt-3 px-4 py-1.5 bg-[#ff2a3d] text-white rounded-lg text-xs font-mono uppercase cursor-pointer"
+                >
+                  + Add First Member
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {people
+                  .filter((p) => p.category === 'tech')
+                  .map((person) => (
+                    <div
+                      key={person.id}
+                      className="p-4 rounded-xl bg-[#0a0a0c] border border-[#202024] flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="relative group shrink-0">
+                          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#26262b] group-hover:border-[#00e5ff] bg-[#131316] flex items-center justify-center transition-colors">
+                            {person.photo_url ? (
+                              <img
+                                src={person.photo_url}
+                                alt={person.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Users size={20} className="text-[#71717a]" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={person.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, name: val } : p))
+                                );
+                              }}
+                              placeholder="Full name"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#00e5ff] outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Role Label
+                            </label>
+                            <input
+                              type="text"
+                              value={person.role_label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
+                                );
+                              }}
+                              placeholder="e.g. Technical team, Platform"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#00e5ff] outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-mono uppercase text-[#8e8e9a] block mb-1">
+                              Group / Section
+                            </label>
+                            <input
+                              type="text"
+                              value={person.group_name || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPeople((prev) =>
+                                  prev.map((p) => (p.id === person.id ? { ...p, group_name: val } : p))
+                                );
+                              }}
+                              placeholder="e.g. Technical members"
+                              className="w-full px-2.5 py-1.5 bg-[#131316] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#00e5ff] outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 bg-[#18181c] hover:bg-[#222228] border border-[#2a2a30] text-xs font-mono text-white rounded-lg cursor-pointer flex items-center gap-1.5">
+                          <Upload size={12} />
+                          <span>{person.photo_url ? 'Replace' : 'Upload'}</span>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            className="hidden"
+                            onChange={(e) => handlePersonPhotoUpload(person.id, e)}
+                          />
+                        </label>
+
+                        {person.photo_url ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPeople((prev) =>
+                                prev.map((p) => (p.id === person.id ? { ...p, photo_url: '' } : p))
+                              );
+                            }}
+                            className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
+                            title="Remove photo"
+                          >
+                            <Trash2 size={12} />
+                            <span>Remove photo</span>
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPeople((prev) =>
+                              prev.map((p) =>
+                                p.id === person.id ? { ...p, is_published: !p.is_published } : p
+                              )
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                            person.is_published
+                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                              : 'bg-[#18181c] border-[#2a2a30] text-[#71717a]'
+                          }`}
+                        >
+                          {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleMovePerson(person.id, 'up')}
+                          className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg cursor-pointer"
+                          title="Move Up"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMovePerson(person.id, 'down')}
+                          className="p-1.5 bg-[#18181c] hover:bg-[#222228] text-white border border-[#2a2a30] rounded-lg cursor-pointer"
+                          title="Move Down"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePerson(person.id)}
+                          className="p-1.5 bg-[#18181c] hover:bg-red-950 text-red-400 border border-red-500/30 rounded-lg cursor-pointer transition-colors"
+                          title="Delete member"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Save Bar */}
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleSavePeople}
+              className="px-6 py-2.5 bg-[#ff2a3d] hover:bg-[#e02030] text-white font-mono text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-[0_0_15px_rgba(255,42,61,0.3)] transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              <span>Save All Organizers & Team Members</span>
+            </button>
           </div>
         </div>
       )}
