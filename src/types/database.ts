@@ -162,6 +162,8 @@ export interface GalleryPhoto {
   sort_order?: number;
   is_published?: boolean;
   created_at?: string;
+  description?: string | null;
+  photo_url?: string;
 }
 
 export type GalleryItem = GalleryPhoto;

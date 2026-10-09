@@ -290,7 +290,8 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
             image_url: url,
             title: fileNameClean,
             caption: fileNameClean,
-            credit: 'BY GCL MEDIA TEAM.',
+            credit: 'GCL Media Team',
+            description: null,
             meta: [],
             accent: '#e8743b',
             tag: 'General',
@@ -331,10 +332,20 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     setSaving(true);
     setValidationError(null);
     try {
-      await saveGalleryPhoto(editingPhoto);
+      const creditClean = (editingPhoto.credit || '')
+        .trim()
+        .replace(/^by\s+/i, '')
+        .replace(/\.+$/, '')
+        .trim();
+      const photoToSave = {
+        ...editingPhoto,
+        credit: creditClean,
+        description: editingPhoto.description !== undefined ? editingPhoto.description : null,
+      };
+      await saveGalleryPhoto(photoToSave);
       onShowToast('Photo details updated', 'success');
       setGalleryPhotos((prev) =>
-        prev.map((p) => (p.id === editingPhoto.id ? editingPhoto : p))
+        prev.map((p) => (p.id === editingPhoto.id ? { ...p, ...photoToSave } : p))
       );
       setEditingPhoto(null);
     } catch (err: any) {
@@ -691,7 +702,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       />
                     </label>
 
-                    {person.photo_url && (
+                    {person.photo_url ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -701,12 +712,13 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                             return copy;
                           });
                         }}
-                        className="p-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer"
-                        title="Remove Photo"
+                        className="px-2.5 py-1.5 bg-[#18181c] hover:bg-red-950/40 text-red-400 border border-red-500/20 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-mono"
+                        title="Remove photo"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
+                        <span>Remove photo</span>
                       </button>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Right: Visibility & Sort Controls */}
@@ -1192,8 +1204,9 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
-              {/* Photo Preview & Accent */}
+              {/* Photo Preview */}
               <div className="space-y-3">
+                <label className="text-[#a1a1aa] block mb-1">Photo</label>
                 <div className="aspect-[4/5] w-full rounded-xl overflow-hidden border border-[#26262b] relative bg-black">
                   <img
                     src={editingPhoto.image_url}
@@ -1203,12 +1216,12 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                 </div>
               </div>
 
-              {/* Editable Fields */}
+              {/* Editable Fields: Title, Photo by, Description */}
               <div className="space-y-3 font-mono text-xs">
-                {/* Title */}
+                {/* 1. Title */}
                 <div>
                   <label className="text-[#a1a1aa] block mb-1">
-                    Title (Supports \n for two lines)
+                    Title
                   </label>
                   <textarea
                     rows={2}
@@ -1216,26 +1229,46 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                     onChange={(e) =>
                       setEditingPhoto((prev) => (prev ? { ...prev, title: e.target.value } : null))
                     }
-                    placeholder="e.g. ARENA IN FOCUS\nROUND TWO"
+                    placeholder="Podium Reveal"
                     className="w-full px-3 py-2 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none"
                   />
                   <p className="text-[11px] text-[#71717a] mt-1 font-mono">
-                    Shown as the headline. Leave empty to show Frame 01.
+                    Headline top-left. Line breaks give two lines. Empty hides headline.
                   </p>
                 </div>
 
-                {/* Credit */}
+                {/* 2. Photo by */}
                 <div>
-                  <label className="text-[#a1a1aa] block mb-1">Credit Byline</label>
+                  <label className="text-[#a1a1aa] block mb-1">Photo by</label>
                   <input
                     type="text"
                     value={editingPhoto.credit || ''}
                     onChange={(e) =>
                       setEditingPhoto((prev) => (prev ? { ...prev, credit: e.target.value } : null))
                     }
-                    placeholder="BY GCL MEDIA TEAM."
+                    placeholder="GCL Media Team"
                     className="w-full px-3 py-2 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none"
                   />
+                  <p className="text-[11px] text-[#71717a] mt-1 font-mono">
+                    Byline bottom-left. Store name only. Empty hides byline.
+                  </p>
+                </div>
+
+                {/* 3. Description */}
+                <div>
+                  <label className="text-[#a1a1aa] block mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={editingPhoto.description ?? ''}
+                    onChange={(e) =>
+                      setEditingPhoto((prev) => (prev ? { ...prev, description: e.target.value } : null))
+                    }
+                    placeholder="GCL 2025 Final Podium"
+                    className="w-full px-3 py-2 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none"
+                  />
+                  <p className="text-[11px] text-[#71717a] mt-1 font-mono">
+                    Single line. Split on · for right-aligned facts. Empty hides facts.
+                  </p>
                 </div>
 
                 {/* Tag & Suggestions */}
@@ -1266,32 +1299,6 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       ))}
                     </div>
                   )}
-                </div>
-
-                {/* Meta Inputs (Up to 3 facts) */}
-                <div>
-                  <label className="text-[#a1a1aa] block mb-1">Facts Meta (Up to 3)</label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[0, 1, 2].map((idx) => {
-                      const metaArr = Array.isArray(editingPhoto.meta) ? [...editingPhoto.meta] : [];
-                      return (
-                        <input
-                          key={idx}
-                          type="text"
-                          value={metaArr[idx] || ''}
-                          placeholder={`Fact ${idx + 1}`}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            metaArr[idx] = val;
-                            setEditingPhoto((prev) =>
-                              prev ? { ...prev, meta: metaArr.filter(Boolean) } : null
-                            );
-                          }}
-                          className="px-2 py-1.5 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white text-[11px] focus:border-[#ff2a3d] outline-none truncate"
-                        />
-                      );
-                    })}
-                  </div>
                 </div>
 
                 {/* Edition link */}

@@ -596,7 +596,8 @@ ALTER TABLE gallery_photos
   ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0,
   ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT true,
-  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL;
 
 ALTER TABLE gallery_photos ALTER COLUMN edition_id DROP NOT NULL;
 ALTER TABLE gallery_photos ALTER COLUMN segment DROP NOT NULL;
@@ -664,7 +665,9 @@ SELECT
   COALESCE(sort_order, 0) AS sort_order,
   COALESCE(is_published, true) AS is_published,
   COALESCE(created_at, uploaded_at, now()) AS created_at,
-  uploaded_at
+  uploaded_at,
+  description,
+  image_url AS photo_url
 FROM gallery_photos;
 
 -- 6. Enable RLS

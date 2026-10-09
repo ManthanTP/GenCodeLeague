@@ -1,60 +1,67 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useEffect, useState, useMemo } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import {
   HeroCarousel,
   type HeroCarouselItem,
 } from '../components/ui/hero-carousel';
+import { SmoothImage } from '../components/ui/smooth-image';
 import { supabase } from '../lib/supabase';
+import { formatCredit, splitFacts } from '../lib/gallery-text';
 import './GalleryView.css';
 
-// 6 Default Editorial Placeholder Frames (used if no published items exist)
-const PLACEHOLDER_FRAMES: (HeroCarouselItem & { tag: string })[] = [
+interface GalleryFrameItem extends HeroCarouselItem {
+  tag?: string;
+}
+
+// 6 Default Editorial Frames (matching v11 reference) if no published items exist
+const DEFAULT_FRAMES: GalleryFrameItem[] = [
   {
-    id: 'ph-1',
-    title: 'Frame 01',
+    id: 'def-1',
+    title: 'Opening\nRound',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
     tag: 'Round 1',
   },
   {
-    id: 'ph-2',
-    title: 'Frame 02',
+    id: 'def-2',
+    title: 'Bidding\nFloor',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
     tag: 'Round 1',
   },
   {
-    id: 'ph-3',
-    title: 'Frame 03',
+    id: 'def-3',
+    title: 'The Hammer\nDrops',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
     tag: 'Round 2',
   },
   {
-    id: 'ph-4',
-    title: 'Frame 04',
+    id: 'def-4',
+    title: 'Team\nHuddle',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
     tag: 'Teams',
   },
   {
-    id: 'ph-5',
-    title: 'Frame 05',
+    id: 'def-5',
+    title: 'Podium\nReveal',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'FINAL', 'PODIUM'],
     tag: 'Final',
   },
   {
-    id: 'ph-6',
-    title: 'Frame 06',
+    id: 'def-6',
+    title: 'Certificate\nHandover',
     image: '',
     credit: 'BY GCL MEDIA TEAM.',
     meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
@@ -62,36 +69,38 @@ const PLACEHOLDER_FRAMES: (HeroCarouselItem & { tag: string })[] = [
   },
 ];
 
-const looksLikeFileName = (t: string) => {
-  const s = (t || '').trim();
-  return (
-    !s ||
-    /\.(jpe?g|png|webp|avif|gif|heic)$/i.test(s) ||
-    /^(IMG|DSC|PXL|DCIM|WA|SCREENSHOT)[\s_-]?\d/i.test(s) ||
-    /\d{8,}/.test(s)
-  );
-};
-
 export default function GalleryView() {
   const reducedMotion = useReducedMotion();
 
   // Controlled Carousel Index
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
 
   // Gallery items loaded from published gallery_items
-  const [galleryItems, setGalleryItems] = useState<(HeroCarouselItem & { tag?: string })[]>(PLACEHOLDER_FRAMES);
+  const [galleryItems, setGalleryItems] = useState<GalleryFrameItem[]>(DEFAULT_FRAMES);
   const [activeTag, setActiveTag] = useState<string>('All');
 
-  // Fetch published gallery items
   useEffect(() => {
     document.title = 'Gen Code League | Gallery';
 
+    const handleScroll = () => {
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      if (total > 0) {
+        setScrollProgress((window.scrollY / total) * 100);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch published gallery items
+  useEffect(() => {
     async function fetchGallery() {
       try {
-        // Query published items from gallery_items view (or gallery_photos table fallback)
-        let data: Record<string, unknown>[] | null = null;
+        let rows: any[] | null = null;
         let err: unknown = null;
 
+        // 1. Try querying gallery_items view
         const resItems = await supabase
           .from('gallery_items')
           .select('*')
@@ -99,9 +108,9 @@ export default function GalleryView() {
           .order('sort_order', { ascending: true });
 
         if (!resItems.error && resItems.data && resItems.data.length > 0) {
-          data = resItems.data as Record<string, unknown>[];
+          rows = resItems.data;
         } else {
-          // Fallback query to gallery_photos table directly
+          // 2. Fallback to gallery_photos table directly
           const resPhotos = await supabase
             .from('gallery_photos')
             .select('*')
@@ -109,7 +118,7 @@ export default function GalleryView() {
             .order('sort_order', { ascending: true });
 
           if (!resPhotos.error && resPhotos.data) {
-            data = resPhotos.data as Record<string, unknown>[];
+            rows = resPhotos.data;
           } else {
             err = resPhotos.error;
           }
@@ -120,25 +129,23 @@ export default function GalleryView() {
           return;
         }
 
-        if (data && data.length > 0) {
-          const mapped: (HeroCarouselItem & { tag?: string })[] = data.map((p, i) => {
-            const title = (p.title as string) || (p.caption as string) || '';
-            const image = ((p.photo_url as string) || (p.image_url as string) || '').trim();
-            const meta =
-              Array.isArray(p.meta) && p.meta.length > 0
-                ? (p.meta as string[])
-                : [((p.tag as string) || (p.segment as string) || 'GENERAL').toUpperCase()];
-            const credit = (p.credit as string) || 'BY GCL MEDIA TEAM.';
-            const tag = (p.tag as string) || (p.segment as string) || 'General';
+        if (rows && rows.length > 0) {
+          const mapped: GalleryFrameItem[] = rows.map((r, i) => {
+            const descFacts = splitFacts(r.description);
+            const metaFacts = descFacts.length
+              ? descFacts
+              : Array.isArray(r.meta)
+              ? r.meta
+              : splitFacts(r.meta as any);
 
             return {
-              id: (p.id as string | number) ?? i,
-              title,
-              image,
-              credit,
-              meta,
-              accent: undefined,
-              tag,
+              id: r.id ?? `photo-${i}`,
+              title: r.title ?? '',
+              image: r.photo_url || r.image_url || '',
+              credit: formatCredit(r.credit),
+              meta: metaFacts,
+              accent: r.accent || undefined,
+              tag: r.tag || r.segment || 'General',
             };
           });
 
@@ -165,76 +172,73 @@ export default function GalleryView() {
     return ['All', ...Array.from(set)];
   }, [galleryItems]);
 
-  // Filtered tiles for the ivory grid
+  // Filtered tiles
   const filteredTiles = useMemo(() => {
     if (activeTag === 'All') return galleryItems;
     return galleryItems.filter((item) => item.tag === activeTag);
   }, [activeTag, galleryItems]);
 
   // Tile click handler: smooth-scroll to top and focus item in carousel
-  const handleTileClick = (item: HeroCarouselItem) => {
+  const handleTileClick = (item: GalleryFrameItem) => {
     const targetIdx = galleryItems.findIndex((it) => it.id === item.id);
     if (targetIdx !== -1) {
       setCarouselIndex(targetIdx);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const getTileFallbackSrc = (accent?: string) => {
-    const safeAccent = accent || '#e8743b';
-    return `data:image/svg+xml;utf8,${encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${safeAccent}'/><stop offset='1' stop-color='#110b0d'/></linearGradient></defs><rect width='300' height='400' fill='url(#g)'/></svg>`
-    )}`;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
   return (
-    <div className="gallery-page-root">
+    <div className="gcl-gallery">
+      {/* Scroll progress bar */}
+      <div id="pg" style={{ width: `${scrollProgress}%` }} />
+
       {/* Universal Navigation Header */}
       <Header viewMode="live" onToggleView={() => {}} />
 
       <main>
         {/* ====================================================================
-            TOP: HERO CAROUSEL in explicit sized wrapper
-            Height: min(88vh, 860px); min-height: 540px
+            CAROUSEL SECTION: NATURAL BACKDROP, NO TINT, EDITABLE TEXT PER PHOTO
             ==================================================================== */}
-        <section
-          className="gallery-carousel-wrapper"
-          style={{ height: 'min(88vh, 860px)', minHeight: '540px' }}
-        >
-          <HeroCarousel
-            items={galleryItems}
-            index={carouselIndex}
-            onIndexChange={setCarouselIndex}
-            autoplay={!reducedMotion}
-            autoplayDelay={4500}
-            className="w-full h-full"
-          />
+        <section id="gal">
+          <div
+            className="hc-stage-wrap"
+            id="hc1"
+            data-slot="gallery_items: photo, title, photo by, description (each editable per photo)"
+          >
+            <HeroCarousel
+              items={galleryItems}
+              index={carouselIndex}
+              onIndexChange={setCarouselIndex}
+              autoplay={!reducedMotion}
+              autoplayDelay={4500}
+              className="w-full h-full"
+            />
+          </div>
         </section>
 
         {/* ====================================================================
-            BELOW: IVORY SECTION (#f3efe6, ink text) "All frames"
+            ALL FRAMES (ARCHIVE) SECTION: DARK THEME (.gcl-gallery)
             ==================================================================== */}
-        <section className="gallery-ivory-section">
-          <div className="gallery-ivory-container">
-            {/* Section Header with Filter Chips */}
-            <div className="gallery-ivory-header">
+        <section className="sec">
+          <div className="c">
+            <div className="agh">
               <div>
-                <div className="gallery-ivory-eyebrow">
-                  Archive / {galleryItems.length} frames
+                <div className="k">
+                  Archive / <span id="cnt">{filteredTiles.length}</span> frames
                 </div>
-                <h2 className="gallery-ivory-title">
-                  All frames.
+                <h2 className="st">
+                  All <em>frames.</em>
                 </h2>
               </div>
 
               {/* Tag Filter Chips */}
-              <div className="gallery-chip-group">
+              <div className="chips" id="chips">
                 {tags.map((tag) => (
                   <button
                     key={tag}
                     type="button"
                     onClick={() => setActiveTag(tag)}
-                    className={`gallery-tag-chip ${activeTag === tag ? 'active' : ''}`}
+                    className={`chip ${activeTag === tag ? 'on' : ''}`}
                   >
                     {tag}
                   </button>
@@ -243,67 +247,74 @@ export default function GalleryView() {
             </div>
 
             {/* Grid of tiles: 3 columns desktop, 2 mobile, aspect 4:5 */}
-            <div className="gallery-frames-grid">
-              {filteredTiles.map((item, idx) => {
-                const titleClean = looksLikeFileName(item.title)
-                  ? `Frame ${String(idx + 1).padStart(2, '0')}`
-                  : item.title.replace(/\n/g, ' ');
-
-                const tileImgSrc = item.image || getTileFallbackSrc(item.accent);
-
-                return (
-                  <motion.div
-                    key={item.id ?? idx}
-                    initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-20px' }}
-                    transition={{
-                      duration: 0.5,
-                      delay: Math.min((idx % 3) * 0.08, 0.24),
-                    }}
-                    className="gallery-frame-tile"
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`View photo: ${titleClean}`}
-                    onClick={() => handleTileClick(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleTileClick(item);
-                      }
-                    }}
-                  >
-                    <img
-                      src={tileImgSrc}
-                      alt={titleClean}
+            <div className="ag" id="ag">
+              {filteredTiles.map((item, idx) => (
+                <div
+                  key={item.id ?? idx}
+                  className="ft rv on"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={item.title ? item.title.replace(/\n/g, ' ') : `Photo ${idx + 1}`}
+                  onClick={() => handleTileClick(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleTileClick(item);
+                    }
+                  }}
+                >
+                  <div className="im">
+                    <SmoothImage
+                      src={item.image}
+                      alt={item.title ? item.title.replace(/\n/g, ' ') : ''}
                       loading="lazy"
-                      className="gallery-frame-img"
-                      onError={(e) => {
-                        const fb = getTileFallbackSrc(item.accent);
-                        if (e.currentTarget.src !== fb) {
-                          e.currentTarget.src = fb;
-                        }
-                      }}
+                      wrapperClassName="w-full h-full"
+                      className="object-cover"
                     />
+                  </div>
 
-                    {/* Title and credit overlay at bottom */}
-                    <div className="gallery-frame-overlay">
-                      <h3 className="gallery-frame-title">
-                        {titleClean}
-                      </h3>
-                      {item.credit ? (
-                        <p className="gallery-frame-credit">
-                          {item.credit}
-                        </p>
-                      ) : null}
+                  {/* Title and credit overlay: empty means hidden, never placeholder */}
+                  {(item.title || item.credit) && (
+                    <div className="ov">
+                      {item.title ? <b>{item.title.replace(/\n/g, ' ')}</b> : null}
+                      {item.credit ? <small>{item.credit}</small> : null}
                     </div>
-                  </motion.div>
-                );
-              })}
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </section>
       </main>
+
+      {/* Universal Footer */}
+      <footer>
+        <div className="c">
+          <div>
+            <div className="logo" style={{ marginBottom: 12 }}>
+              GC<b>L</b>
+            </div>
+            Gen Code League · Technical auction event
+            <br />© GCL 2025
+          </div>
+          <div>
+            <h5>Watch</h5>
+            <Link to="/live">Live auction</Link>
+            <Link to="/hall-of-fame">Hall of Fame</Link>
+            <Link to="/gallery">Gallery</Link>
+          </div>
+          <div>
+            <h5>Participants</h5>
+            <Link to="/my-certificates">Certificates</Link>
+            <Link to="/announcements">Updates</Link>
+            <Link to="/faq">FAQ</Link>
+          </div>
+          <div>
+            <h5>Event</h5>
+            <a href="#">GCL 2025</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

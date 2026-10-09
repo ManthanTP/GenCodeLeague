@@ -6,12 +6,20 @@
 // its neighbours stay clipped to half. Changing the focus crossfades the whole
 // backdrop to that photo, in its natural colours.
 //
-// The backdrop is a plain <img> with a CSS brightness filter and a dark gradient
-// wash. It deliberately uses NO mix-blend-mode and NO colour tint, so it renders
-// the same on every GPU, browser zoom level and compositor.
+// Photo handling:
+//  - Every photo shows a loading shimmer until it has loaded, then fades in.
+//  - The backdrop only switches once the next photo is loaded AND decoded. The
+//    previous photo stays fully opaque underneath while the new one fades in on
+//    top, so there is never a black dip or a hard pop between photos.
+//  - A missing or broken photo falls back to an inline placeholder.
+//
+// Text per photo: `title` (headline), `credit` (byline) and `meta` (description
+// facts, right aligned). Anything left empty is simply not shown.
+//
+// The backdrop uses NO mix-blend-mode and NO colour tint, so it renders the same
+// on every GPU, browser zoom level and compositor.
 import * as React from "react"
 import {
-  AnimatePresence,
   animate,
   motion,
   useMotionValue,
@@ -19,17 +27,18 @@ import {
 } from "framer-motion"
 
 import { cn } from "@/lib/utils"
+import { Shimmer } from "@/components/ui/smooth-image"
 
 export interface HeroCarouselItem {
   /** Stable key; falls back to the index. */
   id?: string | number
-  /** Headline. Newlines become separate reveal lines. A file-name style title is replaced by "Frame 01". */
-  title: string
-  /** Image URL, used both in the card and as the graded backdrop. */
+  /** Photo headline, e.g. "Podium Reveal". Newlines become separate lines. Empty or a file name = no headline. */
+  title?: string
+  /** Image URL, used both in the card and as the backdrop. */
   image: string
-  /** Byline printed beside the headline, e.g. "BY GCL MEDIA TEAM." */
+  /** Byline, already formatted, e.g. "BY GCL MEDIA TEAM." Empty = not shown. */
   credit?: string
-  /** Right-aligned facts, e.g. ["GENERAL"]. */
+  /** Description facts, right aligned, e.g. ["GCL 2025", "FINAL", "PODIUM"]. Empty = not shown. */
   meta?: string[]
   /** Only used for the placeholder shown when a photo is missing or broken. @default "#e8743b" */
   accent?: string
@@ -65,10 +74,11 @@ const LABEL = 12 // mono label size in px
 
 const WHEEL_THRESHOLD = 60
 const WHEEL_COOLDOWN = 420
+const FADE_MS = 700
 
 const DEFAULT_ACCENT = "#e8743b"
 const HEAD_FONT = 'var(--font-hd, "Barlow Semi Condensed"), system-ui, sans-serif'
-const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+const MONO_FONT = "ui-monospace, SFMono-Regular, Menlo, monospace"
 
 /* Subtle film grain as a tiny tiled SVG. Plain alpha, no blend mode. */
 const GRAIN =
@@ -83,6 +93,7 @@ const placeholder = (accent: string) =>
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${accent}'/><stop offset='1' stop-color='#110b0d'/></linearGradient></defs><rect width='300' height='400' fill='url(#g)'/></svg>`
   )}`
 
+/** True for empty titles and raw file names such as "IMG 20251127 164448681". */
 const looksLikeFileName = (t: string) => {
   const s = t.trim()
   return (
@@ -111,10 +122,22 @@ export function HeroCarousel({
   const [dragging, setDragging] = React.useState(false)
   const [paused, setPaused] = React.useState(false)
   const [failed, setFailed] = React.useState<Record<number, true>>({})
+  const [loaded, setLoaded] = React.useState<Record<string, true>>({})
   const reduced = useReducedMotion()
 
   const last = items.length - 1
   const index = clamp(controlled ?? uncontrolled, 0, Math.max(0, last))
+
+  // Backdrop layers: [shown] or [shown, incoming]. The incoming layer stays at
+  // opacity 0 until ITS OWN <img> has loaded and decoded, then fades in on top
+  // while the shown layer stays fully opaque beneath it. That is what prevents
+  // the black flash. When the fade is done the old layer is dropped.
+  type Layer = { k: number; i: number; ready: boolean }
+  const [layers, setLayers] = React.useState<Layer[]>([{ k: 0, i: index, ready: true }])
+  const layerKey = React.useRef(1)
+  const top = layers[layers.length - 1]!
+  // The photo the text and autoplay follow: the incoming one once it is ready.
+  const shown = clamp(top.ready ? top.i : layers[0]!.i, 0, Math.max(0, last))
 
   const go = React.useCallback(
     (next: number) => {
@@ -129,15 +152,53 @@ export function HeroCarousel({
     (i: number) => {
       const it = items[i]
       if (!it) return ""
-      const accent = it.accent ?? DEFAULT_ACCENT
-      return failed[i] || !it.image ? placeholder(accent) : it.image
+      return failed[i] || !it.image ? placeholder(it.accent ?? DEFAULT_ACCENT) : it.image
     },
     [items, failed]
   )
-  const markFailed = (i: number) =>
-    setFailed((f) => (f[i] ? f : { ...f, [i]: true }))
+  const markFailed = React.useCallback(
+    (i: number) => setFailed((f) => (f[i] ? f : { ...f, [i]: true })),
+    []
+  )
+  const markLoaded = React.useCallback(
+    (src: string) => setLoaded((l) => (l[src] ? l : { ...l, [src]: true })),
+    []
+  )
 
-  // Warm the cache for the neighbours so a crossfade never shows an empty frame.
+  // A new focus adds an incoming layer (hidden until its photo is ready).
+  React.useEffect(() => {
+    setLayers((prev) => {
+      const newest = prev[prev.length - 1]!
+      if (newest.i === index) return prev
+      // Back to the photo already shown: cancel the pending one.
+      if (prev.length === 2 && prev[0]!.i === index) return [prev[0]!]
+      // If the pending layer was already fading in, let it become the base.
+      const base = prev.length === 2 && prev[1]!.ready ? prev[1]! : prev[0]!
+      return [base, { k: layerKey.current++, i: index, ready: false }]
+    })
+  }, [index])
+
+  const layerReady = React.useCallback(
+    (k: number) =>
+      setLayers((prev) =>
+        prev.some((l) => l.k === k && !l.ready)
+          ? prev.map((l) => (l.k === k ? { ...l, ready: true } : l))
+          : prev
+      ),
+    []
+  )
+
+  // Once the incoming layer has finished fading in, drop the layer beneath it.
+  React.useEffect(() => {
+    if (layers.length < 2 || !layers[layers.length - 1]!.ready) return
+    const t = window.setTimeout(
+      () => setLayers((prev) => (prev.length > 1 && prev[prev.length - 1]!.ready ? prev.slice(-1) : prev)),
+      reduced ? 0 : FADE_MS + 150
+    )
+    return () => window.clearTimeout(t)
+  }, [layers, reduced])
+
+  // Warm the cache for the neighbours so most switches are instant.
   React.useEffect(() => {
     for (const j of [index - 1, index + 1]) {
       const it = items[j]
@@ -176,7 +237,7 @@ export function HeroCarousel({
 
   const swing = reduced
     ? { duration: 0 }
-    : { duration: 0.7, ease: "easeOut" as const }
+    : { duration: FADE_MS / 1000, ease: "easeOut" as const }
   const spring = reduced
     ? { duration: 0 }
     : { type: "spring" as const, stiffness: 260, damping: 34, mass: 0.9 }
@@ -218,22 +279,25 @@ export function HeroCarousel({
     return () => stage.removeEventListener("wheel", onWheel)
   }, [go, index, last])
 
+  // Autoplay waits for the current photo to be on screen before it counts down.
   React.useEffect(() => {
     if (!autoplay || reduced || paused || dragging || items.length < 2) return
+    if (shown !== index) return
     const id = window.setTimeout(
       () => go(index === last ? 0 : index + 1),
       autoplayDelay
     )
     return () => window.clearTimeout(id)
-  }, [autoplay, autoplayDelay, dragging, go, index, items.length, last, paused, reduced])
+  }, [autoplay, autoplayDelay, dragging, go, index, items.length, last, paused, reduced, shown])
 
-  const active = items[index]
+  const active = items[shown]
   if (!active) return null
 
-  const title = looksLikeFileName(active.title)
-    ? `Frame ${String(index + 1).padStart(2, "0")}`
-    : active.title
-  const lines = title.split("\n")
+  const title = looksLikeFileName(active.title ?? "") ? "" : (active.title ?? "")
+  const lines = title ? title.split("\n") : []
+  const facts = (active.meta ?? []).filter(Boolean)
+  const activeSrc = srcFor(shown)
+  const stageLoading = !loaded[activeSrc]
   const labelStyle: React.CSSProperties = {
     fontFamily: MONO_FONT,
     fontSize: LABEL,
@@ -271,29 +335,47 @@ export function HeroCarousel({
       style={{ touchAction: "pan-y" }}
     >
       {/* Backdrop: the focused photo in its natural colours, darkened for legibility. */}
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={index}
-          className="absolute inset-0"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={swing}
-        >
-          <motion.img
-            src={srcFor(index)}
-            alt=""
-            aria-hidden
-            draggable={false}
-            onError={() => markFailed(index)}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ filter: "brightness(0.58) saturate(1.05)" }}
-            initial={{ scale: reduced ? 1.2 : 1.32 }}
-            animate={{ scale: 1.2 }}
-            transition={reduced ? { duration: 0 } : { duration: 6, ease: "linear" }}
-          />
-        </motion.div>
-      </AnimatePresence>
+      {layers.map((layer) => {
+        const src = srcFor(layer.i)
+        // Mark the layer ready once its own <img> is loaded and decoded.
+        const settle = (el: HTMLImageElement) => {
+          markLoaded(src)
+          if (typeof el.decode === "function") el.decode().then(() => layerReady(layer.k), () => layerReady(layer.k))
+          else layerReady(layer.k)
+        }
+        return (
+          <motion.div
+            key={layer.k}
+            className="absolute inset-0"
+            initial={layer.k === 0 ? false : { opacity: 0 }}
+            animate={{ opacity: layer.ready ? 1 : 0 }}
+            transition={swing}
+          >
+            <motion.img
+              ref={(el: HTMLImageElement | null) => {
+                if (el && el.complete && el.naturalWidth > 0 && (!layer.ready || !loaded[src])) settle(el)
+              }}
+              src={src}
+              alt=""
+              aria-hidden
+              draggable={false}
+              onLoad={(e) => settle(e.currentTarget)}
+              onError={() => markFailed(layer.i)}
+              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500"
+              style={{
+                filter: "brightness(0.58) saturate(1.05)",
+                opacity: loaded[src] ? 1 : 0,
+              }}
+              initial={{ scale: reduced ? 1.2 : 1.32 }}
+              animate={{ scale: 1.2 }}
+              transition={reduced ? { duration: 0 } : { duration: 6, ease: "linear" }}
+            />
+          </motion.div>
+        )
+      })}
+
+      {/* Loading shimmer over the backdrop until the active photo is in. */}
+      {stageLoading ? <Shimmer /> : null}
 
       {/* Legibility wash and a light grain, above the swap so they never flicker. */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/55" />
@@ -323,7 +405,7 @@ export function HeroCarousel({
         </div>
       ) : null}
 
-      {/* Headline block, sitting just above the strip's top edge */}
+      {/* Headline block (title, byline, description), above the strip's top edge */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 flex flex-col justify-end"
         style={{
@@ -334,9 +416,9 @@ export function HeroCarousel({
         }}
       >
         <div className="flex w-full flex-wrap items-end gap-x-[5vw] gap-y-2">
-          <AnimatePresence mode="popLayout" initial={false}>
+          {lines.length ? (
             <motion.h2
-              key={index}
+              key={shown}
               style={{
                 fontFamily: HEAD_FONT,
                 fontWeight: 700,
@@ -347,7 +429,7 @@ export function HeroCarousel({
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.18 } }}
+              transition={{ duration: 0.2 }}
             >
               {lines.map((line, i) => (
                 <span key={i} className="block overflow-hidden">
@@ -366,11 +448,11 @@ export function HeroCarousel({
                 </span>
               ))}
             </motion.h2>
-          </AnimatePresence>
+          ) : null}
 
           {active.credit ? (
             <motion.p
-              key={`credit-${index}`}
+              key={`credit-${shown}`}
               style={labelStyle}
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.85 }}
@@ -380,14 +462,11 @@ export function HeroCarousel({
             </motion.p>
           ) : null}
 
-          {active.meta?.length ? (
-            <div
-              className="ml-auto flex items-end"
-              style={{ gap: "clamp(16px, 3vw, 48px)" }}
-            >
-              {active.meta.map((fact, i) => (
+          {facts.length ? (
+            <div className="ml-auto flex items-end" style={{ gap: "clamp(16px, 3vw, 48px)" }}>
+              {facts.map((fact, i) => (
                 <motion.span
-                  key={`${index}-${fact}`}
+                  key={`${shown}-${fact}`}
                   className="whitespace-nowrap"
                   style={labelStyle}
                   initial={{ opacity: 0, y: 6 }}
@@ -420,34 +499,43 @@ export function HeroCarousel({
             go(Math.round((box.w / 2 - thrown - cardW / 2) / step))
           }}
         >
-          {items.map((item, i) => (
-            <motion.button
-              key={item.id ?? i}
-              type="button"
-              aria-label={(looksLikeFileName(item.title) ? `Frame ${i + 1}` : item.title).replace(/\n/g, " ")}
-              aria-current={i === index}
-              onClick={() => go(i)}
-              className="relative shrink-0 overflow-hidden rounded-none bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
-              style={{ width: cardW }}
-              animate={{ height: i === index ? fullH : halfH }}
-              transition={spring}
-            >
-              <img
-                src={srcFor(i)}
-                alt=""
-                draggable={false}
-                onError={() => markFailed(i)}
-                className="h-full w-full object-cover"
-                style={{ objectPosition: "50% 26%" }}
-              />
-              <motion.span
-                aria-hidden
-                className="absolute inset-0 bg-black"
-                animate={{ opacity: i === index ? 0 : 0.14 }}
+          {items.map((item, i) => {
+            const src = srcFor(i)
+            const label = item.title && !looksLikeFileName(item.title) ? item.title : `Photo ${i + 1}`
+            return (
+              <motion.button
+                key={item.id ?? i}
+                type="button"
+                aria-label={label.replace(/\n/g, " ")}
+                aria-current={i === index}
+                onClick={() => go(i)}
+                className="relative shrink-0 overflow-hidden rounded-none bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
+                style={{ width: cardW }}
+                animate={{ height: i === index ? fullH : halfH }}
                 transition={spring}
-              />
-            </motion.button>
-          ))}
+              >
+                {!loaded[src] ? <Shimmer /> : null}
+                <img
+                  ref={(el) => {
+                    if (el && el.complete && el.naturalWidth > 0) markLoaded(src)
+                  }}
+                  src={src}
+                  alt=""
+                  draggable={false}
+                  onLoad={() => markLoaded(src)}
+                  onError={() => markFailed(i)}
+                  className="h-full w-full object-cover transition-opacity duration-500"
+                  style={{ objectPosition: "50% 26%", opacity: loaded[src] ? 1 : 0 }}
+                />
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0 bg-black"
+                  animate={{ opacity: i === index ? 0 : 0.14 }}
+                  transition={spring}
+                />
+              </motion.button>
+            )
+          })}
         </motion.div>
       </div>
 

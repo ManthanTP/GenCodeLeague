@@ -1,109 +1,101 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, useReducedMotion, useInView } from 'framer-motion';
-import {
-  ArrowRight,
-  ChevronRight,
-  Trophy,
-  User,
-  Radio,
-  Image as ImageIcon,
-  Award,
-} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { HeroCarousel, type HeroCarouselItem } from '../components/ui/hero-carousel';
-import { ShimmerText } from '../components/ui/shimmer-text';
+import { SmoothImage } from '../components/ui/smooth-image';
 import { getLandingContent, type LandingContent } from '../services/contentService';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTimer } from '../hooks/useTimer';
 import { formatCurrency } from '../utils/formatters';
 import { getRoundBasePrice } from '../data/roundsData';
+import { formatCredit, splitFacts } from '../lib/gallery-text';
 import './LandingPage.css';
 
-// Fallback high-res technical arena hero photo if none configured yet
 const DEFAULT_HERO_IMAGE =
   'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2400&q=80';
 
-// Animated Counter component with scroll-trigger and reduced motion support
-function AnimatedNumber({
-  value,
-  prefix = '',
-  suffix = '',
-  fallback = '—',
-}: {
-  value: number | null | undefined;
-  prefix?: string;
-  suffix?: string;
-  fallback?: string;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-  const reducedMotion = useReducedMotion();
-  const [displayVal, setDisplayVal] = useState<number | null>(reducedMotion && typeof value === 'number' ? value : 0);
+const CAM_SVG = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </svg>
+);
 
-  useEffect(() => {
-    if (value === null || value === undefined || isNaN(value)) {
-      setDisplayVal(null);
-      return;
-    }
-    if (reducedMotion) {
-      setDisplayVal(value);
-      return;
-    }
-    if (!isInView) return;
+const USR_SVG = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+  </svg>
+);
 
-    let start = 0;
-    const duration = 1200;
-    const startTime = performance.now();
+const ARROW_SVG = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M5 12h14m-6-6 6 6-6 6" />
+  </svg>
+);
 
-    const update = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // easeOutExpo
-      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      const current = Math.round(start + (value - start) * eased);
-      setDisplayVal(current);
+const CHEVRON_DOWN_SVG = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
 
-      if (progress < 1) {
-        requestAnimationFrame(update);
-      } else {
-        setDisplayVal(value);
-      }
-    };
+const FORMAT_STEPS = [
+  { n: '01', title: 'Bid live', sub: 'A question goes on the block.' },
+  { n: '02', title: 'Win the question', sub: 'Highest bid answers it.' },
+  { n: '03', title: 'Spend with strategy', sub: 'Every crore is a choice.' },
+  { n: '04', title: 'Reach the podium', sub: 'Revealed from the bottom up.' },
+];
 
-    const handle = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(handle);
-  }, [isInView, value, reducedMotion]);
+const TICKER_ITEMS = [
+  { round: 'R1·Q1', team: 'Team 1', amt: '₹70.00 L' },
+  { round: 'R1·Q2', team: 'Team 2', amt: '₹70.00 L' },
+  { round: 'R1·Q3', team: 'Team 14', amt: '₹1.20 Cr' },
+  { round: 'R2·Q1', team: 'Team 10', amt: '₹2.00 Cr' },
+  { round: 'R2·Q2', team: 'Team 15', amt: '₹1.20 Cr' },
+  { round: 'R3·Q1', team: 'Team 3', amt: '₹90.00 L' },
+];
 
-  if (value === null || value === undefined || isNaN(value) || displayVal === null) {
-    return <span ref={ref}>{fallback}</span>;
-  }
+interface TeamMemberDef {
+  key: string;
+  name: string;
+  role: string;
+  photo_url?: string | null;
+  isLead?: boolean;
+}
 
-  return (
-    <span ref={ref}>
-      {prefix}
-      {displayVal.toLocaleString()}
-      {suffix}
-    </span>
-  );
+interface TeamGroupDef {
+  header: string;
+  key: string;
+  role: string;
+  size: 'lg' | 'md' | 'sm';
+  isLead?: boolean;
+  max?: number;
+  members: TeamMemberDef[];
 }
 
 export default function LandingPage() {
-  const navigate = useNavigate();
-  const reducedMotion = useReducedMotion();
-
-  // 1. Fetch Admin Landing Content
   const [content, setContent] = useState<LandingContent | null>(null);
-  const [contentLoading, setContentLoading] = useState(true);
-
-  // 2. Fetch Live Event State & Teams
-  const { eventState, edition, loading: liveLoading } = useEventState();
+  const { eventState, edition } = useEventState();
   const { teams } = useTeams(edition?.id);
-  const { formatted } = useTimer(eventState);
+  const { formatted: timerFormatted } = useTimer(eventState);
+
+  // Teams accordion & more toggles
+  const [openTeam, setOpenTeam] = useState<'event' | 'tech' | null>(null);
+  const [switchingTeam, setSwitchingTeam] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [notchLeft, setNotchLeft] = useState<number>(200);
+
+  const heroRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pfRef = useRef<HTMLDivElement>(null);
+  const pncRef = useRef<HTMLDivElement>(null);
+  const eventBtnRef = useRef<HTMLButtonElement>(null);
+  const techBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // SEO setup
     document.title = 'Gen Code League | Technical Auction Event';
     let metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
@@ -119,759 +111,954 @@ export default function LandingPage() {
         setContent(data);
       } catch (err) {
         console.warn('Failed to load landing content:', err);
-      } finally {
-        setContentLoading(false);
       }
     }
     loadContent();
   }, []);
 
-  // Edition label
-  const editionLabel = content?.settings?.edition_label || edition?.name || 'GCL 2025';
+  // Scroll progress bar & Reveal on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const d = document.documentElement;
+      const pg = document.getElementById('pg');
+      if (pg) {
+        const pct = (window.scrollY / Math.max(1, d.scrollHeight - window.innerHeight)) * 100;
+        pg.style.width = `${pct}%`;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
-  // Hero image
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('on');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    document.querySelectorAll('.rv').forEach((el) => io.observe(el));
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      io.disconnect();
+    };
+  }, [content, openTeam]);
+
+  // Canvas price-lines with hammer ripples and 3D photo tilt
+  useEffect(() => {
+    const hero = heroRef.current;
+    const cv = canvasRef.current;
+    if (!hero || !cv) return;
+
+    const cx = cv.getContext('2d');
+    if (!cx) return;
+
+    const N = 32;
+    let W = 0;
+    let H = 0;
+    const DP = Math.min(window.devicePixelRatio || 1, 2);
+    const hits: { x: number; y: number; t: number }[] = [];
+    let mx = -999;
+    let my = -999;
+    let vis = true;
+    let animId: number;
+
+    const rs = () => {
+      W = hero.clientWidth;
+      H = hero.clientHeight;
+      cv.width = W * DP;
+      cv.height = H * DP;
+      cx.setTransform(DP, 0, 0, DP, 0, 0);
+    };
+    rs();
+    window.addEventListener('resize', rs);
+
+    const hit = (x?: number, y?: number) => {
+      hits.push({
+        x: x ?? W * (0.62 + Math.random() * 0.2),
+        y: y ?? H * (0.35 + Math.random() * 0.3),
+        t: performance.now() / 1000,
+      });
+      if (hits.length > 4) hits.shift();
+    };
+
+    const frame = () => {
+      if (!vis) {
+        animId = requestAnimationFrame(frame);
+        return;
+      }
+      const t = performance.now() / 1000;
+      cx.clearRect(0, 0, W, H);
+
+      for (let l = 0; l < N; l++) {
+        const by = H * (0.04 + (0.94 * l) / (N - 1));
+        cx.beginPath();
+        for (let x = 0; x <= W + 10; x += 10) {
+          let y =
+            by +
+            Math.sin(x * 0.0042 + t * 0.55 + l * 0.34) * 13 +
+            Math.sin(x * 0.012 - t * 0.8 + l * 0.2) * 5;
+          const dx = x - mx;
+          const dy = by - my;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 60000) {
+            y += Math.sign(dy || 1) * Math.exp(-d2 / 22000) * 30;
+          }
+          for (const h of hits) {
+            const age = t - h.t;
+            if (age > 3.2) continue;
+            const d = Math.hypot(x - h.x, by - h.y);
+            y +=
+              Math.sin(d * 0.045 - age * 8) *
+              Math.exp(-d / 280) *
+              Math.exp(-age * 1.25) *
+              38;
+          }
+          if (x === 0) cx.moveTo(x, y);
+          else cx.lineTo(x, y);
+        }
+        cx.strokeStyle =
+          l % 8 === 0
+            ? 'rgba(245,183,59,.40)'
+            : l % 8 === 4
+            ? 'rgba(255,42,61,.34)'
+            : 'rgba(255,255,255,.11)';
+        cx.lineWidth = l % 4 === 0 ? 1.4 : 1;
+        cx.stroke();
+      }
+      animId = requestAnimationFrame(frame);
+    };
+    animId = requestAnimationFrame(frame);
+
+    const onPointerMove = (e: PointerEvent) => {
+      const r = hero.getBoundingClientRect();
+      mx = e.clientX - r.left;
+      my = e.clientY - r.top;
+      if (pfRef.current) {
+        const f = pfRef.current.getBoundingClientRect();
+        const x = (e.clientX - f.left) / f.width - 0.5;
+        const y = (e.clientY - f.top) / f.height - 0.5;
+        pfRef.current.style.transform = `perspective(900px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg)`;
+      }
+    };
+
+    const onPointerLeave = () => {
+      mx = my = -999;
+      if (pfRef.current) pfRef.current.style.transform = '';
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const r = hero.getBoundingClientRect();
+      hit(e.clientX - r.left, e.clientY - r.top);
+    };
+
+    hero.addEventListener('pointermove', onPointerMove);
+    hero.addEventListener('pointerleave', onPointerLeave);
+    hero.addEventListener('click', onClick);
+
+    const observer = new IntersectionObserver((entries) => {
+      vis = entries[0].isIntersecting;
+    });
+    observer.observe(hero);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', rs);
+      hero.removeEventListener('pointermove', onPointerMove);
+      hero.removeEventListener('pointerleave', onPointerLeave);
+      hero.removeEventListener('click', onClick);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Notch position update when team panel opens or switches
+  const updateNotch = (teamKey: 'event' | 'tech') => {
+    const btn = teamKey === 'event' ? eventBtnRef.current : techBtnRef.current;
+    const card = pncRef.current;
+    if (btn && card) {
+      const bRect = btn.getBoundingClientRect();
+      const cRect = card.getBoundingClientRect();
+      setNotchLeft(bRect.left + bRect.width / 2 - cRect.left);
+    }
+  };
+
+  useEffect(() => {
+    if (openTeam) {
+      updateNotch(openTeam);
+    }
+  }, [openTeam]);
+
+  const toggleTeamPanel = (teamKey: 'event' | 'tech') => {
+    if (openTeam === teamKey) {
+      setOpenTeam(null);
+    } else if (openTeam) {
+      setSwitchingTeam(true);
+      setTimeout(() => {
+        setOpenTeam(teamKey);
+        setSwitchingTeam(false);
+        updateNotch(teamKey);
+      }, 230);
+    } else {
+      setOpenTeam(teamKey);
+      setTimeout(() => updateNotch(teamKey), 50);
+    }
+  };
+
+  const editionLabel = content?.settings?.edition_label || edition?.name || 'GCL 2025';
   const heroImage = content?.settings?.hero_image_url || DEFAULT_HERO_IMAGE;
 
-  // Format Carousel Items
+  // Carousel Items mapped strictly per prompt:
+  // { id: r.id, title: r.title ?? "", image: r.photo_url || r.image_url,
+  //   credit: formatCredit(r.credit),
+  //   meta: splitFacts(r.description).length ? splitFacts(r.description) : (Array.isArray(r.meta) ? r.meta : splitFacts(r.meta)) }
   const carouselItems: HeroCarouselItem[] = useMemo(() => {
-    if (!content?.featuredGallery || content.featuredGallery.length === 0) return [];
-    return content.featuredGallery.map((g) => {
+    const list = content?.featuredGallery || [];
+    if (list.length === 0) {
+      // Default initial filmstrip frames from reference
+      return [
+        {
+          id: 'def-1',
+          title: 'Opening\nRound',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
+        },
+        {
+          id: 'def-2',
+          title: 'Bidding\nFloor',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
+        },
+        {
+          id: 'def-3',
+          title: 'The Hammer\nDrops',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
+        },
+        {
+          id: 'def-4',
+          title: 'Team\nHuddle',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
+        },
+        {
+          id: 'def-5',
+          title: 'Podium\nReveal',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'FINAL', 'PODIUM'],
+        },
+        {
+          id: 'def-6',
+          title: 'Certificate\nHandover',
+          image: '',
+          credit: 'BY GCL MEDIA TEAM.',
+          meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
+        },
+      ];
+    }
+    return list.map((r) => {
+      const descFacts = splitFacts(r.description);
+      const metaFacts = descFacts.length
+        ? descFacts
+        : Array.isArray(r.meta)
+        ? r.meta
+        : splitFacts(r.meta as any);
       return {
-        id: g.id,
-        title: g.title || '',
-        image: g.image_url,
-        credit: g.credit || 'BY GCL MEDIA TEAM.',
-        meta: Array.isArray(g.meta) && g.meta.length > 0 ? g.meta : [g.tag || 'GCL MOMENTS'],
-        accent: undefined,
+        id: r.id,
+        title: r.title ?? '',
+        image: r.photo_url || r.image_url,
+        credit: formatCredit(r.credit),
+        meta: metaFacts,
+        accent: r.accent || undefined,
       };
     });
   }, [content?.featuredGallery]);
 
-  // Determine current round base price
-  const roundBasePrice = useMemo(() => {
-    if (!eventState) return 0;
-    return edition?.base_price || getRoundBasePrice(eventState.current_round_index || 0);
-  }, [eventState, edition?.base_price]);
+  // Live state values
+  const roundNum = (eventState?.current_round_index || 0) + 1;
+  const qNum = (eventState?.current_question_index || 0) + 1;
+  const roundBasePrice = edition?.base_price || getRoundBasePrice(eventState?.current_round_index || 0);
+  const currentBidAmt = eventState?.current_bid_preview?.amount || roundBasePrice || 9000000;
+  const bidAmtFormatted = formatCurrency(currentBidAmt);
 
-  // Current bid amount display
-  const currentBidAmount = useMemo(() => {
-    if (!eventState) return 0;
-    if (eventState.current_bid_preview?.amount) {
-      return eventState.current_bid_preview.amount;
-    }
-    return roundBasePrice;
-  }, [eventState, roundBasePrice]);
+  const totalTeams = teams && teams.length > 0 ? teams.length : 15;
+  const startingBudgetCr = edition?.starting_budget
+    ? (edition.starting_budget / 10000000).toFixed(0)
+    : '15';
+  const totalRounds = edition?.total_rounds ?? 3;
+  const questionsPerRound = edition?.questions_per_round ?? 20;
 
-  // Stats calculation
-  const totalTeamsCount = teams && teams.length > 0 ? teams.length : null;
-  const startingBudgetNum = edition?.starting_budget ? edition.starting_budget : null;
-  const startingBudgetFormatted = startingBudgetNum ? formatCurrency(startingBudgetNum) : '—';
-  const totalRoundsVal = edition?.total_rounds ?? 3;
-  const qPerRoundVal = edition?.questions_per_round ?? 20;
-
-  return (
-    <div className="gcl-landing-root min-h-screen">
-      {/* Universal Navigation Header */}
-      <Header viewMode="live" onToggleView={() => {}} />
-
-      <main>
-        {/* ====================================================================
-            A. HERO SECTION
-            ==================================================================== */}
-        <section className="landing-shell pt-10 sm:pt-16 pb-12 sm:pb-20">
-          {/* Eyebrow */}
-          <div className="mb-4">
-            <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em] text-[#8e8e99]">
-              Technical auction event / {editionLabel}
-            </span>
-          </div>
-
-          {/* Huge Masked Condensed Headline */}
-          <h1
-            className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.03em] select-none mb-8 sm:mb-12"
-            style={{
-              fontSize: 'clamp(54px, 10.5vw, 170px)',
-              lineHeight: 0.86,
-            }}
-          >
-            <div className="overflow-hidden">
-              <motion.div
-                initial={reducedMotion ? { y: 0 } : { y: '100%' }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                className="text-[#f4f4f6]"
-              >
-                WHERE CODE
-              </motion.div>
-            </div>
-            <div className="overflow-hidden">
-              <motion.div
-                initial={reducedMotion ? { y: 0 } : { y: '100%' }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.9, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-                className="text-[#f4f4f6]"
-              >
-                MEETS THE <span className="text-[#ff2a3d]">HAMMER.</span>
-              </motion.div>
-            </div>
-          </h1>
-
-          {/* Wide Hero Photo Box with Overlaid Controls */}
-          <div className="relative w-full overflow-hidden bg-[#131316] border border-[#26262b] group">
-            {/* 21:9 Aspect Ratio Frame */}
-            <div className="w-full relative" style={{ aspectRatio: '21 / 9', minHeight: '300px' }}>
-              <img
-                src={heroImage}
-                alt={`${editionLabel} Event Arena`}
-                loading="eager"
-                fetchPriority="high"
-                className="w-full h-full object-cover select-none transition-transform duration-700 group-hover:scale-[1.02]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/20 pointer-events-none" />
-
-              {/* Bottom Left Buttons on Hero Photo (Desktop & Tablet) */}
-              <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 z-10 hidden sm:flex items-center gap-3">
-                <Link
-                  to="/live"
-                  className="bg-[#ff2a3d] hover:bg-[#e02435] text-white font-mono font-semibold uppercase text-xs sm:text-sm px-6 py-3 tracking-wider transition-all inline-flex items-center gap-2"
-                >
-                  <Radio size={14} className="animate-pulse" />
-                  Watch live
-                </Link>
-                <Link
-                  to="/gallery"
-                  className="border border-white/20 hover:border-white/60 bg-black/50 backdrop-blur-md text-white font-mono font-semibold uppercase text-xs sm:text-sm px-6 py-3 tracking-wider transition-all inline-flex items-center gap-2"
-                >
-                  <ImageIcon size={14} />
-                  Gallery
-                </Link>
-              </div>
-
-              {/* Bottom Right: Compact Translucent Live Card (Desktop Overlay >= 960px) */}
-              <div className="hidden lg:block absolute bottom-4 sm:bottom-6 right-4 sm:right-6 z-10 max-w-sm w-full">
-                <LiveStateCard
-                  eventState={eventState}
-                  editionLabel={editionLabel}
-                  currentBidAmount={currentBidAmount}
-                  timerFormatted={formatted}
-                  liveLoading={liveLoading}
-                />
-              </div>
-            </div>
-
-            {/* Mobile Controls & Stacked Live Card under 960px */}
-            <div className="lg:hidden p-4 sm:p-5 bg-[#131316] border-t border-[#26262b] space-y-4">
-              <div className="flex sm:hidden items-center gap-3 w-full">
-                <Link
-                  to="/live"
-                  className="flex-1 text-center bg-[#ff2a3d] hover:bg-[#e02435] text-white font-mono font-semibold uppercase text-xs px-4 py-3 tracking-wider inline-flex items-center justify-center gap-2"
-                >
-                  <Radio size={14} className="animate-pulse" />
-                  Watch live
-                </Link>
-                <Link
-                  to="/gallery"
-                  className="flex-1 text-center border border-white/20 hover:border-white/60 bg-black/50 text-white font-mono font-semibold uppercase text-xs px-4 py-3 tracking-wider inline-flex items-center justify-center gap-2"
-                >
-                  <ImageIcon size={14} />
-                  Gallery
-                </Link>
-              </div>
-
-              <LiveStateCard
-                eventState={eventState}
-                editionLabel={editionLabel}
-                currentBidAmount={currentBidAmount}
-                timerFormatted={formatted}
-                liveLoading={liveLoading}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ====================================================================
-            B. STATS STRIP SECTION
-            ==================================================================== */}
-        <section className="w-full hairline-t hairline-b bg-[#0e0e11]">
-          <div className="landing-shell">
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#26262b]">
-              {/* Stat 1: Teams */}
-              <div className="py-8 sm:py-10 pr-4 sm:pr-8">
-                <div className="font-['Barlow_Semi_Condensed',sans-serif] font-bold text-[#f4f4f6] text-[clamp(44px,5.4vw,84px)] leading-none mb-2">
-                  <AnimatedNumber value={totalTeamsCount} fallback="—" />
-                </div>
-                <div className="font-mono text-xs uppercase tracking-[0.2em] text-[#8e8e99]">
-                  Teams
-                </div>
-              </div>
-
-              {/* Stat 2: Budget Per Team */}
-              <div className="py-8 sm:py-10 px-0 md:px-8">
-                <div className="font-['Barlow_Semi_Condensed',sans-serif] font-bold text-[#f4f4f6] text-[clamp(44px,5.4vw,84px)] leading-none mb-2">
-                  {startingBudgetFormatted}
-                </div>
-                <div className="font-mono text-xs uppercase tracking-[0.2em] text-[#8e8e99]">
-                  Budget per team
-                </div>
-              </div>
-
-              {/* Stat 3: Rounds + Final */}
-              <div className="py-8 sm:py-10 px-0 md:px-8">
-                <div className="font-['Barlow_Semi_Condensed',sans-serif] font-bold text-[#f4f4f6] text-[clamp(44px,5.4vw,84px)] leading-none mb-2">
-                  <AnimatedNumber value={totalRoundsVal} fallback="—" />
-                </div>
-                <div className="font-mono text-xs uppercase tracking-[0.2em] text-[#8e8e99]">
-                  Rounds + final
-                </div>
-              </div>
-
-              {/* Stat 4: Questions Per Round */}
-              <div className="py-8 sm:py-10 pl-0 md:pl-8">
-                <div className="font-['Barlow_Semi_Condensed',sans-serif] font-bold text-[#f4f4f6] text-[clamp(44px,5.4vw,84px)] leading-none mb-2">
-                  <AnimatedNumber value={qPerRoundVal} fallback="—" />
-                </div>
-                <div className="font-mono text-xs uppercase tracking-[0.2em] text-[#8e8e99]">
-                  Questions per round
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ====================================================================
-            C. THE FORMAT SECTION
-            ==================================================================== */}
-        <section className="landing-shell py-16 sm:py-28">
-          <div className="mb-3">
-            <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em]">
-              <span className="text-[#ff2a3d] font-bold">01</span> / The format
-            </span>
-          </div>
-
-          <h2
-            className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.02em] text-[clamp(36px,6vw,72px)] leading-[0.92] mb-12 sm:mb-16"
-          >
-            Four moves. <span className="text-[#ff2a3d]">One champion.</span>
-          </h2>
-
-          <div className="hairline-t">
-            {/* Format Row 1 */}
-            <div className="format-row hairline-b py-6 sm:py-8 group cursor-default">
-              <div className="flex items-baseline justify-between gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-8">
-                  <span className="font-mono text-sm sm:text-base font-bold text-[#8e8e99] group-hover:text-[#ff2a3d] transition-colors">
-                    01
-                  </span>
-                  <span className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-2xl sm:text-4xl text-[#f4f4f6] tracking-tight">
-                    Bid live
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-xs sm:text-sm text-[#8e8e99]">
-                    A question goes on the block.
-                  </span>
-                  <ChevronRight
-                    size={18}
-                    className="text-[#8e8e99] group-hover:text-[#ff2a3d] transition-transform group-hover:translate-x-2 hidden sm:block"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Format Row 2 */}
-            <div className="format-row hairline-b py-6 sm:py-8 group cursor-default">
-              <div className="flex items-baseline justify-between gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-8">
-                  <span className="font-mono text-sm sm:text-base font-bold text-[#8e8e99] group-hover:text-[#ff2a3d] transition-colors">
-                    02
-                  </span>
-                  <span className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-2xl sm:text-4xl text-[#f4f4f6] tracking-tight">
-                    Win the question
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-xs sm:text-sm text-[#8e8e99]">
-                    Highest bid answers it.
-                  </span>
-                  <ChevronRight
-                    size={18}
-                    className="text-[#8e8e99] group-hover:text-[#ff2a3d] transition-transform group-hover:translate-x-2 hidden sm:block"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Format Row 3 */}
-            <div className="format-row hairline-b py-6 sm:py-8 group cursor-default">
-              <div className="flex items-baseline justify-between gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-8">
-                  <span className="font-mono text-sm sm:text-base font-bold text-[#8e8e99] group-hover:text-[#ff2a3d] transition-colors">
-                    03
-                  </span>
-                  <span className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-2xl sm:text-4xl text-[#f4f4f6] tracking-tight">
-                    Spend with strategy
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-xs sm:text-sm text-[#8e8e99]">
-                    Every crore is a choice.
-                  </span>
-                  <ChevronRight
-                    size={18}
-                    className="text-[#8e8e99] group-hover:text-[#ff2a3d] transition-transform group-hover:translate-x-2 hidden sm:block"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Format Row 4 */}
-            <div className="format-row hairline-b py-6 sm:py-8 group cursor-default">
-              <div className="flex items-baseline justify-between gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-8">
-                  <span className="font-mono text-sm sm:text-base font-bold text-[#8e8e99] group-hover:text-[#ff2a3d] transition-colors">
-                    04
-                  </span>
-                  <span className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-2xl sm:text-4xl text-[#f4f4f6] tracking-tight">
-                    Reach the podium
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-xs sm:text-sm text-[#8e8e99]">
-                    Revealed from the bottom up.
-                  </span>
-                  <ChevronRight
-                    size={18}
-                    className="text-[#8e8e99] group-hover:text-[#ff2a3d] transition-transform group-hover:translate-x-2 hidden sm:block"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ====================================================================
-            D. GALLERY SECTION (Full-Width Filmstrip Carousel)
-            ==================================================================== */}
-        {carouselItems.length > 0 && (
-          <section className="w-full py-12 sm:py-20 bg-black">
-            <div className="landing-shell mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
-                <div className="mb-2">
-                  <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em]">
-                    <span className="text-[#ff2a3d] font-bold">02</span> / Gallery
-                  </span>
-                </div>
-                <h2 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.02em] text-[clamp(32px,5vw,64px)] leading-[0.92]">
-                  The arena, in frames.
-                </h2>
-              </div>
-              <Link
-                to="/gallery"
-                className="border border-[#3a3a42] hover:border-[#ff2a3d] text-[#f4f4f6] hover:text-[#ff2a3d] font-mono text-xs uppercase px-5 py-2.5 tracking-wider transition-colors inline-flex items-center gap-2 self-start sm:self-auto"
-              >
-                View all photos
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-
-            {/* Full Bleed Filmstrip Stage */}
-            <div className="w-full" style={{ height: 'min(88vh, 860px)', minHeight: '540px' }}>
-              <HeroCarousel
-                items={carouselItems}
-                autoplay={true}
-                autoplayDelay={4500}
-                className="w-full h-full"
-              />
-            </div>
-          </section>
-        )}
-
-        {/* ====================================================================
-            E. HALL OF FAME SECTION
-            ==================================================================== */}
-        <section className="landing-shell py-16 sm:py-28">
-          <div className="mb-3">
-            <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em]">
-              <span className="text-[#ff2a3d] font-bold">03</span> / Hall of fame
-            </span>
-          </div>
-
-          <h2 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.02em] text-[clamp(36px,6vw,72px)] leading-[0.92] mb-12 sm:mb-16">
-            {editionLabel} <span className="text-[#ff2a3d]">champions.</span>
-          </h2>
-
-          <PodiumDisplay podium={content?.podium} editionLabel={editionLabel} />
-        </section>
-
-        {/* ====================================================================
-            F. THE PEOPLE SECTION
-            ==================================================================== */}
-        {content?.people && content.people.length > 0 && (
-          <section className="landing-shell py-16 sm:py-24 hairline-t">
-            <div className="mb-3">
-              <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em]">
-                <span className="text-[#ff2a3d] font-bold">04</span> / The people
-              </span>
-            </div>
-
-            <h2 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.02em] text-[clamp(36px,6vw,72px)] leading-[0.92] mb-12 sm:mb-16">
-              Behind the <span className="text-[#ff2a3d]">hammer.</span>
-            </h2>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
-              {content.people.map((person) => (
-                <PersonCard key={person.id} person={person} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ====================================================================
-            G. CERTIFICATES SECTION
-            ==================================================================== */}
-        <section className="landing-shell py-16 sm:py-24 hairline-t">
-          <div className="mb-3">
-            <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em]">
-              <span className="text-[#ff2a3d] font-bold">05</span> / Certificates
-            </span>
-          </div>
-
-          <h2 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.02em] text-[clamp(36px,6vw,72px)] leading-[0.92] mb-8 sm:mb-10">
-            Your name. <span className="text-[#ff2a3d]">Your proof.</span>
-          </h2>
-
-          <div className="max-w-xl">
-            <Link
-              to="/my-certificates"
-              className="flex items-center justify-between p-2 pl-5 bg-[#131316] hover:bg-[#18181c] border border-[#26262b] hover:border-[#ff2a3d] rounded-full transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <Award size={18} className="text-[#8e8e99] group-hover:text-[#ff2a3d] transition-colors" />
-                <span className="font-mono text-xs sm:text-sm text-[#8e8e99] group-hover:text-[#f4f4f6] transition-colors">
-                  Enter your full name to unlock
-                </span>
-              </div>
-              <span className="bg-[#ff2a3d] hover:bg-[#e02435] text-white font-mono text-xs uppercase px-5 py-2.5 rounded-full font-bold tracking-wider transition-colors">
-                Unlock
-              </span>
-            </Link>
-          </div>
-        </section>
-
-        {/* ====================================================================
-            H. FINAL CALL SECTION
-            ==================================================================== */}
-        <section className="w-full hairline-t bg-[#0a0a0c] py-24 sm:py-36 text-center">
-          <div className="landing-shell flex flex-col items-center">
-            <h2
-              className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase tracking-[-0.03em] mb-8 select-none"
-              style={{ fontSize: 'clamp(48px, 9vw, 128px)', lineHeight: 0.88 }}
-            >
-              Be in the <span className="text-[#ff2a3d]">room.</span>
-            </h2>
-            <Link
-              to="/live"
-              className="bg-[#ff2a3d] hover:bg-[#e02435] text-white font-mono font-bold uppercase text-xs sm:text-sm px-8 py-4 tracking-widest transition-all inline-flex items-center gap-3 shadow-lg shadow-red-950/40"
-            >
-              <Radio size={16} className="animate-pulse" />
-              Watch the live auction
-            </Link>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-// ── Live State Card Component ──
-function LiveStateCard({
-  eventState,
-  editionLabel,
-  currentBidAmount,
-  timerFormatted,
-  liveLoading,
-}: {
-  eventState: any;
-  editionLabel: string;
-  currentBidAmount: number;
-  timerFormatted: string;
-  liveLoading: boolean;
-}) {
-  if (liveLoading) {
-    return (
-      <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 animate-pulse">
-        <div className="h-4 bg-[#26262b] rounded w-28 mb-3" />
-        <div className="h-8 bg-[#26262b] rounded w-36" />
-      </div>
-    );
-  }
-
-  if (!eventState) {
-    return null;
-  }
-
-  const gameState = eventState.game_state;
-  const roundState = eventState.round_state;
-  const roundNum = (eventState.current_round_index || 0) + 1;
-  const qNum = (eventState.current_question_index || 0) + 1;
-
-  // Active / Live Bidding
-  if (gameState === 'active') {
-    return (
-      <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-4 mb-2 pb-2 hairline-b">
-          <span className="font-mono text-xs uppercase tracking-wider text-[#8e8e99]">
-            Round {roundNum} · Q{qNum}
-          </span>
-          <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[#ff2a3d] font-bold">
-            <span className="w-2 h-2 rounded-full bg-[#ff2a3d] animate-ping" />
-            Live
-          </span>
-        </div>
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="font-['Barlow_Semi_Condensed',sans-serif] text-2xl sm:text-3xl font-bold text-[#ff2a3d] leading-none">
-            {formatCurrency(currentBidAmount)}
-          </span>
-          <span className="font-mono text-sm sm:text-base font-bold text-[#f4f4f6]">
-            {timerFormatted}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Not Started
-  if (gameState === 'setup' || gameState === 'waiting_start') {
-    return (
-      <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 sm:p-5">
-        <ShimmerText variant="red" className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest">
-          AUCTION STARTING SOON
-        </ShimmerText>
-      </div>
-    );
-  }
-
-  // Intermission
-  if (gameState === 'intermission' || roundState === 'INTERMISSION') {
-    return (
-      <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 sm:p-5">
-        <span className="font-mono text-xs sm:text-sm uppercase tracking-wider text-[#f4f4f6]">
-          Round {roundNum} intermission
-        </span>
-      </div>
-    );
-  }
-
-  // Results Pending
-  if (roundState === 'LEADERBOARD_HIDDEN' || gameState === 'winner_reveal') {
-    return (
-      <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 sm:p-5">
-        <span className="font-mono text-xs sm:text-sm uppercase tracking-wider text-[#f4f4f6]">
-          Results will be announced soon
-        </span>
-      </div>
-    );
-  }
-
-  // Completed / Leaderboard reveal
-  return (
-    <div className="bg-[#131316]/90 backdrop-blur-md border border-[#26262b] p-4 sm:p-5 flex items-center justify-between gap-4">
-      <span className="font-mono text-xs sm:text-sm uppercase tracking-wider text-[#f4f4f6]">
-        {editionLabel} complete
-      </span>
-      <Link
-        to="/hall-of-fame"
-        className="text-[#ff2a3d] hover:underline font-mono text-xs uppercase tracking-wider"
-      >
-        Hall of Fame →
-      </Link>
-    </div>
-  );
-}
-
-// ── Podium Display Component (2nd, 1st, 3rd) ──
-function PodiumDisplay({
-  podium,
-  editionLabel,
-}: {
-  podium: LandingContent['podium'] | undefined;
-  editionLabel: string;
-}) {
-  const reducedMotion = useReducedMotion();
-
-  const champion = podium?.champion;
+  // Podium champions
+  const podium = content?.podium;
+  const grandChamp = podium?.champion;
   const runnerUp = podium?.runnerUp;
   const thirdPlace = podium?.thirdPlace;
 
+  // ── Top 4 People Setup ──
+  const peopleDb = content?.people || [];
+  const findDbPerson = (roles: string[]) =>
+    peopleDb.find((p) => roles.some((r) => p.role_label.toLowerCase() === r.toLowerCase()));
+
+  const hodPerson = findDbPerson(['H.O.D', 'HOD']);
+  const facultyPerson = findDbPerson(['Faculty coordinator', 'Faculty']);
+  const studentPerson = findDbPerson(['Student coordinator', 'Event coordinator']);
+  const devPerson = findDbPerson(['Developer', 'Dev']);
+
+  const topPeople = [
+    {
+      k: 'hod',
+      r: 'H.O.D',
+      n: hodPerson?.name || 'Dr. Maheshkumar Patil',
+      photo_url: hodPerson?.photo_url || null,
+      l: false,
+      toggle: null,
+      bl: '',
+    },
+    {
+      k: 'faculty',
+      r: 'Faculty coordinator',
+      n: facultyPerson?.name || 'Prof. Amrutha Naveen',
+      photo_url: facultyPerson?.photo_url || null,
+      l: false,
+      toggle: null,
+      bl: '',
+    },
+    {
+      k: 'student',
+      r: 'Student coordinator',
+      n: studentPerson?.name || 'Student coordinator name',
+      photo_url: studentPerson?.photo_url || null,
+      l: true,
+      toggle: 'event' as const,
+      bl: 'event team',
+    },
+    {
+      k: 'dev',
+      r: 'Developer',
+      n: devPerson?.name || 'Manthan Patel',
+      photo_url: devPerson?.photo_url || null,
+      l: true,
+      toggle: 'tech' as const,
+      bl: 'technical team',
+    },
+  ];
+
+  // ── Teams Definition (port from reference) ──
+  const nm = (prefix: string, count: number) =>
+    Array.from({ length: count }, (_, i) => `${prefix} ${i + 1}`);
+
+  const teamsData: Record<'event' | 'tech', { title: string; groups: TeamGroupDef[] }> = useMemo(() => {
+    return {
+      event: {
+        title: 'Event team',
+        groups: [
+          {
+            header: 'Main event coordinators',
+            key: 'event_lead',
+            role: 'Main event coordinator',
+            size: 'lg',
+            isLead: true,
+            members: [
+              {
+                key: 'event_lead_1',
+                name: 'Main coordinator 1',
+                role: 'Main event coordinator',
+                photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+                isLead: true,
+              },
+              {
+                key: 'event_lead_2',
+                name: 'Main coordinator 2',
+                role: 'Main event coordinator',
+                photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+                isLead: true,
+              },
+            ],
+          },
+          {
+            header: 'Speakers',
+            key: 'speaker',
+            role: 'Speaker',
+            size: 'md',
+            members: nm('Speaker', 4).map((name, i) => ({
+              key: `speaker_${i + 1}`,
+              name,
+              role: 'Speaker',
+              photo_url: `https://images.unsplash.com/photo-${1500000000000 + i * 10000}?auto=format&fit=crop&w=300&q=80`,
+            })),
+          },
+          {
+            header: 'Camera team',
+            key: 'camera',
+            role: 'Camera team',
+            size: 'md',
+            members: nm('Camera member', 4).map((name, i) => ({
+              key: `camera_${i + 1}`,
+              name,
+              role: 'Camera team',
+              photo_url: null, // Camera team with no photos shows name tiles only
+            })),
+          },
+          {
+            header: 'Event coordinators',
+            key: 'event_coord',
+            role: 'Event coordinator',
+            size: 'sm',
+            max: 8,
+            members: nm('Event coordinator', 13).map((name, i) => ({
+              key: `event_coord_${i + 1}`,
+              name,
+              role: 'Event coordinator',
+              photo_url:
+                i < 4
+                  ? `https://images.unsplash.com/photo-${1510000000000 + i * 10000}?auto=format&fit=crop&w=200&q=80`
+                  : null,
+            })),
+          },
+        ],
+      },
+      tech: {
+        title: 'Technical team',
+        groups: [
+          {
+            header: 'Technical members',
+            key: 'tech',
+            role: 'Technical team',
+            size: 'md',
+            max: 8,
+            members: nm('Technical member', 10).map((name, i) => ({
+              key: `tech_${i + 1}`,
+              name,
+              role: 'Technical team',
+              photo_url: null, // Technical team with no photos shows name tiles only
+            })),
+          },
+        ],
+      },
+    };
+  }, []);
+
+  const handleImageFail = (key: string) => {
+    setFailedImages((prev) => ({ ...prev, [key]: true }));
+  };
+
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-end justify-center gap-6 sm:gap-8">
-      {/* 2nd Place: Runner-up (Silver) */}
-      <motion.div
-        initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-        className="order-2 md:order-1 flex-1 max-w-sm w-full"
-      >
-        <PodiumCard
-          rankLabel="02 / RUNNER-UP"
-          rankColor="#c0c0c0"
-          teamName={runnerUp?.name || 'Runner-Up Team'}
-          lots={runnerUp?.lots ?? 0}
-          amount={runnerUp?.amount ?? 0}
-          photoUrl={runnerUp?.photo_url}
-          heightClass="h-[360px] sm:h-[400px]"
-        />
-      </motion.div>
+    <div className="gcl-landing">
+      {/* Scroll indicator bar */}
+      <div id="pg" />
 
-      {/* 1st Place: Champion (Gold - Taller) */}
-      <motion.div
-        initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="order-1 md:order-2 flex-1 max-w-sm w-full"
-      >
-        <PodiumCard
-          rankLabel="01 / CHAMPION"
-          rankColor="#d4af37"
-          teamName={champion?.name || 'Champion Team'}
-          lots={champion?.lots ?? 0}
-          amount={champion?.amount ?? 0}
-          photoUrl={champion?.photo_url}
-          heightClass="h-[420px] sm:h-[480px]"
-          isChampion
-        />
-      </motion.div>
+      {/* Universal Nav */}
+      <Header viewMode="live" onToggleView={() => {}} />
 
-      {/* 3rd Place: Third Place (Bronze) */}
-      <motion.div
-        initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="order-3 flex-1 max-w-sm w-full"
-      >
-        <PodiumCard
-          rankLabel="03 / THIRD PLACE"
-          rankColor="#cd7f32"
-          teamName={thirdPlace?.name || 'Third Place Team'}
-          lots={thirdPlace?.lots ?? 0}
-          amount={thirdPlace?.amount ?? 0}
-          photoUrl={thirdPlace?.photo_url}
-          heightClass="h-[340px] sm:h-[380px]"
-        />
-      </motion.div>
-    </div>
-  );
-}
-
-function PodiumCard({
-  rankLabel,
-  rankColor,
-  teamName,
-  lots,
-  amount,
-  photoUrl,
-  heightClass,
-  isChampion,
-}: {
-  rankLabel: string;
-  rankColor: string;
-  teamName: string;
-  lots: number;
-  amount: number;
-  photoUrl?: string | null;
-  heightClass: string;
-  isChampion?: boolean;
-}) {
-  return (
-    <div
-      className={`relative w-full ${heightClass} bg-[#131316] border ${
-        isChampion ? 'border-[#d4af37]/40 shadow-xl shadow-amber-950/20' : 'border-[#26262b]'
-      } overflow-hidden group`}
-    >
-      {photoUrl ? (
-        <img
-          src={photoUrl}
-          alt={teamName}
-          loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-[#131316] text-[#3a3a42]">
-          <Trophy size={48} style={{ color: rankColor, opacity: 0.3 }} />
-        </div>
-      )}
-
-      {/* Bottom Dark Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col justify-end p-5 sm:p-6 pointer-events-none">
-        <span
-          className="font-mono text-xs uppercase tracking-[0.2em] font-bold mb-1"
-          style={{ color: rankColor }}
-        >
-          {rankLabel}
-        </span>
-        <h3 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-2xl sm:text-3xl text-white tracking-tight leading-tight mb-2">
-          {teamName}
-        </h3>
-        <span className="font-mono text-xs text-[#8e8e99] uppercase tracking-wider">
-          {lots} lots · {formatCurrency(amount)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Person Card Component with Animated SVG Ring ──
-function PersonCard({ person }: { person: any }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-40px' });
-
-  return (
-    <div ref={ref} className="person-card flex flex-col items-center text-center group cursor-default">
-      {/* Circular Avatar Frame (max 220px) */}
-      <div className="relative w-36 h-36 sm:w-48 sm:h-48 md:w-52 md:h-52 mb-4 flex items-center justify-center">
-        {/* SVG Animated Red Ring */}
-        <svg
-          viewBox="0 0 230 230"
-          className="absolute inset-0 w-full h-full pointer-events-none -rotate-90"
-        >
-          <circle
-            cx="115"
-            cy="115"
-            r="110"
-            fill="none"
-            stroke="#ff2a3d"
-            strokeWidth="1.5"
-            className={`svg-ring-circle ${isInView ? 'drawn' : ''}`}
-          />
-        </svg>
-
-        {/* Circular photo container */}
-        <div className="person-photo-wrap w-[86%] h-[86%] rounded-full overflow-hidden bg-[#18181c] border border-[#26262b]">
-          {person.photo_url ? (
-            <img
-              src={person.photo_url}
-              alt={person.name}
-              loading="lazy"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-[#5a5a66]">
-              <User size={40} />
+      {/* ── HERO SECTION ── */}
+      <header className="hero" id="hero" ref={heroRef}>
+        <canvas id="wv" ref={canvasRef} />
+        <div className="c hg">
+          <div>
+            <div className="k">Technical auction event / {editionLabel}</div>
+            <h1>
+              <span className="ln">
+                <span>Where code meets</span>
+              </span>
+              <span className="ln">
+                <span>
+                  the <em>hammer.</em>
+                </span>
+              </span>
+            </h1>
+            <p className="lead">A live auction for engineers. Bid, answer, win.</p>
+            <div className="cta">
+              <Link className="btn b-red" to="/live">
+                Watch live {ARROW_SVG}
+              </Link>
+              <a className="btn b-line" href="#gal">
+                Gallery
+              </a>
             </div>
-          )}
+          </div>
+
+          <div className="pf" id="pf" ref={pfRef}>
+            <div className="im" data-slot="hero_image">
+              <SmoothImage
+                src={heroImage}
+                alt={`${editionLabel} Event Arena`}
+                fetchPriority="high"
+                className="w-full h-full object-cover"
+                wrapperClassName="w-full h-full"
+                fallback={
+                  <span>
+                    {CAM_SVG}
+                    Hero photo · 4:5
+                  </span>
+                }
+              />
+            </div>
+            <svg className="rg" viewBox="0 0 120 120">
+              <defs>
+                <path id="cp" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+              </defs>
+              <text>
+                <textPath href="#cp">{editionLabel} · TECHNICAL AUCTION ·</textPath>
+              </text>
+            </svg>
+            <div className="rgi">GCL</div>
+
+            <div className="lc card" data-bind="live.round · live.question · live.bid · live.timer">
+              <div className="k">
+                <span id="lq">Round {roundNum} · Q{qNum}</span>
+                <span className="lv">
+                  <span className="dot" />
+                  <span id="ls">Live</span>
+                </span>
+              </div>
+              <div className="r">
+                <div className="amt" id="am">
+                  {bidAmtFormatted}
+                </div>
+                <div className="tm" id="tm">
+                  {timerFormatted || '01:57'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── TICKER ── */}
+      <div className="tick">
+        <div id="tk">
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, idx) => (
+            <span key={idx}>
+              {t.round} <b>{t.team}</b> <em>{t.amt}</em>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Name and Role */}
-      <h3 className="font-['Barlow_Semi_Condensed',sans-serif] font-bold uppercase text-lg sm:text-xl text-[#f4f4f6] tracking-tight leading-snug">
-        {person.name || 'Member'}
-      </h3>
-      <span className="font-mono text-xs uppercase tracking-[0.16em] text-[#8e8e99] mt-1">
-        {person.role_label}
-      </span>
+      {/* ── STATS STRIP ── */}
+      <section className="strip">
+        <div className="c">
+          <div className="sc" data-bind="teams.count">
+            <b id="s1">{totalTeams}</b>
+            <span className="k">Teams</span>
+          </div>
+          <div className="sc" data-bind="settings.starting_budget">
+            <b>
+              ₹<span id="s2">{startingBudgetCr}</span> Cr
+            </b>
+            <span className="k">Budget per team</span>
+          </div>
+          <div className="sc" data-bind="settings.rounds">
+            <b id="s3">{totalRounds}</b>
+            <span className="k">Rounds + final</span>
+          </div>
+          <div className="sc" data-bind="settings.questions_per_round">
+            <b id="s4">{questionsPerRound}</b>
+            <span className="k">Questions per round</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 01 / THE FORMAT ── */}
+      <section className="sec" style={{ paddingTop: 'clamp(40px,5vw,70px)' }}>
+        <div className="c">
+          <div className="k">01 / The format</div>
+          <h2 className="st">
+            Four moves.
+            <br />
+            <em>One champion.</em>
+          </h2>
+          <div className="fm" id="fm">
+            {FORMAT_STEPS.map((f) => (
+              <div key={f.n} className="fr rv">
+                <span className="n">{f.n}</span>
+                <h3>
+                  {f.title}
+                  <small>{f.sub}</small>
+                </h3>
+                {ARROW_SVG}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 02 / GALLERY (CAROUSEL) ── */}
+      <section id="gal" style={{ paddingBlock: 'clamp(60px,8vw,110px) 0' }}>
+        <div className="c">
+          <div className="gh">
+            <div>
+              <div className="k">02 / Gallery</div>
+              <h2 className="st">
+                The arena,
+                <br />
+                in <em>frames.</em>
+              </h2>
+            </div>
+            <Link className="btn b-line" to="/gallery">
+              View all photos {ARROW_SVG}
+            </Link>
+          </div>
+        </div>
+        <div className="hc-stage-wrap" id="hc1">
+          <HeroCarousel
+            items={carouselItems}
+            autoplay={true}
+            autoplayDelay={4500}
+            className="w-full h-full"
+          />
+        </div>
+      </section>
+
+      {/* ── 03 / HALL OF FAME ── */}
+      <section className="sec">
+        <div className="c">
+          <div className="k">03 / Hall of fame</div>
+          <h2 className="st">
+            {editionLabel}
+            <br />
+            <em>champions.</em>
+          </h2>
+          <div className="cg">
+            {/* Runner-up (Silver, 4/5) */}
+            <div className="card cd s rv">
+              <div className="im" style={{ aspectRatio: '4/5' }}>
+                <SmoothImage
+                  src={runnerUp?.photo_url}
+                  alt={runnerUp?.name || 'Runner-up'}
+                  loading="lazy"
+                  wrapperClassName="w-full h-full"
+                  className="object-cover"
+                  fallback={
+                    <span>
+                      {CAM_SVG}
+                      Runner-up photo
+                    </span>
+                  }
+                />
+              </div>
+              <div className="ov">
+                <div className="t">02 · Runner-up</div>
+                <h4>{runnerUp?.name || 'Team N – TEAM SSVA'}</h4>
+                <small>
+                  {runnerUp?.lots ? `${runnerUp.lots} lots` : '6 lots'} ·{' '}
+                  {runnerUp?.amount ? formatCurrency(runnerUp.amount) : '₹13.40 Cr'}
+                </small>
+              </div>
+            </div>
+
+            {/* Champion (Gold, 4/5.4) */}
+            <div className="card cd g rv">
+              <div className="im" style={{ aspectRatio: '4/5.4' }}>
+                <SmoothImage
+                  src={grandChamp?.photo_url}
+                  alt={grandChamp?.name || 'Grand champion'}
+                  loading="lazy"
+                  wrapperClassName="w-full h-full"
+                  className="object-cover"
+                  fallback={
+                    <span>
+                      {CAM_SVG}
+                      Champion photo
+                    </span>
+                  }
+                />
+              </div>
+              <div className="ov">
+                <div className="t">01 · Grand champion</div>
+                <h4>{grandChamp?.name || 'Team I – Jetha ke Jabaz'}</h4>
+                <small>
+                  {grandChamp?.lots ? `${grandChamp.lots} lots` : '4 lots'} ·{' '}
+                  {grandChamp?.amount ? formatCurrency(grandChamp.amount) : '₹9.70 Cr'}
+                </small>
+              </div>
+            </div>
+
+            {/* Third place (Bronze, 4/4.6) */}
+            <div className="card cd b rv">
+              <div className="im" style={{ aspectRatio: '4/4.6' }}>
+                <SmoothImage
+                  src={thirdPlace?.photo_url}
+                  alt={thirdPlace?.name || 'Third place'}
+                  loading="lazy"
+                  wrapperClassName="w-full h-full"
+                  className="object-cover"
+                  fallback={
+                    <span>
+                      {CAM_SVG}
+                      Third place photo
+                    </span>
+                  }
+                />
+              </div>
+              <div className="ov">
+                <div className="t">03 · Third place</div>
+                <h4>{thirdPlace?.name || 'Team M – Script Squad'}</h4>
+                <small>
+                  {thirdPlace?.lots ? `${thirdPlace.lots} lots` : '4 lots'} ·{' '}
+                  {thirdPlace?.amount ? formatCurrency(thirdPlace.amount) : '₹9.70 Cr'}
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 04 / THE PEOPLE ── */}
+      <section className="sec" style={{ paddingTop: 'clamp(60px,8vw,100px)' }}>
+        <div className="c">
+          <div className="k">04 / The people</div>
+          <h2 className="st">
+            Behind the <em>hammer.</em>
+          </h2>
+
+          {/* Top 4 Row: Always avatars with circle and ring */}
+          <div className="tp" id="tp">
+            {topPeople.map((p, idx) => (
+              <div key={p.k} className="pz">
+                <div className="pe xl rv">
+                  <div className="av">
+                    <div className="im">
+                      <SmoothImage
+                        src={p.photo_url}
+                        alt={p.n}
+                        loading="lazy"
+                        wrapperClassName="w-full h-full rounded-full"
+                        className="object-cover"
+                        fallback={<span>{USR_SVG}</span>}
+                      />
+                    </div>
+                    <svg className="rgg" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="49.2" />
+                    </svg>
+                  </div>
+                  <h4>{p.n}</h4>
+                  <span className="k">{p.r}</span>
+                  {p.l && <span className="ld">Lead</span>}
+                </div>
+
+                {p.toggle && (
+                  <button
+                    ref={p.toggle === 'event' ? eventBtnRef : techBtnRef}
+                    className="vb"
+                    data-b={p.toggle}
+                    aria-expanded={openTeam === p.toggle}
+                    aria-controls="pnw"
+                    onClick={() => toggleTeamPanel(p.toggle!)}
+                  >
+                    <span>
+                      <span className="vw">{openTeam === p.toggle ? 'Hide' : 'View'} </span>
+                      <span className="tl">{p.bl}</span>
+                    </span>
+                    {CHEVRON_DOWN_SVG}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Collapsible Teams Panel */}
+          <div
+            className={`pnw ${openTeam ? 'open' : ''}`}
+            id="pnw"
+            role="region"
+            aria-label="Team members"
+          >
+            <div>
+              <div id="pn" className={switchingTeam ? 'sw' : ''}>
+                {openTeam && (
+                  <div className="pnc card" ref={pncRef}>
+                    <i className="nt" style={{ left: `${notchLeft}px` }} />
+                    <div className="phd">
+                      <h3>{teamsData[openTeam].title}</h3>
+                      <button className="cls" onClick={() => setOpenTeam(null)}>
+                        Close
+                      </button>
+                    </div>
+
+                    {teamsData[openTeam].groups.map((group) => {
+                      const isExpanded = Boolean(expandedGroups[group.key]);
+                      // Apply max limit of 8 if defined and not expanded
+                      const displayedMembers =
+                        group.max && !isExpanded
+                          ? group.members.slice(0, group.max)
+                          : group.members;
+
+                      // Split into members with valid loaded photos vs without photos
+                      const withPhoto = displayedMembers.filter(
+                        (m) => Boolean(m.photo_url?.trim()) && !failedImages[m.key]
+                      );
+                      const withoutPhoto = displayedMembers.filter(
+                        (m) => !Boolean(m.photo_url?.trim()) || failedImages[m.key]
+                      );
+
+                      const totalCount = group.members.length;
+                      const hasMore = Boolean(group.max && totalCount > group.max);
+                      const moreCount = totalCount - (group.max || 8);
+
+                      return (
+                        <div key={group.key} className="grp">
+                          {/* Group header with counter */}
+                          <div className="gh2">
+                            <span className="k">{group.header}</span>
+                            <b>{String(totalCount).padStart(2, '0')}</b>
+                            <i />
+                          </div>
+
+                          {/* Avatar circles for members WITH photos */}
+                          {withPhoto.length > 0 && (
+                            <div className={`gc ${group.size}`}>
+                              {withPhoto.map((member, i) => (
+                                <div
+                                  key={member.key}
+                                  className={`pe ${group.size} on fi`}
+                                  style={{ '--d': i } as any}
+                                >
+                                  <div className="av">
+                                    <div className="im">
+                                      <SmoothImage
+                                        src={member.photo_url}
+                                        alt={member.name}
+                                        loading="lazy"
+                                        wrapperClassName="w-full h-full rounded-full"
+                                        className="object-cover"
+                                        onFail={() => handleImageFail(member.key)}
+                                      />
+                                    </div>
+                                    <svg className="rgg" viewBox="0 0 100 100">
+                                      <circle cx="50" cy="50" r="49.2" />
+                                    </svg>
+                                  </div>
+                                  <h4>{member.name}</h4>
+                                  <span className="k">{member.role}</span>
+                                  {member.isLead && <span className="ld">Lead</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Name tiles in .gn grid for members WITHOUT photos */}
+                          {withoutPhoto.length > 0 && (
+                            <div className="gn">
+                              {withoutPhoto.map((member, i) => (
+                                <div
+                                  key={member.key}
+                                  className="pn fi"
+                                  style={{ '--d': i } as any}
+                                >
+                                  <b>{member.name}</b>
+                                  <span className="k">{member.role}</span>
+                                  {member.isLead && <span className="ld">Lead</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* See more +N button */}
+                          {hasMore && (
+                            <button
+                              className="more"
+                              aria-expanded={isExpanded}
+                              onClick={() =>
+                                setExpandedGroups((prev) => ({
+                                  ...prev,
+                                  [group.key]: !prev[group.key],
+                                }))
+                              }
+                            >
+                              {isExpanded ? (
+                                'See less'
+                              ) : (
+                                <>
+                                  See more <span>+{moreCount}</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 05 / CERTIFICATES ── */}
+      <section className="sec">
+        <div className="c">
+          <div className="card cb">
+            <div className="vt">
+              <div>
+                <div className="k">05 / Certificates</div>
+                <h2 className="st">
+                  Your name.
+                  <br />
+                  <em>Your proof.</em>
+                </h2>
+              </div>
+              <div className="rv">
+                <div className="fld">
+                  <span>Enter your full name to unlock</span>
+                  <Link className="btn b-red" to="/my-certificates">
+                    Unlock
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ── */}
+      <section className="fin">
+        <div className="c">
+          <h2>
+            Be in the <em>room.</em>
+          </h2>
+          <Link className="btn b-red" to="/live">
+            Watch the live auction
+          </Link>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer>
+        <div className="c">
+          <div>
+            <div className="logo" style={{ marginBottom: 12 }}>
+              GC<b>L</b>
+            </div>
+            Gen Code League · Technical auction event
+            <br />© GCL 2025
+          </div>
+          <div>
+            <h5>Watch</h5>
+            <Link to="/live">Live auction</Link>
+            <Link to="/hall-of-fame">Hall of Fame</Link>
+            <Link to="/gallery">Gallery</Link>
+          </div>
+          <div>
+            <h5>Participants</h5>
+            <Link to="/my-certificates">Certificates</Link>
+            <Link to="/announcements">Updates</Link>
+            <Link to="/faq">FAQ</Link>
+          </div>
+          <div>
+            <h5>Event</h5>
+            <a href="#">GCL 2025</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

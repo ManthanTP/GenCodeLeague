@@ -94,9 +94,10 @@ export async function getLandingContent(): Promise<LandingContent> {
 
   const featuredGallery: GalleryPhoto[] = (galleryData || []).map((item) => ({
     ...item,
-    title: item.title || item.caption || 'Event Highlight',
+    title: item.title ?? item.caption ?? '',
     accent: item.accent || '#e8743b',
-    credit: item.credit || 'BY GCL MEDIA TEAM.',
+    credit: item.credit ?? '',
+    description: item.description || null,
     meta: Array.isArray(item.meta) ? item.meta : [],
   }));
 
@@ -249,9 +250,10 @@ export async function getPublicGalleryItems({
 
   const items: GalleryPhoto[] = (data || []).map((item) => ({
     ...item,
-    title: item.title || item.caption || 'Event Photograph',
+    title: item.title ?? item.caption ?? '',
     accent: item.accent || '#e8743b',
-    credit: item.credit || 'BY GCL MEDIA TEAM.',
+    credit: item.credit ?? '',
+    description: item.description || null,
     meta: Array.isArray(item.meta) ? item.meta : [],
     tag: item.tag || item.segment || 'General',
   }));
@@ -333,7 +335,7 @@ export async function savePerson(person: Partial<Person>) {
       .from('people')
       .update({
         name: person.name ?? '',
-        photo_url: person.photo_url ?? '',
+        photo_url: person.photo_url ? person.photo_url : null,
         sort_order: person.sort_order ?? 0,
         is_published: person.is_published ?? true,
       })
@@ -372,8 +374,9 @@ export async function saveGalleryPhoto(item: Partial<GalleryPhoto>) {
     const { error } = await supabase
       .from('gallery_photos')
       .update({
-        title: item.title,
-        credit: item.credit || 'BY GCL MEDIA TEAM.',
+        title: item.title ?? '',
+        credit: item.credit ?? '',
+        description: item.description ?? null,
         meta: item.meta || [],
         accent: item.accent || '#e8743b',
         tag: item.tag || item.segment || 'General',
@@ -390,9 +393,10 @@ export async function saveGalleryPhoto(item: Partial<GalleryPhoto>) {
       .from('gallery_photos')
       .insert({
         image_url: item.image_url!,
-        title: item.title || 'Event Photograph',
-        caption: item.title || 'Event Photograph',
-        credit: item.credit || 'BY GCL MEDIA TEAM.',
+        title: item.title ?? '',
+        caption: item.title ?? '',
+        credit: item.credit ?? '',
+        description: item.description ?? null,
         meta: item.meta || [],
         accent: item.accent || '#e8743b',
         tag: item.tag || 'General',
