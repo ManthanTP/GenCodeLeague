@@ -1,114 +1,287 @@
 /* ====================================================================
-   GalleryView.css — Filmstrip carousel & masonry archive styles
+   GalleryView.css — Filmstrip carousel & Ivory "All frames" archive
+   Reference: design/gcl-landing-v9.html (classes .hc .hhd .ht .hs .cc .rl .hint)
    ==================================================================== */
 
-.gcl-gallery-root {
-  background-color: #0a0a0c;
-  color: #f4f4f6;
-  font-family: 'Inter', system-ui, sans-serif;
+.gallery-page-root {
+  background-color: #000000;
+  color: #f3efe6;
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   overflow-x: hidden;
+  width: 100%;
   min-height: 100vh;
 }
 
-/* Archive Container */
-.gallery-shell {
-  max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: clamp(20px, 4vw, 48px);
-  padding-right: clamp(20px, 4vw, 48px);
+/* Sized wrapper for the HeroCarousel */
+.gallery-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  height: min(88vh, 860px);
+  min-height: 540px;
+  background-color: #000000;
+  overflow: hidden;
 }
 
-/* Filter Chip Pill Buttons */
-.gallery-filter-chip {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+/* ── Reference Carousel Classes (from gcl-landing-v9.html) ── */
+.hc {
+  position: relative;
+  overflow: hidden;
+  background: #000000;
+  height: 100%;
+  user-select: none;
+  outline: none;
+  touch-action: pan-y;
+}
+
+.hc:focus-visible {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.hhd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50%;
+  display: flex;
+  align-items: flex-end;
+  gap: 5vw;
+  flex-wrap: wrap;
+}
+
+.ht {
+  font-family: var(--hd, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-weight: 700;
+  font-size: clamp(40px, 7.2vw, 118px);
+  line-height: 0.88;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background-color: #131316;
-  color: #8e8e99;
-  border: 1px solid #26262b;
+}
+
+.cr,
+.mt span {
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mt {
+  margin-left: auto;
+  display: flex;
+  gap: clamp(16px, 3vw, 48px);
+}
+
+.hs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+}
+
+.cc {
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0;
+}
+
+.rl {
+  position: absolute;
+  width: min(22%, 260px);
+}
+
+.rl div {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.hint {
+  position: absolute;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+@media (max-width: 960px) {
+  .hint {
+    display: none !important;
+  }
+  .mt {
+    margin-left: 0;
+  }
+}
+
+/* ── Ivory Section: "All frames" ── */
+.gallery-ivory-section {
+  background-color: #f3efe6;
+  color: #0c0c10;
+  padding-block: clamp(60px, 8vw, 100px);
+  position: relative;
+  width: 100%;
+}
+
+.gallery-ivory-container {
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 44px);
+}
+
+.gallery-ivory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: clamp(32px, 5vw, 48px);
+}
+
+.gallery-ivory-eyebrow {
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0c0c10;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.gallery-ivory-title {
+  font-family: var(--hd, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-size: clamp(38px, 6vw, 76px);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #0c0c10;
+}
+
+/* Filter Chips */
+.gallery-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gallery-tag-chip {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(12, 12, 16, 0.22);
+  background: transparent;
+  color: #0c0c10;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   white-space: nowrap;
 }
 
-.gallery-filter-chip:hover {
-  border-color: #ff2a3d;
-  color: #f4f4f6;
+.gallery-tag-chip:hover {
+  background: rgba(12, 12, 16, 0.06);
+  border-color: #0c0c10;
 }
 
-.gallery-filter-chip.active {
-  border-color: #ff2a3d;
-  color: #ff2a3d;
-  background-color: rgba(255, 42, 61, 0.08);
-  font-weight: 700;
+.gallery-tag-chip.active {
+  background: #0c0c10;
+  color: #f3efe6;
+  border-color: #0c0c10;
 }
 
-/* CSS Columns Masonry Grid */
-.gallery-masonry-grid {
-  columns: 4;
-  column-gap: 16px;
+/* Grid of tiles: 3 columns desktop, 2 mobile, aspect 4:5 */
+.gallery-frames-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(16px, 2.5vw, 28px);
 }
 
-@media (max-width: 1200px) {
-  .gallery-masonry-grid {
-    columns: 3;
-    column-gap: 16px;
+@media (max-width: 768px) {
+  .gallery-frames-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 }
 
-@media (max-width: 840px) {
-  .gallery-masonry-grid {
-    columns: 2;
-    column-gap: 14px;
-  }
+.gallery-frame-tile {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #e9e4d7;
+  border: 1px solid rgba(12, 12, 16, 0.12);
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
 
-@media (max-width: 520px) {
-  .gallery-masonry-grid {
-    columns: 1;
-    column-gap: 0;
-  }
+.gallery-frame-tile:hover {
+  transform: scale(1.03);
+  box-shadow: 0 16px 36px rgba(12, 12, 16, 0.16);
 }
 
-.gallery-masonry-item {
-  break-inside: avoid;
-  margin-bottom: 16px;
+.gallery-frame-tile:focus-visible {
+  outline: 2px solid #0c0c10;
+  outline-offset: 2px;
+}
+
+.gallery-frame-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
-/* Card hover and borders */
-.gallery-card-inner {
-  background-color: #131316;
-  border: 1px solid #26262b;
-  overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-  cursor: pointer;
-}
-
-.gallery-card-inner:hover {
-  border-color: #ff2a3d;
-  transform: translateY(-2px);
-}
-
-/* Lightbox Modal */
-.gallery-lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background-color: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(16px);
+.gallery-frame-overlay {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: clamp(12px, 2vw, 20px);
+  background: linear-gradient(to top, rgba(12, 12, 16, 0.94) 0%, rgba(12, 12, 16, 0.6) 55%, transparent 100%);
+  color: #f3efe6;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.gallery-frame-title {
+  font-family: var(--hd, 'Barlow Semi Condensed', system-ui, sans-serif);
+  font-weight: 700;
+  font-size: clamp(15px, 1.6vw, 22px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: #f3efe6;
+  margin-bottom: 4px;
+}
+
+.gallery-frame-credit {
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 230, 0.7);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gallery-card-inner:hover {
+  .gallery-frame-tile:hover {
     transform: none !important;
   }
 }

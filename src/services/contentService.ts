@@ -95,7 +95,7 @@ export async function getLandingContent(): Promise<LandingContent> {
   const featuredGallery: GalleryPhoto[] = (galleryData || []).map((item) => ({
     ...item,
     title: item.title || item.caption || 'Event Highlight',
-    accent: item.accent || '#8a8a8a',
+    accent: item.accent || '#e8743b',
     credit: item.credit || 'BY GCL MEDIA TEAM.',
     meta: Array.isArray(item.meta) ? item.meta : [],
   }));
@@ -250,7 +250,7 @@ export async function getPublicGalleryItems({
   const items: GalleryPhoto[] = (data || []).map((item) => ({
     ...item,
     title: item.title || item.caption || 'Event Photograph',
-    accent: item.accent || '#8a8a8a',
+    accent: item.accent || '#e8743b',
     credit: item.credit || 'BY GCL MEDIA TEAM.',
     meta: Array.isArray(item.meta) ? item.meta : [],
     tag: item.tag || item.segment || 'General',
@@ -375,7 +375,7 @@ export async function saveGalleryPhoto(item: Partial<GalleryPhoto>) {
         title: item.title,
         credit: item.credit || 'BY GCL MEDIA TEAM.',
         meta: item.meta || [],
-        accent: item.accent || '#8a8a8a',
+        accent: item.accent || '#e8743b',
         tag: item.tag || item.segment || 'General',
         segment: item.tag || item.segment || 'General',
         edition_id: item.edition_id || null,
@@ -394,7 +394,7 @@ export async function saveGalleryPhoto(item: Partial<GalleryPhoto>) {
         caption: item.title || 'Event Photograph',
         credit: item.credit || 'BY GCL MEDIA TEAM.',
         meta: item.meta || [],
-        accent: item.accent || '#8a8a8a',
+        accent: item.accent || '#e8743b',
         tag: item.tag || 'General',
         segment: item.tag || 'General',
         edition_id: item.edition_id || null,

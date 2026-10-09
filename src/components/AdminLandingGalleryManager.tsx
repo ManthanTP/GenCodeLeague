@@ -292,7 +292,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
             caption: fileNameClean,
             credit: 'BY GCL MEDIA TEAM.',
             meta: [],
-            accent: '#8a8a8a',
+            accent: '#e8743b',
             tag: 'General',
             edition_id: selectedEditionId || null,
             is_featured: false,
@@ -1208,7 +1208,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                   />
                   <div
                     className="absolute bottom-0 inset-x-0 h-2"
-                    style={{ backgroundColor: editingPhoto.accent || '#8a8a8a' }}
+                    style={{ backgroundColor: editingPhoto.accent || '#e8743b' }}
                   />
                 </div>
 
@@ -1220,7 +1220,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
-                      value={editingPhoto.accent || '#8a8a8a'}
+                      value={editingPhoto.accent || '#e8743b'}
                       onChange={(e) =>
                         setEditingPhoto((prev) => (prev ? { ...prev, accent: e.target.value } : null))
                       }
@@ -1228,7 +1228,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                     />
                     <input
                       type="text"
-                      value={editingPhoto.accent || '#8a8a8a'}
+                      value={editingPhoto.accent || '#e8743b'}
                       onChange={(e) =>
                         setEditingPhoto((prev) => (prev ? { ...prev, accent: e.target.value } : null))
                       }
@@ -1254,6 +1254,9 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                     placeholder="e.g. ARENA IN FOCUS\nROUND TWO"
                     className="w-full px-3 py-2 bg-[#0a0a0c] border border-[#26262b] rounded-lg text-white font-mono text-xs focus:border-[#ff2a3d] outline-none"
                   />
+                  <p className="text-[11px] text-[#71717a] mt-1 font-mono">
+                    Shown as the headline. Leave empty to show Frame 01.
+                  </p>
                 </div>
 
                 {/* Credit */}

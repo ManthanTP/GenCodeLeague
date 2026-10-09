@@ -135,14 +135,20 @@ export default function LandingPage() {
   // Format Carousel Items
   const carouselItems: HeroCarouselItem[] = useMemo(() => {
     if (!content?.featuredGallery || content.featuredGallery.length === 0) return [];
-    return content.featuredGallery.map((g) => ({
-      id: g.id,
-      title: (g.title || 'Event Highlight').toUpperCase(),
-      image: g.image_url,
-      credit: g.credit || 'BY GCL MEDIA TEAM.',
-      meta: Array.isArray(g.meta) && g.meta.length > 0 ? g.meta : [g.tag || 'GCL MOMENTS'],
-      accent: g.accent || '#8a8a8a',
-    }));
+    return content.featuredGallery.map((g) => {
+      const rawAccent = g.accent?.trim();
+      const accent =
+        !rawAccent || rawAccent.toLowerCase() === '#8a8a8a' ? undefined : rawAccent;
+
+      return {
+        id: g.id,
+        title: g.title || '',
+        image: g.image_url,
+        credit: g.credit || 'BY GCL MEDIA TEAM.',
+        meta: Array.isArray(g.meta) && g.meta.length > 0 ? g.meta : [g.tag || 'GCL MOMENTS'],
+        accent,
+      };
+    });
   }, [content?.featuredGallery]);
 
   // Determine current round base price

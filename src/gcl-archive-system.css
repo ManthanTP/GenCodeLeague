@@ -1131,7 +1131,7 @@
 /* Cyber Gradients & Directional Utilities */
 .bg-gradient-to-r { background-image: linear-gradient(to right, var(--tw-gradient-stops, #06b6d4, #e0263f)) !important; }
 .bg-gradient-to-l { background-image: linear-gradient(to left, var(--tw-gradient-stops, #06b6d4, #e0263f)) !important; }
-.bg-gradient-to-b { background-image: linear-gradient(to bottom, var(--tw-gradient-stops, #18181c, #020617)) !important; }
+.bg-gradient-to-b { background-image: linear-gradient(to bottom, var(--tw-gradient-stops, transparent)) !important; }
 .bg-gradient-to-t { background-image: linear-gradient(to top, var(--tw-gradient-stops, rgba(0, 0, 0, 0.9), transparent)) !important; }
 
 .from-cyan-400 { --tw-gradient-from: #22d3ee; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(34, 211, 238, 0)); }

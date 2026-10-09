@@ -59,6 +59,11 @@
   --font-display: 'Inter', 'Outfit', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-hd: 'Barlow Semi Condensed', system-ui, sans-serif;
+  --hd: 'Barlow Semi Condensed', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --ink: #0c0c10;
+  --ivory: #f3efe6;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
