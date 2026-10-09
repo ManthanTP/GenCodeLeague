@@ -512,39 +512,63 @@ export default function LandingPage() {
   const runnerUp = podium?.runnerUp;
   const thirdPlace = podium?.thirdPlace;
 
-  // ── Top 4 People Setup ──
+  // ── Leadership Tier Split (3 in top line, 2 in bottom line) ──
   const peopleDb = content?.people || [];
-  const findDbPerson = (roles: string[]) =>
-    peopleDb.find((p) => roles.some((r) => p.role_label.toLowerCase() === r.toLowerCase()));
 
-  const hodPerson = findDbPerson(['H.O.D', 'HOD']);
-  const facultyPerson = findDbPerson(['Faculty coordinator', 'Faculty']);
-  const studentPerson = findDbPerson(['Student coordinator', 'Event coordinator']);
-  const devPerson = findDbPerson(['Developer', 'Dev']);
+  const hodPerson = peopleDb.find((p) =>
+    ['h.o.d', 'hod'].some((r) => p.role_label.toLowerCase() === r)
+  );
 
-  const topPeople = [
+  const facultyPeople = peopleDb.filter((p) =>
+    ['faculty coordinator', 'faculty'].some((r) => p.role_label.toLowerCase().includes(r))
+  );
+
+  const additionalFaculty = facultyPeople[1] || peopleDb.find((p) =>
+    p.category === 'leadership' &&
+    p.id !== hodPerson?.id &&
+    p.id !== facultyPeople[0]?.id &&
+    !p.role_label.toLowerCase().includes('student') &&
+    !p.role_label.toLowerCase().includes('developer')
+  );
+
+  const studentPerson = peopleDb.find((p) =>
+    ['student coordinator', 'event coordinator', 'event lead'].some((r) => p.role_label.toLowerCase() === r)
+  );
+  const devPerson = peopleDb.find((p) =>
+    ['developer', 'dev', 'technical lead', 'tech lead'].some((r) => p.role_label.toLowerCase() === r)
+  );
+
+  // Top row: 3 faculty / department anchors in one line
+  const facultyPeopleList = [
     {
       k: 'hod',
       r: 'H.O.D',
       n: hodPerson?.name || 'Dr. Maheshkumar Patil',
       photo_url: hodPerson?.photo_url || null,
       l: false,
-      toggle: null,
-      bl: '',
     },
     {
-      k: 'faculty',
+      k: 'faculty_1',
       r: 'Faculty coordinator',
-      n: facultyPerson?.name || 'Prof. Amrutha Naveen',
-      photo_url: facultyPerson?.photo_url || null,
+      n: facultyPeople[0]?.name || 'Prof. Amrutha Naveen',
+      photo_url: facultyPeople[0]?.photo_url || null,
       l: false,
-      toggle: null,
-      bl: '',
     },
+    {
+      k: 'faculty_2',
+      r: additionalFaculty?.role_label || 'Faculty coordinator',
+      n: additionalFaculty?.name || 'Faculty coordinator',
+      photo_url: additionalFaculty?.photo_url || null,
+      l: false,
+    },
+  ];
+
+  // Bottom row: 2 student / developer leads down
+  const leadPeopleList = [
     {
       k: 'student',
       r: 'Student coordinator',
-      n: studentPerson?.name || 'Student coordinator name',
+      n: studentPerson?.name || 'Avaneesh Bhirdi',
       photo_url: studentPerson?.photo_url || null,
       l: true,
       toggle: 'event' as const,
@@ -1084,9 +1108,37 @@ export default function LandingPage() {
             Behind the <em>hammer.</em>
           </h2>
 
-          {/* Top 4 Row: Always avatars with circle and ring */}
-          <div className="tp" id="tp">
-            {topPeople.map((p, idx) => (
+          {/* Top Row: 3 in one line (H.O.D + 2 Faculty Coordinators) */}
+          <div className="tp tp-top" id="tp-top">
+            {facultyPeopleList.map((p) => (
+              <div key={p.k} className="pz">
+                <div className="pe xl rv">
+                  <div className="av">
+                    <div className="im">
+                      <SmoothImage
+                        src={p.photo_url}
+                        alt={p.n}
+                        loading="lazy"
+                        wrapperClassName="w-full h-full rounded-full"
+                        className="object-cover"
+                        fallback={<span>{USR_SVG}</span>}
+                      />
+                    </div>
+                    <svg className="rgg" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="49.2" />
+                    </svg>
+                  </div>
+                  <h4>{p.n}</h4>
+                  <span className="k">{p.r}</span>
+                  {p.l && <span className="ld">Lead</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom Row: 2 down (Student Coordinator Lead + Developer Lead) */}
+          <div className="tp tp-bottom" id="tp-bottom">
+            {leadPeopleList.map((p) => (
               <div key={p.k} className="pz">
                 <div className="pe xl rv">
                   <div className="av">

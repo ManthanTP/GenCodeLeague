@@ -195,20 +195,21 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     }
   };
 
-  const handleAddPerson = (category: 'event' | 'tech') => {
+  const handleAddPerson = (category: 'leadership' | 'event' | 'tech') => {
+    const isLeadership = category === 'leadership';
     const isEvent = category === 'event';
     const newPerson: Person = {
       id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      role_label: isEvent ? 'Event coordinator' : 'Technical team',
+      role_label: isLeadership ? 'Faculty coordinator' : isEvent ? 'Event coordinator' : 'Technical team',
       name: '',
       photo_url: '',
       sort_order: people.length + 1,
       is_published: true,
       category,
-      group_name: isEvent ? 'Event coordinators' : 'Technical members',
+      group_name: isLeadership ? 'Leadership' : isEvent ? 'Event coordinators' : 'Technical members',
     };
     setPeople((prev) => [...prev, newPerson]);
-    onShowToast(`Added new ${isEvent ? 'event' : 'technical'} team member`, 'info');
+    onShowToast(`Added new ${category} member`, 'info');
   };
 
   const handleDeletePerson = async (id: string) => {
@@ -679,14 +680,25 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
 
           {/* Section 1: Leadership (Top 4) */}
           <div className="admin-card space-y-4">
-            <div className="border-b border-[#202024] pb-3">
-              <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#ff2a3d]" />
-                <span>1. Core Leadership (HOD, Faculty, Student Lead, Developer)</span>
-              </h4>
-              <p className="text-xs text-[#8e8e9a] mt-0.5">
-                These 4 primary anchors appear directly in the top row under "Behind the hammer".
-              </p>
+            <div className="flex items-center justify-between border-b border-[#202024] pb-3">
+              <div>
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#ff2a3d]" />
+                  <span>1. Core Leadership & Faculty (Behind the hammer)</span>
+                </h4>
+                <p className="text-xs text-[#8e8e9a] mt-0.5">
+                  Top tier (HOD & Faculty Coordinators in line 1) and Leads (Student Coordinator & Developer in line 2).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleAddPerson('leadership')}
+                className="px-4 py-2 bg-[#18181c] hover:bg-[#25252c] text-white border border-[#2f2f38] hover:border-[#ff2a3d] font-mono text-xs font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={14} className="text-[#ff2a3d]" />
+                <span>Add Leadership Member</span>
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -713,9 +725,18 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       </div>
 
                       <div>
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
-                          {person.role_label}
-                        </span>
+                        <input
+                          type="text"
+                          value={person.role_label}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPeople((prev) =>
+                              prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
+                            );
+                          }}
+                          placeholder="Role (e.g. Faculty coordinator)"
+                          className="px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-mono text-[10px] font-bold uppercase focus:border-[#ff2a3d] outline-none"
+                        />
                         <div className="mt-1.5">
                           <input
                             type="text"
@@ -778,6 +799,14 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       >
                         {person.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
                         <span>{person.is_published ? 'Visible' : 'Hidden'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePerson(person.id)}
+                        className="p-1.5 text-[#71717a] hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-colors cursor-pointer"
+                        title="Delete member"
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>

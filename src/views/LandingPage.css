@@ -594,10 +594,19 @@
 /* people */
 .gcl-landing .tp {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 28px;
-  margin-top: 48px;
+  gap: 36px;
   align-items: stretch;
+  justify-content: center;
+}
+
+.gcl-landing .tp-top {
+  grid-template-columns: repeat(3, minmax(0, 320px));
+  margin-top: 52px;
+}
+
+.gcl-landing .tp-bottom {
+  grid-template-columns: repeat(2, minmax(0, 320px));
+  margin-top: 40px;
 }
 
 .gcl-landing .pz {
@@ -1069,8 +1078,15 @@
     order: -1;
   }
   .gcl-landing .tp {
-    grid-template-columns: 1fr 1fr;
-    gap: 36px 16px;
+    gap: 32px 16px;
+  }
+  .gcl-landing .tp-top {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin-top: 36px;
+  }
+  .gcl-landing .tp-bottom {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin-top: 28px;
   }
   .gcl-landing .pe.xl { --s: 148px; }
   .gcl-landing .pe.lg { --s: 128px; }
