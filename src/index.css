@@ -4896,6 +4896,16 @@ select.gcl-input option {
 /* ====================================================================
    Hero Carousel Utilities & Overrides
    ==================================================================== */
+.inset-x-0 {
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.inset-y-0 {
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
 .ml-auto {
   margin-left: auto !important;
 }
