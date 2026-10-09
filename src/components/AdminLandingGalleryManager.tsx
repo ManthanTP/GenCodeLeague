@@ -749,11 +749,14 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
               {people
                 .filter((p) => {
                   const r = (p.role_label || '').toLowerCase();
+                  const n = (p.name || '').toLowerCase();
                   return (
                     (!p.category || p.category === 'leadership') &&
                     !r.includes('student') &&
                     !r.includes('developer') &&
-                    !r.includes('dev')
+                    !r.includes('dev') &&
+                    !n.includes('avaneesh') &&
+                    !n.includes('manthan')
                   );
                 })
                 .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -928,9 +931,14 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
               {people
                 .filter((p) => {
                   const r = (p.role_label || '').toLowerCase();
+                  const n = (p.name || '').toLowerCase();
                   return (
                     (!p.category || p.category === 'leadership') &&
-                    (r.includes('student') || r.includes('developer') || r.includes('dev'))
+                    (r.includes('student') ||
+                      r.includes('developer') ||
+                      r.includes('dev') ||
+                      n.includes('avaneesh') ||
+                      n.includes('manthan'))
                   );
                 })
                 .map((person) => (
@@ -954,9 +962,23 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                       </div>
 
                       <div>
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
-                          {person.role_label} · Lead
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18181c] border border-[#2a2a30] text-[#ff2a3d] font-bold">
+                            Lead
+                          </span>
+                          <input
+                            type="text"
+                            value={person.role_label}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPeople((prev) =>
+                                prev.map((p) => (p.id === person.id ? { ...p, role_label: val } : p))
+                              );
+                            }}
+                            placeholder="Role (e.g. Student coordinator)"
+                            className="px-2 py-0.5 bg-[#18181c] border border-[#2a2a30] rounded text-[#ccc] font-mono text-[10px] font-bold uppercase focus:border-[#ff2a3d] outline-none"
+                          />
+                        </div>
                         <div className="mt-1.5">
                           <input
                             type="text"

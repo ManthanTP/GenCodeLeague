@@ -518,7 +518,14 @@ export default function LandingPage() {
   // Exclude Student Coordinator and Developer from the top tier
   const isBottomLead = (p: typeof peopleDb[0]) => {
     const r = (p.role_label || '').toLowerCase();
-    return r.includes('student') || r.includes('developer') || r.includes('dev');
+    const n = (p.name || '').toLowerCase();
+    return (
+      r.includes('student') ||
+      r.includes('developer') ||
+      r.includes('dev') ||
+      n.includes('avaneesh') ||
+      n.includes('manthan')
+    );
   };
 
   // Top 3 faculty/department leadership members sorted strictly by sort_order
@@ -526,11 +533,11 @@ export default function LandingPage() {
     .filter((p) => (!p.category || p.category === 'leadership') && !isBottomLead(p))
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-  // Default fallback if fewer than 3 are present in DB
+  // Fixed top tier values (Principal, H.O.D, Faculty coordinator)
   const defaultTopTier = [
+    { name: 'Dr. Prashanth Banakar', role: 'Principal', photo_url: null },
     { name: 'Dr. Maheshkumar Patil', role: 'H.O.D', photo_url: null },
     { name: 'Prof. Amrutha Naveen', role: 'Faculty coordinator', photo_url: null },
-    { name: 'Faculty coordinator', role: 'Faculty coordinator', photo_url: null },
   ];
 
   // Top row: strictly in the arranged position order (Position 1, Position 2, Position 3)
@@ -546,22 +553,24 @@ export default function LandingPage() {
     };
   });
 
-  // Bottom 2 leads: Student Coordinator and Developer
+  // Bottom 2 leads: Student Coordinator and Developer (matching by role or name)
   const studentPerson = peopleDb.find((p) => {
     const r = (p.role_label || '').toLowerCase();
-    return r.includes('student');
+    const n = (p.name || '').toLowerCase();
+    return r.includes('student') || n.includes('avaneesh');
   });
 
   const devPerson = peopleDb.find((p) => {
     const r = (p.role_label || '').toLowerCase();
-    return r.includes('developer') || r.includes('dev');
+    const n = (p.name || '').toLowerCase();
+    return r.includes('developer') || r.includes('dev') || n.includes('manthan');
   });
 
-  // Bottom row: 2 student / developer leads down
+  // Bottom row: 2 student / developer leads down (fixed values with uploaded photos)
   const leadPeopleList = [
     {
       k: 'student',
-      r: 'Student coordinator',
+      r: studentPerson?.role_label || 'Student coordinator',
       n: studentPerson?.name || 'Avaneesh Bhirdi',
       photo_url: studentPerson?.photo_url || null,
       l: true,
@@ -570,7 +579,7 @@ export default function LandingPage() {
     },
     {
       k: 'dev',
-      r: 'Developer',
+      r: devPerson?.role_label || 'Developer',
       n: devPerson?.name || 'Manthan Patel',
       photo_url: devPerson?.photo_url || null,
       l: true,
