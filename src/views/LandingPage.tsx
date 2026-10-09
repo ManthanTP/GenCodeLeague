@@ -13,8 +13,13 @@ import { formatCredit, splitFacts } from '../lib/gallery-text';
 import { supabase } from '../lib/supabase';
 import './LandingPage.css';
 
-const DEFAULT_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2400&q=80';
+const getCachedHeroImage = (): string => {
+  try {
+    return localStorage.getItem('gcl_cached_hero_image_url') || '';
+  } catch (e) {
+    return '';
+  }
+};
 
 const CAM_SVG = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -369,8 +374,17 @@ export default function LandingPage() {
     }
   };
 
-  const editionLabel = content?.settings?.edition_label || edition?.name || 'GCL 2025';
-  const heroImage = content?.settings?.hero_image_url || DEFAULT_HERO_IMAGE;
+  const rawEdition = content?.settings?.edition_label || edition?.name || 'GCL 2026';
+  const editionLabel = rawEdition.includes('2025') ? rawEdition.replace('2025', '2026') : (rawEdition || 'GCL 2026');
+  const heroImage = content?.settings?.hero_image_url || getCachedHeroImage();
+
+  useEffect(() => {
+    if (content?.settings?.hero_image_url) {
+      try {
+        localStorage.setItem('gcl_cached_hero_image_url', content.settings.hero_image_url);
+      } catch (e) {}
+    }
+  }, [content?.settings?.hero_image_url]);
 
   // Carousel Items mapped strictly per prompt:
   // { id: r.id, title: r.title ?? "", image: r.photo_url || r.image_url,
@@ -825,7 +839,7 @@ export default function LandingPage() {
           </div>
           <div className="sc" data-bind="settings.rounds">
             <b id="s3">{totalRounds}</b>
-            <span className="k">Rounds + final</span>
+            <span className="k">Rounds</span>
           </div>
           <div className="sc" data-bind="settings.questions_per_round">
             <b id="s4">{questionsPerRound}</b>
@@ -872,7 +886,7 @@ export default function LandingPage() {
           {/* Interactive Pop-up Explaining the Format Step on Click */}
           {activeFormatStep && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-3xl animate-fade-in"
               onClick={() => setActiveFormatStep(null)}
               role="dialog"
               aria-modal="true"
@@ -891,14 +905,6 @@ export default function LandingPage() {
                       Tournament Rules
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveFormatStep(null)}
-                    className="text-[#8e8e9a] hover:text-white p-1 rounded-lg hover:bg-[#18181c] transition-colors cursor-pointer"
-                    aria-label="Close explanation"
-                  >
-                    {CLOSE_SVG}
-                  </button>
                 </div>
 
                 <div className="mt-5 space-y-4">

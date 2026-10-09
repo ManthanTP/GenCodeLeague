@@ -327,7 +327,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
             credit: 'GCL Media Team',
             description: null,
             meta: [],
-            accent: '#e8743b',
+            accent: '#180a0f',
             tag: 'General',
             edition_id: selectedEditionId || null,
             is_featured: false,

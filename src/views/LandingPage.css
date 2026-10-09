@@ -407,12 +407,21 @@
 
 .gcl-landing .sc b {
   display: block;
-  font: 700 clamp(44px, 5vw, 76px)/1 var(--hd);
-  margin-bottom: 6px;
+  font: 700 clamp(54px, 6vw, 92px)/1 var(--hd);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 
 .gcl-landing .sc b span {
   color: var(--red);
+}
+
+.gcl-landing .sc .k {
+  display: block;
+  font: 600 clamp(13px, 1.15vw, 16px) var(--mono);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #a2a2b0;
 }
 
 .gcl-landing .sec {

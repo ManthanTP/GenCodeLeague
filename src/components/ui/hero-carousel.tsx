@@ -76,7 +76,7 @@ const WHEEL_THRESHOLD = 60
 const WHEEL_COOLDOWN = 420
 const FADE_MS = 700
 
-const DEFAULT_ACCENT = "#e8743b"
+const DEFAULT_ACCENT = "#180a0f"
 const HEAD_FONT = 'var(--font-hd, "Barlow Semi Condensed"), system-ui, sans-serif'
 const MONO_FONT = "ui-monospace, SFMono-Regular, Menlo, monospace"
 
@@ -87,10 +87,9 @@ const GRAIN =
 const clamp = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, n))
 
-/** Inline placeholder so a missing or broken photo never leaves an empty frame. */
-const placeholder = (accent: string) =>
+const placeholder = (_accent?: string) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${accent}'/><stop offset='1' stop-color='#110b0d'/></linearGradient></defs><rect width='300' height='400' fill='url(#g)'/></svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#180a0f'/><stop offset='1' stop-color='#07070a'/></linearGradient></defs><rect width='300' height='400' fill='url(#g)'/></svg>`
   )}`
 
 /** True for empty titles and raw file names such as "IMG 20251127 164448681". */

@@ -17,57 +17,17 @@ interface GalleryFrameItem extends HeroCarouselItem {
   tag?: string;
 }
 
-// 6 Default Editorial Frames (matching v11 reference) if no published items exist
-const DEFAULT_FRAMES: GalleryFrameItem[] = [
-  {
-    id: 'def-1',
-    title: 'Opening\nRound',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
-    tag: 'Round 1',
-  },
-  {
-    id: 'def-2',
-    title: 'Bidding\nFloor',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
-    tag: 'Round 1',
-  },
-  {
-    id: 'def-3',
-    title: 'The Hammer\nDrops',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
-    tag: 'Round 2',
-  },
-  {
-    id: 'def-4',
-    title: 'Team\nHuddle',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
-    tag: 'Teams',
-  },
-  {
-    id: 'def-5',
-    title: 'Podium\nReveal',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'FINAL', 'PODIUM'],
-    tag: 'Final',
-  },
-  {
-    id: 'def-6',
-    title: 'Certificate\nHandover',
-    image: '',
-    credit: 'BY GCL MEDIA TEAM.',
-    meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
-    tag: 'Awards',
-  },
-];
+// Cached gallery items helper to prevent any initial layout shift or empty flashes
+const getInitialGalleryItems = (): GalleryFrameItem[] => {
+  try {
+    const cached = localStorage.getItem('gcl_gallery_items_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return [];
+};
 
 export default function GalleryView() {
   const reducedMotion = useReducedMotion();
@@ -76,9 +36,12 @@ export default function GalleryView() {
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
   const [scrollProgress, setScrollProgress] = useState<number>(0);
 
-  // Gallery items loaded from published gallery_items
-  const [galleryItems, setGalleryItems] = useState<GalleryFrameItem[]>(DEFAULT_FRAMES);
+  // Gallery items loaded from published gallery_items or local cache
+  const [galleryItems, setGalleryItems] = useState<GalleryFrameItem[]>(getInitialGalleryItems);
   const [activeTag, setActiveTag] = useState<string>('All');
+
+  // Lightbox Modal state for full image viewer
+  const [selectedImage, setSelectedImage] = useState<GalleryFrameItem | null>(null);
 
   useEffect(() => {
     document.title = 'Gen Code League | Gallery';
@@ -151,6 +114,9 @@ export default function GalleryView() {
 
           if (mapped.length > 0) {
             setGalleryItems(mapped);
+            try {
+              localStorage.setItem('gcl_gallery_items_cache', JSON.stringify(mapped));
+            } catch (e) {}
           }
         }
       } catch (e) {
@@ -178,13 +144,59 @@ export default function GalleryView() {
     return galleryItems.filter((item) => item.tag === activeTag);
   }, [activeTag, galleryItems]);
 
-  // Tile click handler: smooth-scroll to top and focus item in carousel
-  const handleTileClick = (item: GalleryFrameItem) => {
-    const targetIdx = galleryItems.findIndex((it) => it.id === item.id);
-    if (targetIdx !== -1) {
-      setCarouselIndex(targetIdx);
+  // Lightbox keyboard navigation (Esc to close, ArrowLeft / ArrowRight to navigate)
+  useEffect(() => {
+    if (!selectedImage) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedImage(null);
+      } else if (e.key === 'ArrowLeft') {
+        const curIdx = filteredTiles.findIndex((t) => t.id === selectedImage.id);
+        if (curIdx > 0) {
+          setSelectedImage(filteredTiles[curIdx - 1]);
+        } else if (curIdx === 0 && filteredTiles.length > 1) {
+          setSelectedImage(filteredTiles[filteredTiles.length - 1]);
+        }
+      } else if (e.key === 'ArrowRight') {
+        const curIdx = filteredTiles.findIndex((t) => t.id === selectedImage.id);
+        if (curIdx !== -1 && curIdx < filteredTiles.length - 1) {
+          setSelectedImage(filteredTiles[curIdx + 1]);
+        } else if (curIdx === filteredTiles.length - 1 && filteredTiles.length > 1) {
+          setSelectedImage(filteredTiles[0]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedImage, filteredTiles]);
+
+  const selectedIndex = selectedImage
+    ? filteredTiles.findIndex((t) => t.id === selectedImage.id)
+    : -1;
+
+  const handlePrevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (selectedIndex > 0) {
+      setSelectedImage(filteredTiles[selectedIndex - 1]);
+    } else if (filteredTiles.length > 1) {
+      setSelectedImage(filteredTiles[filteredTiles.length - 1]);
     }
-    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  };
+
+  const handleNextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (selectedIndex !== -1 && selectedIndex < filteredTiles.length - 1) {
+      setSelectedImage(filteredTiles[selectedIndex + 1]);
+    } else if (filteredTiles.length > 1) {
+      setSelectedImage(filteredTiles[0]);
+    }
+  };
+
+  // Tile click handler: opens the full image viewer without scrolling to top
+  const handleTileClick = (item: GalleryFrameItem) => {
+    setSelectedImage(item);
   };
 
   return (
@@ -205,14 +217,24 @@ export default function GalleryView() {
             id="hc1"
             data-slot="gallery_items: photo, title, photo by, description (each editable per photo)"
           >
-            <HeroCarousel
-              items={galleryItems}
-              index={carouselIndex}
-              onIndexChange={setCarouselIndex}
-              autoplay={!reducedMotion}
-              autoplayDelay={4500}
-              className="w-full h-full"
-            />
+            {galleryItems.length > 0 ? (
+              <HeroCarousel
+                items={galleryItems}
+                index={carouselIndex}
+                onIndexChange={setCarouselIndex}
+                autoplay={!reducedMotion}
+                autoplayDelay={4500}
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#07070a] relative">
+                <SmoothImage
+                  src={null}
+                  wrapperClassName="w-full h-full"
+                  className="w-full h-full"
+                />
+              </div>
+            )}
           </div>
         </section>
 
@@ -246,7 +268,7 @@ export default function GalleryView() {
               </div>
             </div>
 
-            {/* Grid of tiles: 3 columns desktop, 2 mobile, aspect 4:5 */}
+            {/* Grid of tiles: responsive spacious grid */}
             <div className="ag" id="ag">
               {filteredTiles.map((item, idx) => (
                 <div
@@ -273,7 +295,7 @@ export default function GalleryView() {
                     />
                   </div>
 
-                  {/* Title and credit overlay: empty means hidden, never placeholder */}
+                  {/* Title and credit overlay */}
                   {(item.title || item.credit) && (
                     <div className="ov">
                       {item.title ? <b>{item.title.replace(/\n/g, ' ')}</b> : null}
@@ -285,6 +307,106 @@ export default function GalleryView() {
             </div>
           </div>
         </section>
+
+        {/* ====================================================================
+            VIEW IMAGE TYPE LIGHTBOX MODAL
+            ==================================================================== */}
+        {selectedImage && (
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/92 backdrop-blur-2xl animate-fade-in"
+            onClick={() => setSelectedImage(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image view"
+          >
+            <div
+              className="relative max-w-5xl w-full max-h-[94vh] flex flex-col items-center justify-center text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top Bar: Tag Badge, Frame Index, Close Button */}
+              <div className="w-full flex items-center justify-between pb-3 text-white">
+                <div className="flex items-center gap-3">
+                  {selectedImage.tag && (
+                    <span className="px-3 py-1 rounded-full bg-[#2a0c12] border border-[#ff2a3d] text-[#ff8791] font-mono text-xs font-semibold uppercase tracking-wider">
+                      {selectedImage.tag}
+                    </span>
+                  )}
+                  <span className="text-xs font-mono text-[#8e8e9a] uppercase tracking-wider">
+                    {selectedIndex !== -1 ? `FRAME ${selectedIndex + 1} OF ${filteredTiles.length}` : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage(null)}
+                  className="text-[#8e8e9a] hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-white/10"
+                  aria-label="Close image viewer"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Main Image Stage with Previous and Next Controls */}
+              <div className="relative w-full flex items-center justify-center my-auto overflow-hidden rounded-2xl border border-[#24242c] bg-[#0c0c11] shadow-[0_0_80px_rgba(255,42,61,0.25)]">
+                {filteredTiles.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handlePrevImage}
+                    className="absolute left-3 sm:left-5 z-10 p-3 rounded-full bg-black/70 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md border border-white/15 transition-all hover:scale-105 cursor-pointer shadow-lg"
+                    aria-label="Previous image"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+
+                <img
+                  src={selectedImage.image}
+                  alt={selectedImage.title?.replace(/\n/g, ' ') || 'Gallery frame'}
+                  className="max-h-[72vh] sm:max-h-[76vh] w-auto max-w-full object-contain select-none"
+                />
+
+                {filteredTiles.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    className="absolute right-3 sm:right-5 z-10 p-3 rounded-full bg-black/70 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md border border-white/15 transition-all hover:scale-105 cursor-pointer shadow-lg"
+                    aria-label="Next image"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Caption, Credits and Description Facts */}
+              {(selectedImage.title || selectedImage.credit || (selectedImage.meta && selectedImage.meta.length > 0)) && (
+                <div className="w-full mt-3 flex items-center justify-between flex-wrap gap-2 text-xs font-mono text-[#8e8e9a]">
+                  <div>
+                    {selectedImage.title && (
+                      <span className="text-white text-base sm:text-lg font-bold font-['Barlow_Semi_Condensed',sans-serif] uppercase tracking-wide mr-3">
+                        {selectedImage.title.replace(/\n/g, ' ')}
+                      </span>
+                    )}
+                    {selectedImage.credit && <span>{selectedImage.credit}</span>}
+                  </div>
+                  {selectedImage.meta && selectedImage.meta.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {selectedImage.meta.map((m, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/70">
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Universal Footer */}
