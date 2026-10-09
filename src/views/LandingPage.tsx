@@ -374,8 +374,7 @@ export default function LandingPage() {
     }
   };
 
-  const rawEdition = content?.settings?.edition_label || edition?.name || 'GCL 2026';
-  const editionLabel = rawEdition.includes('2025') ? rawEdition.replace('2025', '2026') : (rawEdition || 'GCL 2026');
+  const editionLabel = content?.settings?.edition_label || edition?.name || 'GCL 2025';
   const heroImage = content?.settings?.hero_image_url || getCachedHeroImage();
 
   useEffect(() => {
@@ -1019,9 +1018,9 @@ export default function LandingPage() {
             <em>champions.</em>
           </h2>
           <div className="cg">
-            {/* Runner-up (Silver, 4/5) */}
+            {/* Runner-up (Silver, 4/3.2) */}
             <div className="card cd s rv">
-              <div className="im" style={{ aspectRatio: '4/5' }}>
+              <div className="im" style={{ aspectRatio: '4/3.2' }}>
                 <SmoothImage
                   src={runnerUp?.photo_url}
                   alt={runnerUp?.name || 'Runner-up'}
@@ -1046,9 +1045,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Champion (Gold, 4/5.4) */}
+            {/* Champion (Gold, 4/3.6) */}
             <div className="card cd g rv">
-              <div className="im" style={{ aspectRatio: '4/5.4' }}>
+              <div className="im" style={{ aspectRatio: '4/3.6' }}>
                 <SmoothImage
                   src={grandChamp?.photo_url}
                   alt={grandChamp?.name || 'Grand champion'}
@@ -1073,9 +1072,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Third place (Bronze, 4/4.6) */}
+            {/* Third place (Bronze, 4/3.1) */}
             <div className="card cd b rv">
-              <div className="im" style={{ aspectRatio: '4/4.6' }}>
+              <div className="im" style={{ aspectRatio: '4/3.1' }}>
                 <SmoothImage
                   src={thirdPlace?.photo_url}
                   alt={thirdPlace?.name || 'Third place'}

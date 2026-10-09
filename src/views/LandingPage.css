@@ -533,19 +533,37 @@
 /* hall of fame */
 .gcl-landing .cg {
   display: grid;
-  grid-template-columns: 1fr 1.15fr 1fr;
+  grid-template-columns: 1fr 1.12fr 1fr;
   gap: 16px;
   align-items: end;
-  margin-top: 44px;
+  margin-top: 36px;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .gcl-landing .cd {
   position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0d0d12;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.gcl-landing .cd:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .gcl-landing .cd .im {
   border: 0;
   border-radius: 0;
+  max-height: 270px;
+}
+
+.gcl-landing .cd.g .im {
+  max-height: 310px;
 }
 
 .gcl-landing .cd .ov {
@@ -553,30 +571,37 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 18px;
-  background: linear-gradient(transparent, #000d);
+  padding: 14px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.55) 60%, transparent 100%);
   z-index: 2;
 }
 
 .gcl-landing .cd.g {
-  box-shadow: 0 0 44px #ff2a3d38;
+  box-shadow: 0 0 36px rgba(255, 42, 61, 0.25);
+  border-color: rgba(255, 42, 61, 0.35);
+}
+
+.gcl-landing .cd.g:hover {
+  border-color: rgba(255, 42, 61, 0.55);
 }
 
 .gcl-landing .cd .t {
-  font: 500 12px var(--mono);
-  letter-spacing: .14em;
+  font: 600 11px var(--mono);
+  letter-spacing: .12em;
   text-transform: uppercase;
 }
 
 .gcl-landing .cd h4 {
-  font: 700 clamp(22px, 2.6vw, 36px)/1 var(--hd);
+  font: 700 clamp(16px, 1.8vw, 22px)/1.2 var(--hd);
   text-transform: uppercase;
-  margin: 6px 0 4px;
+  margin: 4px 0 2px;
+  color: #fff;
+  letter-spacing: 0.02em;
 }
 
 .gcl-landing .cd small {
-  font: 500 12px var(--mono);
-  color: #ccc;
+  font: 500 11px var(--mono);
+  color: #a1a1aa;
 }
 
 .gcl-landing .cd.g .t {
@@ -589,6 +614,17 @@
 
 .gcl-landing .cd.b .t {
   color: #f0875a;
+}
+
+@media (max-width: 768px) {
+  .gcl-landing .cg {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    gap: 18px;
+  }
+  .gcl-landing .cd.g {
+    order: -1;
+  }
 }
 
 /* people */

@@ -122,6 +122,10 @@ export function HeroCarousel({
   const [paused, setPaused] = React.useState(false)
   const [failed, setFailed] = React.useState<Record<number, true>>({})
   const [loaded, setLoaded] = React.useState<Record<string, true>>({})
+  const [dragIndex, setDragIndex] = React.useState<number | null>(null)
+  const [isScrubbingRail, setIsScrubbingRail] = React.useState(false)
+  const [autoplayProgress, setAutoplayProgress] = React.useState(0)
+  const railRef = React.useRef<HTMLDivElement>(null)
   const reduced = useReducedMotion()
 
   const last = items.length - 1
@@ -278,16 +282,84 @@ export function HeroCarousel({
     return () => stage.removeEventListener("wheel", onWheel)
   }, [go, index, last])
 
-  // Autoplay waits for the current photo to be on screen before it counts down.
+  // Autoplay with real-time progression loop for the progression bar
   React.useEffect(() => {
-    if (!autoplay || reduced || paused || dragging || items.length < 2) return
-    if (shown !== index) return
-    const id = window.setTimeout(
-      () => go(index === last ? 0 : index + 1),
-      autoplayDelay
-    )
-    return () => window.clearTimeout(id)
-  }, [autoplay, autoplayDelay, dragging, go, index, items.length, last, paused, reduced, shown])
+    if (!autoplay || reduced || paused || dragging || isScrubbingRail || items.length < 2) {
+      setAutoplayProgress(0)
+      return
+    }
+    if (shown !== index) {
+      setAutoplayProgress(0)
+      return
+    }
+
+    let animId: number
+    const startTime = performance.now()
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const prog = Math.min(1, elapsed / autoplayDelay)
+      setAutoplayProgress(prog)
+
+      if (prog >= 1) {
+        setAutoplayProgress(0)
+        go(index === last ? 0 : index + 1)
+      } else {
+        animId = requestAnimationFrame(step)
+      }
+    }
+
+    animId = requestAnimationFrame(step)
+
+    return () => {
+      cancelAnimationFrame(animId)
+    }
+  }, [autoplay, autoplayDelay, dragging, isScrubbingRail, go, index, items.length, last, paused, reduced, shown])
+
+  const calcRailIndex = React.useCallback(
+    (clientX: number) => {
+      const rail = railRef.current
+      if (!rail) return index
+      const rect = rail.getBoundingClientRect()
+      if (rect.width <= 0) return index
+      const ratio = clamp((clientX - rect.left) / rect.width, 0, 0.999)
+      return clamp(Math.floor(ratio * items.length), 0, last)
+    },
+    [index, items.length, last]
+  )
+
+  const handleRailPointerDown = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      setIsScrubbingRail(true)
+      const targetIdx = calcRailIndex(e.clientX)
+      go(targetIdx)
+    },
+    [calcRailIndex, go]
+  )
+
+  const handleRailPointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isScrubbingRail) return
+      const targetIdx = calcRailIndex(e.clientX)
+      go(targetIdx)
+    },
+    [isScrubbingRail, calcRailIndex, go]
+  )
+
+  const handleRailPointerUp = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (isScrubbingRail) {
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId)
+        } catch {}
+        setIsScrubbingRail(false)
+      }
+    },
+    [isScrubbingRail]
+  )
+
+  const displayIndex = isScrubbingRail ? index : (dragIndex !== null ? dragIndex : index)
 
   const active = items[shown]
   if (!active) return null
@@ -492,8 +564,15 @@ export function HeroCarousel({
           dragElastic={0.08}
           dragConstraints={{ left: xFor(last), right: xFor(0) }}
           onDragStart={() => setDragging(true)}
+          onDrag={() => {
+            const currentX = x.get()
+            const floatIndex = (box.w / 2 - currentX - cardW / 2) / step
+            const nearest = clamp(Math.round(floatIndex), 0, last)
+            setDragIndex(nearest)
+          }}
           onDragEnd={(_, info) => {
             setDragging(false)
+            setDragIndex(null)
             const thrown = x.get() + info.velocity.x * 0.12
             go(Math.round((box.w / 2 - thrown - cardW / 2) / step))
           }}
@@ -538,22 +617,106 @@ export function HeroCarousel({
         </motion.div>
       </div>
 
-      {/* Position rail */}
+      {/* Position rail: Fully interactive progression bar with seek, scrub & autoplay countdown */}
       <div
-        className="pointer-events-none absolute"
+        className="absolute z-20 flex flex-col justify-end"
         style={{ left: pad, bottom: 22, width: Math.min(box.w * 0.22, 260) }}
       >
-        <div className="flex justify-between tabular-nums opacity-85" style={labelStyle}>
-          <span>{String(index + 1).padStart(2, "0")}</span>
-          <span>{String(items.length).padStart(2, "0")}</span>
+        <div className="flex justify-between items-center tabular-nums select-none opacity-85" style={labelStyle}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              go(index === 0 ? last : index - 1)
+            }}
+            className="cursor-pointer hover:opacity-100 hover:text-white transition-opacity py-0.5 outline-none"
+            title="Previous photo"
+            aria-label="Previous photo"
+          >
+            <span>{String(displayIndex + 1).padStart(2, "0")}</span>
+          </button>
+
+          <span className="text-[10px] tracking-widest text-white/40 uppercase hidden sm:inline-block">
+            {isScrubbingRail ? "Seeking" : autoplay && !paused ? "Auto" : "Frame"}
+          </span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              go(index === last ? 0 : index + 1)
+            }}
+            className="cursor-pointer hover:opacity-100 hover:text-white transition-opacity py-0.5 outline-none"
+            title="Next photo"
+            aria-label="Next photo"
+          >
+            <span>{String(items.length).padStart(2, "0")}</span>
+          </button>
         </div>
-        <div className="relative mt-2 h-px w-full bg-white/25">
-          <motion.div
-            className="absolute inset-y-0 bg-white"
-            style={{ width: `${100 / items.length}%` }}
-            animate={{ left: `${(index / items.length) * 100}%` }}
-            transition={spring}
-          />
+
+        {/* Interactive progression track */}
+        <div
+          ref={railRef}
+          role="slider"
+          aria-label="Carousel progression bar"
+          aria-valuemin={1}
+          aria-valuemax={items.length}
+          aria-valuenow={displayIndex + 1}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") {
+              e.preventDefault()
+              go(index === 0 ? last : index - 1)
+            } else if (e.key === "ArrowRight") {
+              e.preventDefault()
+              go(index === last ? 0 : index + 1)
+            }
+          }}
+          onPointerDown={handleRailPointerDown}
+          onPointerMove={handleRailPointerMove}
+          onPointerUp={handleRailPointerUp}
+          onPointerCancel={handleRailPointerUp}
+          className="relative mt-2 py-2.5 -my-2.5 w-full cursor-pointer group/rail outline-none touch-none select-none"
+        >
+          {/* Base track */}
+          <div className="relative h-[2px] group-hover/rail:h-[3px] w-full bg-white/20 transition-all duration-200 rounded-full overflow-hidden">
+            {/* Illuminated trail for past slides */}
+            <div
+              className="absolute inset-y-0 left-0 bg-white/35 transition-all duration-300"
+              style={{ width: `${(displayIndex / items.length) * 100}%` }}
+            />
+
+            {/* Active slide thumb with real-time progression fill */}
+            <motion.div
+              className="absolute inset-y-0 bg-white shadow-[0_0_8px_rgba(255,255,255,0.85)]"
+              style={{
+                width: `${100 / items.length}%`,
+                left: `${(displayIndex / items.length) * 100}%`,
+              }}
+              transition={spring}
+            >
+              {/* Internal progress indicator during autoplay */}
+              {autoplay && !paused && !dragging && !isScrubbingRail ? (
+                <div
+                  className="h-full bg-white shadow-[0_0_10px_#ff8791] origin-left"
+                  style={{ width: `${Math.round(autoplayProgress * 100)}%` }}
+                />
+              ) : null}
+            </motion.div>
+          </div>
+
+          {/* Hover tick division markers */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex opacity-0 group-hover/rail:opacity-100 transition-opacity duration-200 pointer-events-none">
+            {items.map((_, i) => (
+              <div key={i} className="flex-1 flex justify-center items-center">
+                <div
+                  className={`w-[1px] h-[3px] rounded-full transition-colors ${
+                    i === displayIndex ? "bg-white" : "bg-white/25"
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
