@@ -51,7 +51,7 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
   const [settings, setSettings] = useState<LandingSettings>({
     id: '',
     hero_image_url: null,
-    edition_label: 'GCL 2025',
+    edition_label: 'GCL 2026',
   });
 
   // People State

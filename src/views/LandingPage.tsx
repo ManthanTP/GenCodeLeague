@@ -374,7 +374,7 @@ export default function LandingPage() {
     }
   };
 
-  const editionLabel = content?.settings?.edition_label || edition?.name || 'GCL 2025';
+  const editionLabel = content?.settings?.edition_label || 'GCL 2026';
   const heroImage = content?.settings?.hero_image_url || getCachedHeroImage();
 
   useEffect(() => {
@@ -451,42 +451,42 @@ export default function LandingPage() {
         title: 'Opening\nRound',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'ROUND 1', 'ARENA'],
+        meta: ['GCL 2026', 'ROUND 1', 'ARENA'],
       },
       {
         id: 'def-2',
         title: 'Bidding\nFloor',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'ROUND 1', 'LIVE'],
+        meta: ['GCL 2026', 'ROUND 1', 'LIVE'],
       },
       {
         id: 'def-3',
         title: 'The Hammer\nDrops',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'ROUND 2', 'HAMMER'],
+        meta: ['GCL 2026', 'ROUND 2', 'HAMMER'],
       },
       {
         id: 'def-4',
         title: 'Team\nHuddle',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'STRATEGY', 'TEAMS'],
+        meta: ['GCL 2026', 'STRATEGY', 'TEAMS'],
       },
       {
         id: 'def-5',
         title: 'Podium\nReveal',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'FINAL', 'PODIUM'],
+        meta: ['GCL 2026', 'FINAL', 'PODIUM'],
       },
       {
         id: 'def-6',
         title: 'Certificate\nHandover',
         image: '',
         credit: 'BY GCL MEDIA TEAM.',
-        meta: ['GCL 2025', 'AWARDS', 'CERTIFICATES'],
+        meta: ['GCL 2026', 'AWARDS', 'CERTIFICATES'],
       },
     ];
   }, [galleryItems]);
@@ -813,7 +813,9 @@ export default function LandingPage() {
                 <path id="cp" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
               </defs>
               <text>
-                <textPath href="#cp">GCL · TECHNICAL AUCTION · GEN CODE LEAGUE ·</textPath>
+                <textPath href="#cp" textLength="276.46" lengthAdjust="spacing">
+                  GCL · TECHNICAL AUCTION · GEN CODE LEAGUE ·{' '}
+                </textPath>
               </text>
             </svg>
             <div className="rgi">GCL</div>
@@ -875,7 +877,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── 01 / THE FORMAT ── */}
-      <section className="sec" style={{ paddingTop: 'clamp(40px,5vw,70px)' }}>
+      <section className="sec" style={{ paddingTop: 'clamp(20px,2.5vw,36px)' }}>
         <div className="c">
           <div className="k">01 / The format</div>
           <h2 className="st">
@@ -982,7 +984,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── 02 / GALLERY (CAROUSEL) ── */}
-      <section id="gal" style={{ paddingBlock: 'clamp(60px,8vw,110px) 0' }}>
+      <section id="gal" style={{ paddingBlock: 'clamp(20px,2.5vw,36px) 0' }}>
         <div className="c">
           <div className="gh">
             <div>
@@ -1103,7 +1105,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── 04 / THE PEOPLE ── */}
-      <section className="sec" style={{ paddingTop: 'clamp(60px,8vw,100px)' }}>
+      <section className="sec" style={{ paddingTop: 'clamp(24px,3vw,38px)' }}>
         <div className="c">
           <div className="k">04 / The people</div>
           <h2 className="st">

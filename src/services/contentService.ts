@@ -55,7 +55,7 @@ export async function getLandingContent(): Promise<LandingContent> {
   let settings: LandingSettings = {
     id: '',
     hero_image_url: null,
-    edition_label: 'GCL 2025',
+    edition_label: 'GCL 2026',
   };
 
   const { data: settingsData } = await supabase
