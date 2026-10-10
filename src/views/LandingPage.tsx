@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { HeroCarousel, type HeroCarouselItem } from '../components/ui/hero-carousel';
-import { SmoothImage } from '../components/ui/smooth-image';
+import { SmoothImage, Shimmer } from '../components/ui/smooth-image';
 import { getLandingContent, type LandingContent } from '../services/contentService';
+import { RegistrationRulesDialog } from '../components/RegistrationRulesDialog';
+import type { LandingSettings } from '../types/database';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTimer } from '../hooks/useTimer';
@@ -12,6 +14,30 @@ import { getRoundBasePrice } from '../data/roundsData';
 import { formatCredit, splitFacts } from '../lib/gallery-text';
 import { supabase } from '../lib/supabase';
 import './LandingPage.css';
+
+const isRegOpen = (s?: LandingSettings | null, nowMs: number = Date.now()): boolean =>
+  !!s?.registration_open &&
+  /^https:\/\//i.test(s?.registration_url ?? '') &&
+  (!s?.registration_closes_at || nowMs < new Date(s.registration_closes_at).getTime());
+
+function formatClosesAt(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const formatted = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric',
+      month: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(d);
+    return formatted.replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
+  } catch {
+    return '';
+  }
+}
 
 const getCachedHeroImage = (): string => {
   try {
@@ -145,6 +171,35 @@ export default function LandingPage() {
   const { eventState, edition } = useEventState();
   const { teams } = useTeams(edition?.id);
   const { formatted: timerFormatted } = useTimer(eventState);
+
+  // Registration state & 30-second interval
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const [rulesDialogOpen, setRulesDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const regState = useMemo<'loading' | 'open' | 'closed'>(() => {
+    if (content === null) return 'loading';
+    return isRegOpen(content.settings, nowMs) ? 'open' : 'closed';
+  }, [content, nowMs]);
+
+  const rulesList = useMemo<string[]>(() => {
+    const raw = content?.settings?.registration_rules;
+    if (!raw) return [];
+    return raw
+      .split('\n')
+      .map((r) => r.trim())
+      .filter(Boolean);
+  }, [content?.settings?.registration_rules]);
+
+  const closesFormatted = useMemo<string>(() => {
+    return formatClosesAt(content?.settings?.registration_closes_at);
+  }, [content?.settings?.registration_closes_at]);
 
   // Format step interactive pop-up
   const [activeFormatStep, setActiveFormatStep] = useState<FormatStepDef | null>(null);
@@ -770,7 +825,25 @@ export default function LandingPage() {
         <canvas id="wv" ref={canvasRef} />
         <div className="c hg">
           <div>
-            <div className="k">Technical auction event / {editionLabel}</div>
+            <div className="hero-eyebrow-wrap">
+              <div className="k">Technical auction event / {editionLabel}</div>
+              <div
+                className={`hero-reg-pill ${regState === 'open' ? 'open' : 'closed'}`}
+                style={{ visibility: regState === 'loading' ? 'hidden' : 'visible' }}
+              >
+                {regState === 'open' ? (
+                  <>
+                    <span className="dot" aria-hidden="true" />
+                    <span>Registration open</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="dot-closed" aria-hidden="true" />
+                    <span>Registration closed</span>
+                  </>
+                )}
+              </div>
+            </div>
             <h1>
               <span className="ln">
                 <span>Where code meets</span>
@@ -783,12 +856,40 @@ export default function LandingPage() {
             </h1>
             <p className="lead">A live auction for engineers. Bid, answer, win.</p>
             <div className="cta">
-              <Link className="btn b-red" to="/live">
-                Watch live {ARROW_SVG}
-              </Link>
+              {regState === 'loading' ? (
+                <div className="hero-btn-skeleton" aria-hidden="true">
+                  <Shimmer />
+                </div>
+              ) : regState === 'open' ? (
+                rulesList.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn b-red"
+                    onClick={() => setRulesDialogOpen(true)}
+                  >
+                    Register now {ARROW_SVG}
+                  </button>
+                ) : (
+                  <a
+                    href={content?.settings?.registration_url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn b-red"
+                  >
+                    Register now {ARROW_SVG}
+                  </a>
+                )
+              ) : (
+                <Link className="btn b-red" to="/live">
+                  Watch live {ARROW_SVG}
+                </Link>
+              )}
               <a className="btn b-line" href="#gal">
                 Gallery
               </a>
+              {regState === 'open' && closesFormatted && (
+                <span className="hero-closes-label">Closes {closesFormatted}</span>
+              )}
             </div>
           </div>
 
@@ -1322,9 +1423,42 @@ export default function LandingPage() {
           <h2>
             Be in the <em>room.</em>
           </h2>
-          <Link className="btn b-red" to="/live">
-            Watch the live auction
-          </Link>
+          {regState === 'loading' ? (
+            <div className="fin-btn-skeleton" aria-hidden="true">
+              <Shimmer />
+            </div>
+          ) : regState === 'open' ? (
+            <>
+              {rulesList.length > 0 ? (
+                <button
+                  type="button"
+                  className="btn b-red"
+                  onClick={() => setRulesDialogOpen(true)}
+                >
+                  Register now
+                </button>
+              ) : (
+                <a
+                  href={content?.settings?.registration_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn b-red"
+                >
+                  Register now
+                </a>
+              )}
+              {closesFormatted && (
+                <div className="fin-note">Closes {closesFormatted}</div>
+              )}
+            </>
+          ) : (
+            <>
+              <Link className="btn b-red" to="/live">
+                Watch the live auction
+              </Link>
+              <div className="fin-note">Registration is closed</div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1366,6 +1500,16 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {rulesDialogOpen && (
+        <RegistrationRulesDialog
+          open={rulesDialogOpen}
+          onOpenChange={setRulesDialogOpen}
+          registrationUrl={content?.settings?.registration_url || ''}
+          rules={rulesList}
+          closesFormatted={closesFormatted}
+        />
+      )}
     </div>
   );
 }

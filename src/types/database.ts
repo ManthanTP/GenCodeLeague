@@ -173,6 +173,10 @@ export interface LandingSettings {
   hero_image_url: string | null;
   edition_label: string;
   updated_at?: string;
+  registration_open?: boolean | null;
+  registration_url?: string | null;
+  registration_closes_at?: string | null;
+  registration_rules?: string | null;
 }
 
 export interface Person {

@@ -56,6 +56,10 @@ export async function getLandingContent(): Promise<LandingContent> {
     id: '',
     hero_image_url: null,
     edition_label: 'GCL 2026',
+    registration_open: false,
+    registration_url: null,
+    registration_closes_at: null,
+    registration_rules: null,
   };
 
   const { data: settingsData } = await supabase
@@ -311,7 +315,15 @@ export async function getAdminLandingContent() {
     .order('uploaded_at', { ascending: false });
 
   return {
-    settings: settings || { id: '', hero_image_url: null, edition_label: 'GCL 2025' },
+    settings: settings || {
+      id: '',
+      hero_image_url: null,
+      edition_label: 'GCL 2026',
+      registration_open: false,
+      registration_url: null,
+      registration_closes_at: null,
+      registration_rules: null,
+    },
     people: (people || []) as Person[],
     editions: (editions || []) as Edition[],
     galleryPhotos: (galleryPhotos || []) as GalleryPhoto[],
@@ -319,23 +331,26 @@ export async function getAdminLandingContent() {
 }
 
 export async function saveLandingSettings(settings: Partial<LandingSettings>) {
+  const payload = {
+    hero_image_url: settings.hero_image_url,
+    edition_label: settings.edition_label || 'GCL 2026',
+    registration_open: settings.registration_open ?? false,
+    registration_url: settings.registration_url ?? null,
+    registration_closes_at: settings.registration_closes_at ?? null,
+    registration_rules: settings.registration_rules ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
   if (settings.id) {
     const { error } = await supabase
       .from('landing_settings')
-      .update({
-        hero_image_url: settings.hero_image_url,
-        edition_label: settings.edition_label || 'GCL 2025',
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', settings.id);
     if (error) throw error;
   } else {
     const { error } = await supabase
       .from('landing_settings')
-      .insert({
-        hero_image_url: settings.hero_image_url,
-        edition_label: settings.edition_label || 'GCL 2025',
-      });
+      .insert(payload);
     if (error) throw error;
   }
 }

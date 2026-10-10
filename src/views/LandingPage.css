@@ -31,7 +31,7 @@
 
 .gcl-landing :focus-visible {
   outline: 2px solid var(--red);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .gcl-landing .c {
@@ -263,6 +263,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
   margin-top: 28px;
 }
 
@@ -1161,3 +1162,388 @@
     transform: none;
   }
 }
+
+/* ── REGISTRATION PILL & BUTTONS ON LANDING ── */
+.gcl-landing .hero-eyebrow-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-height: 30px;
+  margin-bottom: 8px;
+}
+
+.gcl-landing .hero-reg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 99px;
+  font: 600 11.5px/1 var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.gcl-landing .hero-reg-pill.open {
+  background: #2a0c12;
+  border: 1px solid var(--red);
+  color: #ff8791;
+  box-shadow: 0 0 14px rgba(255, 42, 61, 0.4);
+}
+
+.gcl-landing .hero-reg-pill.closed {
+  background: var(--p1);
+  border: 1px solid var(--ln);
+  color: var(--mu);
+}
+
+.gcl-landing .dot-closed {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #71717a;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.gcl-landing .hero-btn-skeleton {
+  display: inline-flex;
+  height: 50px;
+  width: 168px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.gcl-landing .hero-closes-label {
+  font: 500 12px var(--mono);
+  color: var(--mu);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-left: 6px;
+}
+
+.gcl-landing .fin-btn-skeleton {
+  display: inline-flex;
+  height: 50px;
+  width: 220px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.gcl-landing .fin-note {
+  font: 500 12px var(--mono);
+  text-transform: uppercase;
+  color: var(--mu);
+  margin-top: 18px;
+  letter-spacing: .08em;
+}
+
+/* ── REGISTRATION RULES DIALOG (RADIX) ── */
+.gcl-reg-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: #000000b8;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: regOverlayFade .25s ease-out forwards;
+}
+
+@keyframes regOverlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.gcl-reg-dialog {
+  --bg: #07070a;
+  --p1: #0e0e13;
+  --p2: #14141a;
+  --ln: #24242c;
+  --red: #ff2a3d;
+  --tx: #f5f5f7;
+  --mu: #8e8e9a;
+  --hd: 'Barlow Semi Condensed', system-ui, sans-serif;
+  --bd: Inter, system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, monospace;
+
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: clamp(22px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+
+  /* gradient-border card style */
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(165deg, #15151b, #0c0c10) padding-box,
+    linear-gradient(135deg, #ff2a3d 0, #4a0e15 24%, #2a0a10 60%, #ff2a3d 100%) border-box;
+  box-shadow: 0 0 28px rgba(255, 42, 61, 0.12);
+
+  /* Animation: rises 18px and scales .98 to 1 over .45s cubic-bezier(.16,1,.3,1) */
+  animation: regPanelEnter .45s cubic-bezier(.16, 1, .3, 1) forwards;
+}
+
+@keyframes regPanelEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 18px)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.gcl-reg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ln);
+  flex-shrink: 0;
+}
+
+.gcl-reg-eyebrow {
+  font: 500 12px var(--mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--mu);
+  margin-bottom: 4px;
+}
+
+.gcl-reg-title {
+  font: 700 clamp(28px, 3.4vw, 38px)/1 var(--hd);
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -.01em;
+}
+
+.gcl-reg-dialog .cls {
+  font: 600 13px var(--bd);
+  border: 1px solid var(--ln);
+  border-radius: 10px;
+  height: 38px;
+  padding: 0 16px;
+  background: var(--p1);
+  color: var(--tx);
+  cursor: pointer;
+  transition: .25s;
+  flex-shrink: 0;
+}
+
+.gcl-reg-dialog .cls:hover {
+  border-color: var(--red);
+  box-shadow: 0 0 14px rgba(255, 42, 61, 0.4);
+}
+
+.gcl-reg-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 4px;
+  margin-bottom: 16px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #2e2e38 transparent;
+}
+
+.gcl-reg-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.gcl-reg-list::-webkit-scrollbar-thumb {
+  background: #2e2e38;
+  border-radius: 4px;
+}
+
+.gcl-reg-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--ln);
+}
+
+.gcl-reg-num {
+  width: 34px;
+  flex-shrink: 0;
+  font: 500 12px var(--mono);
+  color: var(--mu);
+  padding-top: 2px;
+}
+
+.gcl-reg-text {
+  flex: 1;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #c9c9d2;
+  font-family: var(--bd);
+}
+
+.gcl-reg-footer {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.gcl-reg-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gcl-reg-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--ln);
+  background: var(--p1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: .2s ease;
+}
+
+.gcl-reg-checkbox.checked {
+  border-color: var(--red);
+  background: #2a0c12;
+  box-shadow: 0 0 14px rgba(255, 42, 61, 0.45);
+}
+
+.gcl-reg-checkbox-row input:focus-visible + .gcl-reg-checkbox {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.gcl-reg-checkbox-label {
+  font-size: 14px;
+  color: #f5f5f7;
+  font-weight: 500;
+  font-family: var(--bd);
+}
+
+.gcl-reg-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.gcl-reg-dialog .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition: .25s;
+  box-sizing: border-box;
+}
+
+.gcl-reg-dialog .b-red {
+  background: linear-gradient(#ff3b4d, #c4101f);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(255, 42, 61, 0.35);
+}
+
+.gcl-reg-dialog .b-red:not(.disabled):hover {
+  box-shadow: 0 0 28px rgba(255, 42, 61, 0.55);
+  transform: translateY(-2px);
+}
+
+.gcl-reg-dialog .b-red.disabled {
+  opacity: 0.38;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gcl-reg-dialog .b-line {
+  background: var(--p1);
+  border-color: var(--ln);
+  color: var(--tx);
+}
+
+.gcl-reg-dialog .b-line:hover {
+  border-color: var(--red);
+  box-shadow: 0 0 16px rgba(255, 42, 61, 0.25);
+}
+
+.gcl-reg-dialog :focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.gcl-reg-note {
+  font: 500 11.5px var(--mono);
+  color: var(--mu);
+  margin-top: 14px;
+  text-transform: uppercase;
+  line-height: 1.45;
+  letter-spacing: .06em;
+}
+
+/* Mobile (<=640px): bottom sheet */
+@media (max-width: 640px) {
+  .gcl-reg-dialog {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    animation: regSheetEnter .45s cubic-bezier(.16, 1, .3, 1) forwards;
+  }
+
+  @keyframes regSheetEnter {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .gcl-reg-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .gcl-reg-actions .btn {
+    width: 100%;
+    height: 50px;
+  }
+}
+

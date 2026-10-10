@@ -40,6 +40,40 @@ interface AdminLandingGalleryManagerProps {
   onShowToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
+// Helper to convert ISO string to datetime-local input string in Asia/Kolkata (IST)
+function toIstLocalString(isoStr?: string | null): string {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(d);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value || '';
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+  } catch {
+    return '';
+  }
+}
+
+// Helper to convert datetime-local input string to ISO string interpreting as Asia/Kolkata (IST)
+function fromIstLocalString(localStr: string): string | null {
+  if (!localStr) return null;
+  try {
+    const istIso = `${localStr}:00+05:30`;
+    const d = new Date(istIso);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
 export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProps> = ({
   onShowToast,
 }) => {
@@ -52,6 +86,10 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     id: '',
     hero_image_url: null,
     edition_label: 'GCL 2026',
+    registration_open: false,
+    registration_url: '',
+    registration_closes_at: null,
+    registration_rules: '',
   });
 
   // People State
@@ -168,6 +206,25 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
     try {
       await saveLandingSettings(settings);
       onShowToast('Hero settings saved successfully', 'success');
+    } catch (err: any) {
+      setValidationError(err?.message || 'Failed to save');
+      onShowToast(err?.message || 'Failed to save', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveRegistration = async () => {
+    if (settings.registration_url && !/^https:\/\//i.test(settings.registration_url.trim())) {
+      setValidationError('Google Form link must be a valid https:// URL');
+      onShowToast('Google Form link must begin with https://', 'error');
+      return;
+    }
+    setSaving(true);
+    setValidationError(null);
+    try {
+      await saveLandingSettings(settings);
+      onShowToast('Registration settings saved successfully', 'success');
     } catch (err: any) {
       setValidationError(err?.message || 'Failed to save');
       onShowToast(err?.message || 'Failed to save', 'error');
@@ -664,6 +721,144 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                 >
                   {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                   <span>Save Hero Settings</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Registration Settings Card */}
+            <div className="admin-card space-y-4">
+              <div className="flex items-center justify-between border-b border-[#202024] pb-3">
+                <div>
+                  <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-white">
+                    Registration Settings
+                  </h3>
+                  <p className="text-xs text-[#8e8e9a] mt-0.5">
+                    Configure public student registration, rules, and optional automated closing deadline.
+                  </p>
+                </div>
+              </div>
+
+              {/* Switch "Registration open" */}
+              <div className="flex items-center justify-between p-3.5 bg-[#0a0a0c] border border-[#26262b] rounded-xl">
+                <div>
+                  <label className="text-xs font-mono uppercase tracking-wider text-white font-bold block">
+                    Registration open
+                  </label>
+                  <span className="text-[11px] text-[#71717a] font-mono block mt-0.5">
+                    Toggle to open or close registration on the landing page
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!settings.registration_open}
+                  onClick={() =>
+                    setSettings((prev) => ({ ...prev, registration_open: !prev.registration_open }))
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    settings.registration_open ? 'bg-[#ff2a3d]' : 'bg-[#26262b]'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      settings.registration_open ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Google Form Link */}
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#a1a1aa] mb-1.5">
+                  Google Form link
+                </label>
+                <input
+                  type="url"
+                  value={settings.registration_url ?? ''}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, registration_url: e.target.value }))
+                  }
+                  placeholder="https://forms.gle/..."
+                  className="w-full px-3.5 py-2.5 bg-[#0a0a0c] border border-[#26262b] rounded-xl text-white font-mono text-sm focus:border-[#ff2a3d] outline-none"
+                />
+                {settings.registration_url &&
+                  !/^https:\/\//i.test(settings.registration_url.trim()) && (
+                    <span className="text-[11px] text-red-400 mt-1 block font-mono">
+                      Link must start with https://
+                    </span>
+                  )}
+                {settings.registration_open && !settings.registration_url?.trim() && (
+                  <span className="text-[11px] text-[#f59e0b] mt-1 block font-mono">
+                    Add the form link. The landing stays closed until you do.
+                  </span>
+                )}
+              </div>
+
+              {/* Closing Time (Optional) with Clear Button */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-mono uppercase tracking-wider text-[#a1a1aa]">
+                    Closing time (optional)
+                  </label>
+                  {settings.registration_closes_at && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettings((prev) => ({ ...prev, registration_closes_at: null }))
+                      }
+                      className="text-[11px] font-mono text-[#ff2a3d] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <X size={12} />
+                      <span>Clear</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="datetime-local"
+                  value={toIstLocalString(settings.registration_closes_at)}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      registration_closes_at: fromIstLocalString(e.target.value),
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 bg-[#0a0a0c] border border-[#26262b] rounded-xl text-white font-mono text-sm focus:border-[#ff2a3d] outline-none [color-scheme:dark]"
+                />
+                <span className="text-[11px] text-[#71717a] mt-1 block font-mono">
+                  Interpreted in Indian Standard Time (IST). Registration closes automatically once this deadline passes.
+                </span>
+              </div>
+
+              {/* Rules & Regulations Textarea */}
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#a1a1aa] mb-1.5">
+                  Rules & regulations <span className="text-[#71717a] text-[11px] normal-case">(One rule per line)</span>
+                </label>
+                <textarea
+                  rows={6}
+                  value={settings.registration_rules ?? ''}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, registration_rules: e.target.value }))
+                  }
+                  placeholder={'Only registered college students can participate\nBring your college ID card\nTeams must consist of 3-4 members'}
+                  className="w-full px-3.5 py-2.5 bg-[#0a0a0c] border border-[#26262b] rounded-xl text-white font-mono text-sm focus:border-[#ff2a3d] outline-none leading-relaxed"
+                />
+                <span className="text-[11px] text-[#71717a] mt-1 block font-mono">
+                  Rules are split on newlines, trimmed, empties dropped, and rendered as numbered plain text.
+                </span>
+              </div>
+
+              {/* Save Button */}
+              <div className="pt-4 border-t border-[#202024] flex justify-end">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleSaveRegistration}
+                  className="px-6 py-2.5 bg-[#ff2a3d] hover:bg-[#e02030] text-white font-mono text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-[0_0_15px_rgba(255,42,61,0.3)] transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>Save Registration Settings</span>
                 </button>
               </div>
             </div>
