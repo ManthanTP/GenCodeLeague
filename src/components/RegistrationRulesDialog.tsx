@@ -106,6 +106,19 @@ export const RegistrationRulesDialog: React.FC<RegistrationRulesDialogProps> = (
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
                 className="sr-only"
+                style={{
+                  position: 'absolute',
+                  width: '1px',
+                  height: '1px',
+                  padding: 0,
+                  margin: '-1px',
+                  overflow: 'hidden',
+                  clip: 'rect(0, 0, 0, 0)',
+                  whiteSpace: 'nowrap',
+                  border: 0,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
               />
               <span
                 className={`gcl-reg-checkbox ${agreed ? "checked" : ""}`}

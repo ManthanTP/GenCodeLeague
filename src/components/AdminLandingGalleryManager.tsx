@@ -738,34 +738,92 @@ export const AdminLandingGalleryManager: React.FC<AdminLandingGalleryManagerProp
                 </div>
               </div>
 
-              {/* Switch "Registration open" */}
-              <div className="flex items-center justify-between p-3.5 bg-[#0a0a0c] border border-[#26262b] rounded-xl">
-                <div>
-                  <label className="text-xs font-mono uppercase tracking-wider text-white font-bold block">
-                    Registration open
-                  </label>
-                  <span className="text-[11px] text-[#71717a] font-mono block mt-0.5">
-                    Toggle to open or close registration on the landing page
-                  </span>
+              {/* Switch "Registration open" with clear visual status */}
+              <div className="p-4 bg-[#0a0a0c] border border-[#26262b] rounded-xl space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <label className="text-xs font-mono uppercase tracking-wider text-white font-bold block">
+                        Registration Status
+                      </label>
+                      {/* Prominent Status Chip */}
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold uppercase tracking-wider ${
+                          settings.registration_open
+                            ? 'bg-[#2a0c12] text-[#ff8791] border border-[#ff2a3d] shadow-[0_0_10px_rgba(255,42,61,0.35)]'
+                            : 'bg-[#18181c] text-[#8e8e9a] border border-[#33333b]'
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full inline-block ${
+                            settings.registration_open
+                              ? 'bg-[#ff2a3d] shadow-[0_0_6px_#ff2a3d] animate-pulse'
+                              : 'bg-[#71717a]'
+                          }`}
+                        />
+                        {settings.registration_open ? 'Registration Open' : 'Registration Closed'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#8e8e9a] font-mono block mt-1">
+                      Toggle to switch registration status between Open and Closed on the landing page
+                    </span>
+                  </div>
+
+                  {/* High-contrast Switch */}
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span
+                      className={`text-xs font-mono font-bold uppercase tracking-wider ${
+                        settings.registration_open ? 'text-[#ff2a3d]' : 'text-[#71717a]'
+                      }`}
+                    >
+                      {settings.registration_open ? 'ON' : 'OFF'}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={!!settings.registration_open}
+                      onClick={() =>
+                        setSettings((prev) => ({ ...prev, registration_open: !prev.registration_open }))
+                      }
+                      style={{
+                        backgroundColor: settings.registration_open ? '#ff2a3d' : '#1c1c22',
+                        borderColor: settings.registration_open ? '#ff2a3d' : '#3f3f4a',
+                        boxShadow: settings.registration_open
+                          ? '0 0 14px rgba(255, 42, 61, 0.45)'
+                          : 'none',
+                      }}
+                      className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 transition-all duration-200 ease-in-out focus:outline-none"
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          transform: settings.registration_open ? 'translateX(20px)' : 'translateX(2px)',
+                          backgroundColor: settings.registration_open ? '#ffffff' : '#8e8e9a',
+                        }}
+                        className="pointer-events-none inline-block h-5 w-5 self-center rounded-full shadow-md transition-all duration-200 ease-in-out"
+                      />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={!!settings.registration_open}
-                  onClick={() =>
-                    setSettings((prev) => ({ ...prev, registration_open: !prev.registration_open }))
-                  }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    settings.registration_open ? 'bg-[#ff2a3d]' : 'bg-[#26262b]'
-                  }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      settings.registration_open ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+
+                {/* Helpful status explainer line */}
+                <div className="pt-2 border-t border-[#1a1a20] flex items-center gap-2 text-[11px] font-mono">
+                  {settings.registration_open ? (
+                    settings.registration_url && /^https:\/\//i.test(settings.registration_url.trim()) ? (
+                      <span className="text-emerald-400">
+                        ● Active on landing page: "Registration open" pill and "Register now" buttons are visible.
+                      </span>
+                    ) : (
+                      <span className="text-amber-400">
+                        ▲ Switch is ON, but requires a valid https:// Google Form link to open on the landing.
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[#8e8e9a]">
+                      ○ Registration is closed. Landing shows "Registration closed" chip and "Watch live" button.
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Google Form Link */}
