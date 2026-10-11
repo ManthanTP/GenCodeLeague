@@ -153,6 +153,7 @@ export default function LandingPage() {
   // Event Phase: Single source of truth
   const {
     phase,
+    settings,
     year,
     closesText,
     closesDateShort,
@@ -162,18 +163,18 @@ export default function LandingPage() {
     timeLeftAria,
     timeLeftStat,
     hasClosesTime,
-  } = useEventPhase(content?.settings);
+  } = useEventPhase();
 
   const [rulesDialogOpen, setRulesDialogOpen] = useState(false);
 
   const rulesList = useMemo<string[]>(() => {
-    const raw = content?.settings?.registration_rules;
+    const raw = settings?.registration_rules || content?.settings?.registration_rules;
     if (!raw) return [];
     return raw
       .split('\n')
       .map((r) => r.trim())
       .filter(Boolean);
-  }, [content?.settings?.registration_rules]);
+  }, [settings?.registration_rules, content?.settings?.registration_rules]);
 
   const statCellCount =
     phase === 'reg-open'
