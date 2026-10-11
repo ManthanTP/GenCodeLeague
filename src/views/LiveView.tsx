@@ -358,19 +358,9 @@ export default function LiveView() {
     }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [teams, items]);
 
-  // Available teams from Supabase with fallback to blueprint teams
+  // Available teams from Supabase
   const availableTeams = useMemo(() => {
-    if (teams && teams.length > 0) return teams;
-    return [
-      { id: 't1', name: 'helloo new team', budget: 50000000, score: 0, edition_id: '' },
-      { id: 't2', name: 'New team 1', budget: 49000000, score: 0, edition_id: '' },
-      { id: 't3', name: 'New team 2', budget: 45000000, score: 0, edition_id: '' },
-      { id: 't4', name: 'New team 3', budget: 43000000, score: 0, edition_id: '' },
-      { id: 't5', name: 'New team 4', budget: 50000000, score: 0, edition_id: '' },
-      { id: 't6', name: 'New team 5', budget: 50000000, score: 0, edition_id: '' },
-      { id: 't7', name: 'Team Alpha', budget: 47000000, score: 0, edition_id: '' },
-      { id: 't8', name: 'New team 6', budget: 50000000, score: 0, edition_id: '' },
-    ] as Team[];
+    return teams || [];
   }, [teams]);
 
   // Sorted teams for dropdown selects (A to Z)
@@ -597,7 +587,7 @@ export default function LiveView() {
     >
       <Header
         totalSpent={totalSpent}
-        totalAvailable={totalAvailable || 342000000}
+        totalAvailable={totalAvailable}
         teamCount={availableTeams.length}
         viewMode="live"
         isFullscreen={isFullscreen}
@@ -1335,7 +1325,7 @@ export default function LiveView() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <h3 style={{ fontSize: '23px', fontWeight: 700, color: '#f4f4f6', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Rajdhani', sans-serif" }}>
-                            {selectedTeam?.name || 'helloo new team'}
+                            {selectedTeam?.name || 'My Team'}
                           </h3>
                           <div className="chip" style={{ width: '39px', height: '25px', fontSize: '12px', fontWeight: 700 }}>
                             YOU

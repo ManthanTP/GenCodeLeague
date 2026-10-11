@@ -124,48 +124,29 @@ export default function Header({
   }, [edition?.id, propTotalAvailable, propTeamCount, directStats, teams]);
 
   const effectiveBudget = useMemo(() => {
-    if (typeof propTotalAvailable === 'number' && propTotalAvailable > 0) {
+    if (typeof propTotalAvailable === 'number') {
       return propTotalAvailable;
     }
     if (teams && teams.length > 0) {
       const b = teams.reduce((acc, t) => acc + (t.budget || 0), 0);
-      if (b > 0) return b;
+      return b;
     }
-    if (directStats && directStats.budget > 0) {
+    if (directStats && typeof directStats.budget === 'number') {
       return directStats.budget;
     }
-    try {
-      const cached = localStorage.getItem('gcl_cached_teams');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const b = parsed.reduce((acc: number, t: { budget?: number }) => acc + (t.budget || 0), 0);
-          if (b > 0) return b;
-        }
-      }
-    } catch {}
     return 0;
   }, [propTotalAvailable, teams, directStats]);
 
   const effectiveTeamCount = useMemo(() => {
-    if (typeof propTeamCount === 'number' && propTeamCount > 0) {
+    if (typeof propTeamCount === 'number') {
       return propTeamCount;
     }
     if (teams && teams.length > 0) {
       return teams.length;
     }
-    if (directStats && directStats.count > 0) {
+    if (directStats && typeof directStats.count === 'number') {
       return directStats.count;
     }
-    try {
-      const cached = localStorage.getItem('gcl_cached_teams');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.length;
-        }
-      }
-    } catch {}
     return 0;
   }, [propTeamCount, teams, directStats]);
 
