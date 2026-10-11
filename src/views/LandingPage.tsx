@@ -9,35 +9,13 @@ import type { LandingSettings } from '../types/database';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
 import { useTimer } from '../hooks/useTimer';
+import { useEventPhase } from '../hooks/useEventPhase';
+import { ClipboardPen, Lock, Hourglass } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 import { getRoundBasePrice } from '../data/roundsData';
 import { formatCredit, splitFacts } from '../lib/gallery-text';
 import { supabase } from '../lib/supabase';
 import './LandingPage.css';
-
-const isRegOpen = (s?: LandingSettings | null, nowMs: number = Date.now()): boolean =>
-  !!s?.registration_open &&
-  /^https:\/\//i.test(s?.registration_url ?? '') &&
-  (!s?.registration_closes_at || nowMs < new Date(s.registration_closes_at).getTime());
-
-function formatClosesAt(dateStr?: string | null): string {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
-    const formatted = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      day: 'numeric',
-      month: 'short',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).format(d);
-    return formatted.replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
-  } catch {
-    return '';
-  }
-}
 
 const getCachedHeroImage = (): string => {
   try {
@@ -172,21 +150,21 @@ export default function LandingPage() {
   const { teams } = useTeams(edition?.id);
   const { formatted: timerFormatted } = useTimer(eventState);
 
-  // Registration state & 30-second interval
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  // Event Phase: Single source of truth
+  const {
+    phase,
+    year,
+    closesText,
+    closesDateShort,
+    closesDateUpper,
+    closesTextUpper,
+    timeLeft,
+    timeLeftAria,
+    timeLeftStat,
+    hasClosesTime,
+  } = useEventPhase(content?.settings);
+
   const [rulesDialogOpen, setRulesDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNowMs(Date.now());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const regState = useMemo<'loading' | 'open' | 'closed'>(() => {
-    if (content === null) return 'loading';
-    return isRegOpen(content.settings, nowMs) ? 'open' : 'closed';
-  }, [content, nowMs]);
 
   const rulesList = useMemo<string[]>(() => {
     const raw = content?.settings?.registration_rules;
@@ -197,9 +175,16 @@ export default function LandingPage() {
       .filter(Boolean);
   }, [content?.settings?.registration_rules]);
 
-  const closesFormatted = useMemo<string>(() => {
-    return formatClosesAt(content?.settings?.registration_closes_at);
-  }, [content?.settings?.registration_closes_at]);
+  const statCellCount =
+    phase === 'reg-open'
+      ? hasClosesTime
+        ? 4
+        : 2
+      : phase === 'reg-closed'
+      ? hasClosesTime
+        ? 2
+        : 1
+      : 4;
 
   // Format step interactive pop-up
   const [activeFormatStep, setActiveFormatStep] = useState<FormatStepDef | null>(null);
@@ -827,22 +812,26 @@ export default function LandingPage() {
           <div>
             <div className="hero-eyebrow-wrap">
               <div className="k">Technical auction event / {editionLabel}</div>
-              <div
-                className={`hero-reg-pill ${regState === 'open' ? 'open' : 'closed'}`}
-                style={{ visibility: regState === 'loading' ? 'hidden' : 'visible' }}
-              >
-                {regState === 'open' ? (
-                  <>
-                    <span className="dot" aria-hidden="true" />
-                    <span>Registration open</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="dot-closed" aria-hidden="true" />
-                    <span>Registration closed</span>
-                  </>
-                )}
-              </div>
+              {phase === 'loading' ? (
+                <div className="hero-reg-pill-skeleton" aria-hidden="true">
+                  <Shimmer />
+                </div>
+              ) : phase === 'reg-open' ? (
+                <div className="hero-reg-pill open">
+                  <span className="dot" aria-hidden="true" />
+                  <span>Registration open</span>
+                </div>
+              ) : phase === 'reg-closed' ? (
+                <div className="hero-reg-pill closed">
+                  <span className="dot-closed" aria-hidden="true" />
+                  <span>Registration closed</span>
+                </div>
+              ) : phase === 'starting-soon' ? (
+                <div className="hero-reg-pill open">
+                  <span className="dot" aria-hidden="true" />
+                  <span>Auction starting soon</span>
+                </div>
+              ) : null}
             </div>
             <h1>
               <span className="ln">
@@ -856,11 +845,11 @@ export default function LandingPage() {
             </h1>
             <p className="lead">A live auction for engineers. Bid, answer, win.</p>
             <div className="cta">
-              {regState === 'loading' ? (
+              {phase === 'loading' ? (
                 <div className="hero-btn-skeleton" aria-hidden="true">
                   <Shimmer />
                 </div>
-              ) : regState === 'open' ? (
+              ) : phase === 'reg-open' ? (
                 rulesList.length > 0 ? (
                   <button
                     type="button"
@@ -887,8 +876,8 @@ export default function LandingPage() {
               <a className="btn b-line" href="#gal">
                 Gallery
               </a>
-              {regState === 'open' && closesFormatted && (
-                <span className="hero-closes-label">Closes {closesFormatted}</span>
+              {phase === 'reg-open' && closesText && (
+                <span className="hero-closes-label">Closes {closesText}</span>
               )}
             </div>
           </div>
@@ -915,28 +904,137 @@ export default function LandingPage() {
               </defs>
               <text>
                 <textPath href="#cp" textLength="276.46" lengthAdjust="spacing">
-                  GCL · TECHNICAL AUCTION · GEN CODE LEAGUE ·{' '}
+                  {phase === 'reg-open'
+                    ? `REGISTRATION OPEN · GCL ${year} · `
+                    : phase === 'reg-closed'
+                    ? `REGISTRATION CLOSED · GCL ${year} · `
+                    : phase === 'starting-soon'
+                    ? `AUCTION STARTING SOON · GCL ${year} · `
+                    : 'GCL · TECHNICAL AUCTION · GEN CODE LEAGUE · '}
                 </textPath>
               </text>
             </svg>
-            <div className="rgi">GCL</div>
+            <div className="rgi">
+              {phase === 'loading' ? (
+                <div style={{ width: 28, height: 28, borderRadius: 6, position: 'relative', overflow: 'hidden' }}>
+                  <Shimmer />
+                </div>
+              ) : phase === 'reg-open' ? (
+                <ClipboardPen size={26} color="#ffffff" />
+              ) : phase === 'reg-closed' ? (
+                <Lock size={26} color="#ffffff" />
+              ) : phase === 'starting-soon' ? (
+                <Hourglass size={26} color="#ff4350" />
+              ) : (
+                'GCL'
+              )}
+            </div>
 
             <div className="lc card" data-bind="live.round · live.question · live.bid · live.timer">
-              <div className="k">
-                <span id="lq">Round {roundNum} · Q{qNum}</span>
-                <span className="lv">
-                  <span className="dot" />
-                  <span id="ls">Live</span>
-                </span>
-              </div>
-              <div className="r">
-                <div className="amt" id="am">
-                  {bidAmtFormatted}
-                </div>
-                <div className="tm" id="tm">
-                  {timerFormatted || '01:57'}
-                </div>
-              </div>
+              {phase === 'loading' ? (
+                <>
+                  <div className="k">
+                    <div style={{ width: 90, height: 14, borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+                      <Shimmer />
+                    </div>
+                    <div style={{ width: 45, height: 14, borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+                      <Shimmer />
+                    </div>
+                  </div>
+                  <div className="r" style={{ marginTop: 6, alignItems: 'center' }}>
+                    <div style={{ width: 120, height: 40, borderRadius: 6, position: 'relative', overflow: 'hidden' }}>
+                      <Shimmer />
+                    </div>
+                    <div style={{ width: 60, height: 20, borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+                      <Shimmer />
+                    </div>
+                  </div>
+                </>
+              ) : phase === 'reg-open' ? (
+                <>
+                  <div className="k">
+                    <span id="lq">REGISTRATION</span>
+                    <span className="lv">
+                      <span className="dot" aria-hidden="true" />
+                      <span id="ls">OPEN</span>
+                    </span>
+                  </div>
+                  <div className="r">
+                    <div className="amt" id="am">
+                      {hasClosesTime ? closesDateUpper : 'OPEN'}
+                    </div>
+                    {hasClosesTime && (
+                      <div className="tm" id="tm" aria-label={timeLeftAria}>
+                        {timeLeft}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : phase === 'reg-closed' ? (
+                <>
+                  <div className="k">
+                    <span id="lq">REGISTRATION</span>
+                    <span className="lv" style={{ color: 'var(--mu)' }}>
+                      <span className="dot-closed" aria-hidden="true" />
+                      <span id="ls">CLOSED</span>
+                    </span>
+                  </div>
+                  <div className="r">
+                    <div className="amt" id="am" style={{ color: 'var(--tx)' }}>
+                      CLOSED
+                    </div>
+                    {closesDateShort && (
+                      <div className="tm" id="tm">
+                        {closesDateShort}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : phase === 'starting-soon' ? (
+                <>
+                  <div className="k">
+                    <span id="lq">AUCTION</span>
+                    <span className="lv">
+                      <span className="dot" aria-hidden="true" />
+                      <span id="ls">SOON</span>
+                    </span>
+                  </div>
+                  <div className="r">
+                    <div
+                      className="amt"
+                      id="am"
+                      style={{
+                        fontSize: '22px',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'baseline',
+                      }}
+                    >
+                      STARTING SOON
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="k">
+                    <span id="lq">Round {roundNum} · Q{qNum}</span>
+                    <span className="lv">
+                      <span className="dot" />
+                      <span id="ls">Live</span>
+                    </span>
+                  </div>
+                  <div className="r">
+                    <div className="amt" id="am">
+                      {bidAmtFormatted}
+                    </div>
+                    <div className="tm" id="tm">
+                      {timerFormatted || '01:57'}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -944,36 +1042,135 @@ export default function LandingPage() {
 
       {/* ── TICKER ── */}
       <div className="tick">
-        <div id="tk">
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, idx) => (
-            <span key={idx}>
-              {t.round} <b>{t.team}</b> <em>{t.amt}</em>
-            </span>
-          ))}
-        </div>
+        {phase === 'loading' ? (
+          <div style={{ display: 'inline-flex', gap: 56, width: '100%', height: 18, position: 'relative', overflow: 'hidden' }}>
+            <Shimmer />
+          </div>
+        ) : phase === 'reg-open' ? (
+          <div id="tk">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <span key={idx}>
+                REGISTRATION <b>IS OPEN</b>
+                {hasClosesTime && closesTextUpper && (
+                  <> <em>CLOSES {closesTextUpper}</em></>
+                )}
+              </span>
+            ))}
+          </div>
+        ) : phase === 'reg-closed' ? (
+          <div id="tk">
+            {Array.from({ length: 12 }).map((_, idx) => (
+              <span key={idx}>
+                REGISTRATION <b>IS CLOSED</b>
+              </span>
+            ))}
+          </div>
+        ) : phase === 'starting-soon' ? (
+          <div id="tk">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <span key={idx}>
+                {`GCL ${year}`} <b>AUCTION</b> <em>STARTING SOON</em>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div id="tk">
+            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, idx) => (
+              <span key={idx}>
+                {t.round} <b>{t.team}</b> <em>{t.amt}</em>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── STATS STRIP ── */}
       <section className="strip">
-        <div className="c">
-          <div className="sc" data-bind="teams.count">
-            <b id="s1">{totalTeams}</b>
-            <span className="k">Teams</span>
-          </div>
-          <div className="sc" data-bind="settings.starting_budget">
-            <b>
-              ₹<span id="s2">{startingBudgetCr}</span> Cr
-            </b>
-            <span className="k">Budget per team</span>
-          </div>
-          <div className="sc" data-bind="settings.rounds">
-            <b id="s3">{totalRounds}</b>
-            <span className="k">Rounds</span>
-          </div>
-          <div className="sc" data-bind="settings.questions_per_round">
-            <b id="s4">{questionsPerRound}</b>
-            <span className="k">Questions per round</span>
-          </div>
+        <div className="c" style={{ '--strip-cols': statCellCount } as React.CSSProperties}>
+          {phase === 'loading' ? (
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className="sc">
+                <div style={{ height: 'clamp(54px, 6vw, 92px)', width: '60%', marginBottom: 8, position: 'relative', overflow: 'hidden', borderRadius: 6 }}>
+                  <Shimmer />
+                </div>
+                <div style={{ height: 'clamp(13px, 1.15vw, 16px)', width: '40%', position: 'relative', overflow: 'hidden', borderRadius: 4 }}>
+                  <Shimmer />
+                </div>
+              </div>
+            ))
+          ) : phase === 'reg-open' ? (
+            hasClosesTime ? (
+              <>
+                <div className="sc" data-bind="registration.status">
+                  <b id="s1">Open</b>
+                  <span className="k">Registration</span>
+                </div>
+                <div className="sc" data-bind="registration.closes_on">
+                  <b id="s2">{closesDateShort}</b>
+                  <span className="k">Last date to register</span>
+                </div>
+                <div className="sc" data-bind="registration.time_left">
+                  <b id="s3">{timeLeftStat.value}</b>
+                  <span className="k">{timeLeftStat.label}</span>
+                </div>
+                <div className="sc" data-bind="registration.steps">
+                  <b id="s4">2</b>
+                  <span className="k">Steps to register</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="sc" data-bind="registration.status">
+                  <b id="s1">Open</b>
+                  <span className="k">Registration</span>
+                </div>
+                <div className="sc" data-bind="registration.steps">
+                  <b id="s4">2</b>
+                  <span className="k">Steps to register</span>
+                </div>
+              </>
+            )
+          ) : phase === 'reg-closed' ? (
+            hasClosesTime ? (
+              <>
+                <div className="sc" data-bind="registration.status">
+                  <b id="s1">Closed</b>
+                  <span className="k">Registration</span>
+                </div>
+                <div className="sc" data-bind="registration.closed_on">
+                  <b id="s2">{closesDateShort}</b>
+                  <span className="k">Closed on</span>
+                </div>
+              </>
+            ) : (
+              <div className="sc" data-bind="registration.status">
+                <b id="s1">Closed</b>
+                <span className="k">Registration</span>
+              </div>
+            )
+          ) : (
+            /* starting-soon & live */
+            <>
+              <div className="sc" data-bind="teams.count">
+                <b id="s1">{totalTeams}</b>
+                <span className="k">Teams</span>
+              </div>
+              <div className="sc" data-bind="settings.starting_budget">
+                <b>
+                  ₹<span id="s2">{startingBudgetCr}</span> Cr
+                </b>
+                <span className="k">Budget per team</span>
+              </div>
+              <div className="sc" data-bind="settings.rounds">
+                <b id="s3">{totalRounds}</b>
+                <span className="k">Rounds</span>
+              </div>
+              <div className="sc" data-bind="settings.questions_per_round">
+                <b id="s4">{questionsPerRound}</b>
+                <span className="k">Questions per round</span>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1423,11 +1620,11 @@ export default function LandingPage() {
           <h2>
             Be in the <em>room.</em>
           </h2>
-          {regState === 'loading' ? (
+          {phase === 'loading' ? (
             <div className="fin-btn-skeleton" aria-hidden="true">
               <Shimmer />
             </div>
-          ) : regState === 'open' ? (
+          ) : phase === 'reg-open' ? (
             <>
               {rulesList.length > 0 ? (
                 <button
@@ -1447,17 +1644,28 @@ export default function LandingPage() {
                   Register now
                 </a>
               )}
-              {closesFormatted && (
-                <div className="fin-note">Closes {closesFormatted}</div>
+              {closesText && (
+                <div className="fin-note">Closes {closesText}</div>
               )}
             </>
-          ) : (
+          ) : phase === 'reg-closed' ? (
             <>
               <Link className="btn b-red" to="/live">
                 Watch the live auction
               </Link>
               <div className="fin-note">Registration is closed</div>
             </>
+          ) : phase === 'starting-soon' ? (
+            <>
+              <Link className="btn b-red" to="/live">
+                Watch the live auction
+              </Link>
+              <div className="fin-note">Auction starting soon</div>
+            </>
+          ) : (
+            <Link className="btn b-red" to="/live">
+              Watch the live auction
+            </Link>
           )}
         </div>
       </section>
@@ -1507,7 +1715,7 @@ export default function LandingPage() {
           onOpenChange={setRulesDialogOpen}
           registrationUrl={content?.settings?.registration_url || ''}
           rules={rulesList}
-          closesFormatted={closesFormatted}
+          closesFormatted={closesText}
         />
       )}
     </div>

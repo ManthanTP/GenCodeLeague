@@ -392,7 +392,7 @@
 
 .gcl-landing .strip .c {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--strip-cols, 4), 1fr);
 }
 
 .gcl-landing .sc {
@@ -1100,7 +1100,7 @@
     right: -6px;
   }
   .gcl-landing .strip .c {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(min(var(--strip-cols, 2), 2), 1fr);
   }
   .gcl-landing .sc {
     border-right: 0;
@@ -1207,6 +1207,17 @@
   background: #71717a;
   display: inline-block;
   flex-shrink: 0;
+}
+
+.gcl-landing .hero-reg-pill-skeleton {
+  display: inline-flex;
+  height: 30px;
+  width: 154px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .gcl-landing .hero-btn-skeleton {

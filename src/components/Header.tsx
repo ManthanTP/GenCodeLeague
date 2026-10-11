@@ -14,11 +14,18 @@ import {
   HelpCircle,
   Wallet,
   ChevronRight,
+  ClipboardPen,
+  Timer,
+  Lock,
+  CalendarX,
+  Hourglass,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 import { useEventState } from '../hooks/useEventState';
 import { useTeams } from '../hooks/useTeams';
+import { useEventPhase } from '../hooks/useEventPhase';
+import { Shimmer } from './ui/smooth-image';
 import { supabase } from '../lib/supabase';
 import './Header.css';
 
@@ -53,6 +60,16 @@ export default function Header({
 }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isLivePage = location.pathname === '/live';
+  const {
+    phase,
+    year,
+    timeLeft,
+    timeLeftAria,
+    closesDateShort,
+    hasClosesTime,
+  } = useEventPhase();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [directStats, setDirectStats] = useState<{ count: number; budget: number } | null>(null);
 
@@ -282,10 +299,31 @@ export default function Header({
             >
               GEN CODE LEAGUE
             </span>
-            <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
-              <span className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
-              LIVE AUCTION
-            </span>
+            {isLivePage || phase === 'live' ? (
+              <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                <span className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+                LIVE AUCTION
+              </span>
+            ) : phase === 'loading' ? (
+              <div style={{ position: 'relative', width: '92px', height: '11px', borderRadius: '3px', marginTop: '0.25rem', overflow: 'hidden' }}>
+                <Shimmer />
+              </div>
+            ) : phase === 'reg-open' ? (
+              <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                <span className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+                {`Registration open · ${year}`}
+              </span>
+            ) : phase === 'reg-closed' ? (
+              <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#71717a', flexShrink: 0 }} />
+                Registration closed
+              </span>
+            ) : (
+              <span style={{ fontSize: 'clamp(8.5px, 0.8vw, 11px)', fontWeight: 500, letterSpacing: '0.2px', color: '#9a9aa3', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                <span className="dot" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e8212e' }} />
+                Auction starting soon
+              </span>
+            )}
           </div>
         </div>
 
@@ -338,41 +376,123 @@ export default function Header({
 
         {/* Right Stats & Mobile Controls Section */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1vw, 0.65rem)', flexShrink: 0 }}>
-          {/* Mobile/Tablet Compact Budget Pill (Shown < 1024px) */}
-          <div className="gcl-header-budget-mobile flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
-            <Wallet size={14} className="text-[#ff4350] shrink-0" />
-            <span className="text-xs font-bold text-[#ff4350] font-['Rajdhani',sans-serif] font-mono whitespace-nowrap">
-              {displayBudget}
-            </span>
-          </div>
+          {/* Mobile/Tablet Compact Budget Pill (Shown < 1024px, only in live/starting-soon or live route) */}
+          {(isLivePage || phase === 'live' || phase === 'starting-soon') && (
+            <div className="gcl-header-budget-mobile flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#18181c] border border-[#2c2c33]">
+              <Wallet size={14} className="text-[#ff4350] shrink-0" />
+              <span className="text-xs font-bold text-[#ff4350] font-['Rajdhani',sans-serif] font-mono whitespace-nowrap">
+                {displayBudget}
+              </span>
+            </div>
+          )}
 
           {/* Desktop Stat Cards (Shown >= 1024px) */}
           <div className="hidden lg:flex items-center gap-2">
-            {/* Remaining Budget glass card */}
-            <div className="panel red gcl-header-budget-desktop" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <Wallet size={20} style={{ strokeWidth: 2.2, color: '#ff4350', flexShrink: 0 }} />
-              <div style={{ whiteSpace: 'nowrap' }}>
-                <p className="gcl-header-budget-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                  Remaining Budget
-                </p>
-                <p style={{ fontSize: '18px', fontWeight: 700, color: '#ff4350', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {displayBudget}
-                </p>
-              </div>
-            </div>
+            {isLivePage || phase === 'live' ? (
+              <>
+                {/* Remaining Budget glass card */}
+                <div className="panel red gcl-header-budget-desktop" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <Wallet size={20} style={{ strokeWidth: 2.2, color: '#ff4350', flexShrink: 0 }} />
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    <p className="gcl-header-budget-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                      Remaining Budget
+                    </p>
+                    <p style={{ fontSize: '18px', fontWeight: 700, color: '#ff4350', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      {displayBudget}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Total Teams glass card */}
-            <div className="panel gcl-header-teams-chip" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <Users size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
-              <div style={{ whiteSpace: 'nowrap' }}>
-                <p className="gcl-header-teams-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
-                  Total Teams
-                </p>
-                <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {displayTeams}
-                </p>
+                {/* Total Teams glass card */}
+                <div className="panel gcl-header-teams-chip" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <Users size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    <p className="gcl-header-teams-label" style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                      Total Teams
+                    </p>
+                    <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      {displayTeams}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : phase === 'loading' ? (
+              <>
+                <div className="panel" style={{ width: '136px', height: '48px', borderRadius: '10px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                  <Shimmer />
+                </div>
+                <div className="panel" style={{ width: '110px', height: '48px', borderRadius: '10px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                  <Shimmer />
+                </div>
+              </>
+            ) : phase === 'reg-open' ? (
+              <>
+                <div className="panel red" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <ClipboardPen size={20} style={{ strokeWidth: 2.2, color: '#ff4350', flexShrink: 0 }} />
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    <p style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                      Registration
+                    </p>
+                    <p style={{ fontSize: '18px', fontWeight: 700, color: '#ff4350', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      Open
+                    </p>
+                  </div>
+                </div>
+                {hasClosesTime && (
+                  <div className="panel" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }} aria-label={timeLeftAria}>
+                    <Timer size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+                    <div style={{ whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                        Closes in
+                      </p>
+                      <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        {timeLeft}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : phase === 'reg-closed' ? (
+              <>
+                <div className="panel" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <Lock size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    <p style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                      Registration
+                    </p>
+                    <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      Closed
+                    </p>
+                  </div>
+                </div>
+                {hasClosesTime && (
+                  <div className="panel" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <CalendarX size={18} style={{ color: '#f4f4f6', flexShrink: 0 }} />
+                    <div style={{ whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                        Closed on
+                      </p>
+                      <p style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f6', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        {closesDateShort}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* starting-soon */
+              <div className="panel red" style={{ width: 'auto', height: '48px', borderRadius: '10px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <Hourglass size={18} style={{ strokeWidth: 2.2, color: '#ff4350', flexShrink: 0 }} />
+                <div style={{ whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: '11px', color: '#b5b5bd', fontWeight: 400, margin: 0, lineHeight: 1, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
+                    Auction
+                  </p>
+                  <p style={{ fontSize: '18px', fontWeight: 700, color: '#ff4350', margin: '0.1rem 0 0 0', lineHeight: 1, fontFamily: "'Rajdhani', sans-serif", fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    Starting soon
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Admin Controls */}
