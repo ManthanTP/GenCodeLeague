@@ -552,22 +552,32 @@ export function HeroCarousel({
         style={{ left: pad, bottom: 22, width: Math.min(box.w * 0.22, 260) }}
       >
         <div
-          className="flex justify-between tabular-nums opacity-85"
+          className="flex justify-between tabular-nums"
           style={{
             ...labelStyle,
             fontWeight: 500,
+            opacity: 0.85,
           }}
         >
           <span>{String(displayIndex + 1).padStart(2, "0")}</span>
           <span>{String(items.length).padStart(2, "0")}</span>
         </div>
         <div
-          className="relative mt-2 h-px w-full"
-          style={{ backgroundColor: "rgba(255, 255, 255, 0.27)" }}
+          className="relative w-full"
+          style={{
+            height: 1,
+            marginTop: 8,
+            backgroundColor: "#ffffff44",
+          }}
         >
           <motion.div
-            className="absolute top-[-0.5px] h-[2px] bg-white"
-            style={{ width: `${items.length > 0 ? 100 / items.length : 0}%` }}
+            className="absolute"
+            style={{
+              top: -0.5,
+              height: 2,
+              backgroundColor: "#ffffff",
+              width: `${items.length > 0 ? 100 / items.length : 0}%`,
+            }}
             animate={{ left: `${items.length > 0 ? (displayIndex / items.length) * 100 : 0}%` }}
             transition={spring}
           />
