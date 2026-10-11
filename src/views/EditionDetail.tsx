@@ -152,6 +152,14 @@ export default function EditionDetail() {
     if (a.id === thirdPlaceId) return -1;
     if (b.id === thirdPlaceId) return 1;
 
+    if (a.sort_order != null && b.sort_order != null && a.sort_order !== b.sort_order) {
+      return a.sort_order - b.sort_order;
+    }
+
+    if ((b.score ?? 0) !== (a.score ?? 0)) {
+      return (b.score ?? 0) - (a.score ?? 0);
+    }
+
     const spentA = getTeamStats(a.id).amountSpent;
     const spentB = getTeamStats(b.id).amountSpent;
     return spentB - spentA;

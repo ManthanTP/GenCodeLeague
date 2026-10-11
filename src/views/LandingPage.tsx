@@ -1338,10 +1338,10 @@ export default function LandingPage() {
               </div>
               <div className="ov">
                 <div className="t">02 · Runner-up</div>
-                <h4>{runnerUp?.name || 'Team N – TEAM SSVA'}</h4>
+                <h4>{runnerUp?.name || 'Team M – Script Squad'}</h4>
                 <small>
-                  {runnerUp?.lots ? `${runnerUp.lots} lots` : '6 lots'} ·{' '}
-                  {runnerUp?.amount ? formatCurrency(runnerUp.amount) : '₹13.40 Cr'}
+                  {runnerUp?.lots ? `${runnerUp.lots} lots` : '4 lots'} ·{' '}
+                  {runnerUp?.amount ? formatCurrency(runnerUp.amount) : '₹9.70 Cr'}
                 </small>
               </div>
             </div>
@@ -1392,10 +1392,10 @@ export default function LandingPage() {
               </div>
               <div className="ov">
                 <div className="t">03 · Third place</div>
-                <h4>{thirdPlace?.name || 'Team M – Script Squad'}</h4>
+                <h4>{thirdPlace?.name || 'Team N – TEAM SSVA'}</h4>
                 <small>
-                  {thirdPlace?.lots ? `${thirdPlace.lots} lots` : '4 lots'} ·{' '}
-                  {thirdPlace?.amount ? formatCurrency(thirdPlace.amount) : '₹9.70 Cr'}
+                  {thirdPlace?.lots ? `${thirdPlace.lots} lots` : '6 lots'} ·{' '}
+                  {thirdPlace?.amount ? formatCurrency(thirdPlace.amount) : '₹13.40 Cr'}
                 </small>
               </div>
             </div>
